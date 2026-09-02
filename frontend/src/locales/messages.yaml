@@ -135,12 +135,18 @@ auth.loginedTip:
 auth.logout:
   zhCn: 登出
   en: Log Out
+auth.storageFreeSpace:
+  zhCn: 存储剩余空间：{space}
+  en: Storage free space: {space}
 router.goDashboard:
   zhCn: 前往仪表盘
   en: Go to Dashboard
 site.dashboard:
   zhCn: 仪表盘
   en: Dashboard
+site.darkMode:
+  zhCn: 暗色模式
+  en: Dark Mode
 auth.accountSetting:
   zhCn: 用户设置
   en: User settings
@@ -620,6 +626,15 @@ file.emptyTip:
 file.emptySearchTip:
   zhCn: 没有名称含有 “{word}” 的文件，请换个搜索词试试。
   en: No files contain "{word}". Please try a different search term.
+file.searchPlaceholder:
+  zhCn: 搜索所有组中的文件
+  en: Search files across all groups
+file.searchNotJoined:
+  zhCn: 未加入
+  en: Not joined
+file.searchEmpty:
+  zhCn: 未找到相关文件
+  en: No matching files
 project.deleteFile:
   zhCn: 删除文件
   en: Delete File
@@ -651,6 +666,12 @@ project.onlyOneTargetTip:
 imageTranslator.translationPlaceholder:
   zhCn: 请输入翻译
   en: Please enter translation
+imageTranslator.hideSymbolTool:
+  zhCn: 隐藏符号工具
+  en: Hide Symbol Tool
+imageTranslator.showSymbolTool:
+  zhCn: 显示符号工具
+  en: Show Symbol Tool
 imageTranslator.proofreadPlaceholder:
   zhCn: 请输入校对
   en: Please enter proofreading

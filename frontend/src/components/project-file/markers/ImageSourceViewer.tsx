@@ -39,7 +39,7 @@ export const ImageSourceViewer: FC<ImageSourceViewerProps> = ({
     <div
       className={classNames(['ImageSourceViewer', className])}
       css={css`
-        background: #fff;
+        background: var(--moeflow-surface);
         display: flex;
         flex-direction: column;
         .ImageSourceViewer__List {

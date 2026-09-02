@@ -1,7 +1,7 @@
 import { css } from '@emotion/core';
 import { Checkbox } from 'antd';
 import classNames from 'classnames';
-import { clearFix, darken } from 'polished';
+import { clearFix } from 'polished';
 import React, { useEffect } from 'react';
 import { useIntl } from 'react-intl';
 import { useDispatch, useSelector } from 'react-redux';
@@ -221,7 +221,7 @@ const SourceWithoutRef: React.ForwardRefRenderFunction<
         .ImageSourceViewerProofreaderSource__TranslationContentProofread {
           padding: 4px 0;
           margin: 0 5px;
-          border-top: 1px dashed ${darken(0.03, style.borderColorBase)};
+          border-top: 1px dashed ${style.borderColorBase};
           white-space: pre-wrap;
           word-break: break-all;
         }

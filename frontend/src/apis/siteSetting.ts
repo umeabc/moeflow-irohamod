@@ -44,8 +44,23 @@ const getHomepage = ({ configs }: { configs?: AxiosRequestConfig }) => {
   });
 };
 
+export interface APIStorageUsage {
+  storageType: string;
+  total: number;
+  used: number;
+  free: number;
+}
+const getStorageUsage = ({ configs }: { configs?: AxiosRequestConfig }) => {
+  return request<APIStorageUsage>({
+    method: 'GET',
+    url: `/v1/admin/storage-usage`,
+    ...configs,
+  });
+};
+
 export default {
   getSiteSetting,
   editSiteSetting,
   getHomepage,
+  getStorageUsage,
 };

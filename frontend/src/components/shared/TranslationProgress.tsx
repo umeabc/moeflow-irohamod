@@ -48,7 +48,7 @@ export const TranslationProgress: FC<TranslationProgressProps> = ({
           position: relative;
           width: 100%;
           height: 10px;
-          background: #efefef;
+          background: var(--moeflow-progressTrack);
           border-radius: ${style.borderRadiusBase};
           overflow: hidden;
         }
@@ -60,10 +60,10 @@ export const TranslationProgress: FC<TranslationProgressProps> = ({
           border-radius: ${style.borderRadiusBase};
         }
         .TranslationProgress__ProgressTranslatedSourceCount {
-          background: #ffe4a8;
+          background: var(--moeflow-warningColorLight);
         }
         .TranslationProgress__ProgressCheckedSourceCount {
-          background: ${style.primaryColorLightest};
+          background: var(--moeflow-progressStatus);
         }
         .TranslationProgress__Text {
           flex: none;
@@ -84,10 +84,10 @@ export const TranslationProgress: FC<TranslationProgressProps> = ({
           padding: 0 3px 0 2px;
           font-weight: bold;
           &.TranslationProgress__TextItemTranslated {
-            background-color: #ffd26e;
+            background-color: var(--moeflow-warningColorLight);
           }
           &.TranslationProgress__TextItemChecked {
-            background-color: #ffb3bc;
+            background-color: var(--moeflow-progressStatus);
           }
           .TranslationProgress__TextItemIcon {
             margin-right: 2px;
@@ -99,10 +99,10 @@ export const TranslationProgress: FC<TranslationProgressProps> = ({
           .TranslationProgress__LineBase {
             background: repeating-linear-gradient(
               45deg,
-              #e0e0e0,
-              #e0e0e0 15px,
-              #efefef 0,
-              #efefef 30px
+              var(--moeflow-surface2),
+              var(--moeflow-surface2) 15px,
+              var(--moeflow-progressTrack) 0,
+              var(--moeflow-progressTrack) 30px
             );
           }
         }

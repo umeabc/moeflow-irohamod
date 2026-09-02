@@ -85,6 +85,7 @@ export const TeamList: FC<TeamListProps> = ({ className } = {}) => {
   return (
     <List
       className={classNames(['TeamList', className])}
+      searchInputVisible={false}
       onChange={handleChange}
       loading={loading}
       total={total}

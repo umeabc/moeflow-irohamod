@@ -2,7 +2,6 @@ import { css } from '@emotion/core';
 import { Checkbox, Popconfirm } from 'antd';
 import TextArea, { TextAreaProps, TextAreaRef } from 'antd/lib/input/TextArea';
 import classNames from 'classnames';
-import { lighten } from 'polished';
 import React, { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { useDispatch, useSelector } from 'react-redux';
@@ -201,7 +200,7 @@ export const Translation: FC<TranslationProps> = ({
             color: ${style.primaryColor};
           }
           &:active {
-            color: ${lighten(0.15, style.primaryColor)};
+            color: ${style.primaryColorLighter};
           }
         }
         .Translation__ContentCloneIcon {

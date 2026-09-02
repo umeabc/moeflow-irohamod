@@ -112,6 +112,7 @@ export const ProjectSetList: FC<ProjectSetListProps> = ({
     <List
       id={currentTeam.id}
       className={className}
+      searchInputVisible={false}
       onChange={handleChange}
       loading={loading}
       total={total}

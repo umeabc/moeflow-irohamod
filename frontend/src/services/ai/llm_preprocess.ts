@@ -21,22 +21,34 @@ export interface LLMConf {
 export const llmPresets: readonly Readonly<LLMConf>[] = [
   // gemini:
   // see https://ai.google.dev/gemini-api/docs/openai
-  ...['gemini-2.5-flash', 'gemini-2.5-pro'].map((model) => ({
+  ...['gemini-3.5-flash', 'gemini-3.7-flash'].map((model) => ({
     provider: 'Google',
     model,
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
   })),
   // OpenAI models: see https://platform.openai.com/docs/models
-  ...['gpt-5-mini', 'gpt-4o', 'gpt-5'].map((model) => ({
+  ...['gpt-5.6-sol', 'gpt-5.6-luna', 'gpt-5.6-terra'].map((model) => ({
     provider: 'OpenAI',
     model,
     baseUrl: 'https://api.openai.com/v1/',
   })),
   // Anthropic models in OpenAI compatible format: https://docs.claude.com/en/api/openai-sdk
-  ...['claude-sonnet-4-20250514', 'claude-3-7-sonnet-latest'].map((model) => ({
+  ...['claude-sonnet-5', 'claude-sonnet-4-6'].map((model) => ({
     provider: 'Anthropic',
     model,
     baseUrl: 'https://api.anthropic.com/v1/',
+  })),
+  // Deepseek models in OpenAI compatible format
+  ...['deepseek-v4-flash-vision-exp'].map((model) => ({
+    provider: 'Deepseek',
+    model,
+    baseUrl: 'https://api.deepseek.com/v1/',
+  })),
+  // SpaceXAI (xAI) models in OpenAI compatible format
+  ...['grok-4.6'].map((model) => ({
+    provider: 'SpaceXAI',
+    model,
+    baseUrl: 'https://api.x.ai/v1/',
   })),
 ];
 

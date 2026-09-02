@@ -29,7 +29,7 @@ export const ImageViewerSettingPanel: FC<ImageViewerSettingPanelProps> = ({
         flex-direction: row;
         align-items: center;
         height: 40px;
-        background-color: #fff;
+        background-color: var(--moeflow-control);
         border-radius: 0 ${style.borderRadiusBase} ${style.borderRadiusBase} 0;
         pointer-events: auto;
         box-shadow: ${style.boxShadowBase};

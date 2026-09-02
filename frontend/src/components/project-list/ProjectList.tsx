@@ -156,6 +156,7 @@ export const ProjectList: FC<ProjectListProps> = ({
   return (
     <List
       id={listID + '-' + status.toString()}
+      searchInputVisible={false}
       css={css`
         .List__ItemWrapper {
           padding: 0 ${style.paddingBase}px;

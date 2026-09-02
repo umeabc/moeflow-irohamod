@@ -507,7 +507,7 @@ export const ImageViewer: FC<ImageViewerProps> = ({
           align-items: center;
           width: 40px;
           height: 40px;
-          background-color: rgba(255, 255, 255, ${widgetOpacity});
+          background-color: var(--moeflow-control);
           ${clickEffect(
             css`
               background-color: ${style.widgetButtonHoverBackgroundColor};
@@ -530,14 +530,14 @@ export const ImageViewer: FC<ImageViewerProps> = ({
           top: ${isMobile ? '5px' : '10px'};
           left: ${isMobile ? '45px' : '50px'};
           z-index: 4;
-          background-color: rgba(255, 255, 255, ${widgetOpacity});
+          background-color: var(--moeflow-control);
         }
         .ImageViewer__ImageViewerPagingPanel {
           position: absolute;
           top: ${isMobile ? '5px' : '10px'};
           right: ${isMobile ? '55px' : '10px'};
           z-index: 5;
-          background-color: rgba(255, 255, 255, ${widgetOpacity});
+          background-color: var(--moeflow-control);
         }
       `}
     >

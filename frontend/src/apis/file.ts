@@ -133,6 +133,35 @@ const editFile = ({
   });
 };
 
+export interface APIFileSearchItem {
+  id: string;
+  name: string;
+  project_id: string;
+  project_name: string;
+  project_set_id: string;
+  project_set_name: string;
+  team_id: string;
+  team_name: string;
+  can_access: boolean;
+}
+/** 跨组（团队）文件搜索 */
+const searchFiles = ({
+  word,
+  limit,
+  configs,
+}: {
+  word: string;
+  limit?: number;
+  configs?: AxiosRequestConfig;
+}) => {
+  return request<APIFileSearchItem[]>({
+    method: 'GET',
+    url: `/v1/files/search`,
+    params: { word, limit },
+    ...configs,
+  });
+};
+
 export default {
   getProjectFiles,
   getFile,
@@ -140,4 +169,5 @@ export default {
   editFile,
   adminGetFiles,
   adminSafeCheck,
+  searchFiles,
 };

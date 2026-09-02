@@ -39,7 +39,7 @@ export const ImageSourceViewerModeControl: FC<
 
         .ImageSourceViewerModeControl__Button {
           text-align: center;
-          background: #eee;
+          background: var(--moeflow-surface2);
           width: 50%;
           border: none; // remove UA style
           border-right: 1px solid ${style.borderColorBase};
@@ -50,13 +50,13 @@ export const ImageSourceViewerModeControl: FC<
           }
 
           ${clickEffect(
-            `background-color: #f7f7f7;`,
-            `background-color: #fff`,
+            `background-color: var(--moeflow-surface2);`,
+            `background-color: var(--moeflow-surface);`,
           )};
         }
 
         .ImageSourceViewerModeControl__Button--active {
-          background: #fff;
+          background: var(--moeflow-surface);
           ${clearClickEffect()};
         }
       `}

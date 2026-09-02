@@ -6,11 +6,16 @@ from app.core.responses import MoePagination
 from app.core.views import MoeAPIView
 from app.decorators.auth import admin_required, token_required
 from app.decorators.url import fetch_model
-from app.exceptions import NoPermissionError, UploadFileNotFoundError
+from app.exceptions import (
+    FileDuplicateError,
+    NoPermissionError,
+    UploadFileNotFoundError,
+)
+from app.utils.hash import get_file_md5
 from app.models.file import File, FileTargetCache
 from app.models.user import User
 from app.models.project import Project, ProjectPermission
-from app.models.team import TeamPermission
+from app.models.team import TeamPermission, TeamUserRelation
 from app.constants.project import ProjectStatus
 from app.constants.file import FileNotExistReason, FileType
 from app.validators.file import (
@@ -129,6 +134,34 @@ class ProjectFileListAPI(MoeAPIView):
         old_file: File = project.get_files(
             name=real_file.filename, parent=data["parent_id"]
         ).first()
+        # 以组（团队）为单位，用 MD5 去重：同内容已存在于同组则拒绝上传
+        md5 = get_file_md5(real_file)  # 读取流计算 md5
+        real_file.stream.seek(0)  # 还原流指针，交给后续上传
+        if md5:
+            # 当前团队下的项目（避免 mongoengine 跨两级引用 join 查询）
+            team_project_ids = [
+                p.id for p in Project.objects(team=project.team).only("id")
+            ]
+            duplicate: File = (
+                File.objects(
+                    md5=md5, activated=True, project__in=team_project_ids
+                )
+                .order_by("-edit_time")
+                .first()
+            )
+            # 同名同项目的覆盖上传（同一个文件）不算重复
+            if duplicate and (old_file is None or str(duplicate.id) != str(old_file.id)):
+                dup_project = duplicate.project
+                raise FileDuplicateError(
+                    gettext(
+                        "相同内容的图片已存在：{name}（{team} > {project_set} > {project}）"
+                    ).format(
+                        name=duplicate.name,
+                        team=dup_project.team.name,
+                        project_set=dup_project.project_set.name,
+                        project=dup_project.name,
+                    )
+                )
         file: File = project.upload(
             real_file.filename, real_file, parent=data["parent_id"]
         )
@@ -338,3 +371,85 @@ class AdminFileListSafeCheckAPI(MoeAPIView):
         for file in unsafe_files:
             file.delete_real_file(file_not_exist_reason=FileNotExistReason.BLOCK)
         return {"message": gettext("处理成功")}
+
+
+class FileSearchAPI(MoeAPIView):
+    @token_required
+    def get(self):
+        """
+        @api {get} /v1/files/search 跨组（团队）文件搜索
+        @apiVersion 1.0.0
+        @apiName getFileSearchAPI
+        @apiGroup File
+        @apiUse APIHeader
+        @apiUse TokenHeader
+
+        @apiParam {String} [word] 文件名搜索词
+        @apiParam {Number} [limit] 返回条数上限（默认20，最大50）
+
+        @apiSuccessExample {json} 返回示例
+        [
+            {
+                "id": "...",
+                "name": "@xxx.png",
+                "project_id": "...",
+                "project_name": "...",
+                "project_set_id": "...",
+                "project_set_name": "...",
+                "team_id": "...",
+                "team_name": "...",
+                "can_access": true,
+            }
+        ]
+        """
+        word = (request.args.get("word") or "").strip()
+        if not word:
+            return []
+        try:
+            limit = int(request.args.get("limit", 20))
+        except ValueError:
+            limit = 20
+        limit = max(1, min(limit, 50))
+        # 当前用户加入的团队
+        team_ids = [
+            my_team.id
+            for my_team in TeamUserRelation.objects(user=self.current_user)
+            .scalar("group")
+            .no_dereference()
+        ]
+        if not team_ids:
+            return []
+        # 这些团队下的项目
+        project_ids = [
+            project.id
+            for project in Project.objects(team__in=team_ids).only("id")
+        ]
+        if not project_ids:
+            return []
+        # 按文件名模糊匹配
+        files = (
+            File.objects(activated=True, name__icontains=word, project__in=project_ids)
+            .order_by("-edit_time")
+            .limit(limit)
+        )
+        result = []
+        for file in files:
+            project = file.project
+            project_set = project.project_set
+            team = project.team
+            result.append(
+                {
+                    "id": str(file.id),
+                    "name": file.name,
+                    "project_id": str(project.id),
+                    "project_name": project.name,
+                    "project_set_id": str(project_set.id),
+                    "project_set_name": project_set.name,
+                    "team_id": str(team.id),
+                    "team_name": team.name,
+                    "can_access": self.current_user.can(
+                        project, ProjectPermission.ACCESS
+                    ),
+                }
+            )
+        return result

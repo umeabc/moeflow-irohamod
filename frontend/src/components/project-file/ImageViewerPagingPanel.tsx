@@ -103,7 +103,7 @@ export const ImageViewerPagingPanel: FC<ImageViewerPagingPanelProps> = ({
         flex-direction: row;
         align-items: center;
         height: 40px;
-        background-color: #fff;
+        background-color: var(--moeflow-control);
         border-radius: ${style.borderRadiusBase};
         pointer-events: auto;
         box-shadow: ${style.boxShadowBase};

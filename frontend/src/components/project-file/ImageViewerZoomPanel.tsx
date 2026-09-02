@@ -171,7 +171,7 @@ export const ImageViewerZoomPanel: FC<ImageViewerZoomPanelProps> = ({
           flex-direction: column;
           align-items: center;
           width: 40px;
-          background-color: #fff;
+          background-color: var(--moeflow-control);
           border-radius: ${style.borderRadiusBase};
           pointer-events: auto;
           box-shadow: ${style.boxShadowBase};
@@ -191,13 +191,13 @@ export const ImageViewerZoomPanel: FC<ImageViewerZoomPanelProps> = ({
             )}
             &.ImageViewerZoomPanel__ShrinkButton {
               height: 30px;
-              background-color: ${shrunk ? '#fff' : '#eee'};
+              background-color: ${shrunk ? 'var(--moeflow-control)' : 'var(--moeflow-surface2)'};
               border-radius: ${`${style.borderRadiusBase} ${style.borderRadiusBase} 0 0`};
               overflow: hidden;
             }
             &.ImageViewerZoomPanel__ShrinkArrow {
               height: 10px;
-              background-color: ${shrunk ? '#fff' : '#eee'};
+              background-color: ${shrunk ? 'var(--moeflow-control)' : 'var(--moeflow-surface2)'};
               border-radius: ${`0 0 ${style.borderRadiusBase} ${style.borderRadiusBase}`};
               overflow: hidden;
             }
@@ -218,31 +218,31 @@ export const ImageViewerZoomPanel: FC<ImageViewerZoomPanelProps> = ({
                 margin: 0;
                 padding: 0 22px 0 18px;
                 .ant-slider-rail {
-                  background-color: #e1e1e1;
+                  background-color: var(--moeflow-sliderRail);
                 }
                 &:hover {
                   .ant-slider-rail {
-                    background-color: #e1e1e1;
+                    background-color: var(--moeflow-sliderRail);
                   }
                 }
               }
               .ant-slider-track {
-                background-color: #666666;
+                background-color: var(--moeflow-sliderThumb);
               }
               .ant-slider-handle {
                 margin-bottom: 0;
-                border: 2px solid #666666;
+                border: 2px solid var(--moeflow-sliderThumb);
                 &:focus {
                   box-shadow: none;
                 }
               }
               .ant-slider-handle-click-focused {
-                border: 2px solid #666666;
+                border: 2px solid var(--moeflow-sliderThumb);
                 box-shadow: none;
               }
               .ant-slider-step {
                 .ant-slider-dot-active {
-                  border: 2px solid #666666;
+                  border: 2px solid var(--moeflow-sliderThumb);
                 }
               }
             }
@@ -262,7 +262,7 @@ export const ImageViewerZoomPanel: FC<ImageViewerZoomPanelProps> = ({
           flex-direction: row;
           align-items: center;
           height: 40px;
-          background-color: #fff;
+          background-color: var(--moeflow-control);
           border-radius: ${style.borderRadiusBase};
           pointer-events: auto;
           box-shadow: ${style.boxShadowBase};
@@ -300,21 +300,21 @@ export const ImageViewerZoomPanel: FC<ImageViewerZoomPanelProps> = ({
                 padding: 18px 0 22px 0;
               }
               .ant-slider-track {
-                background-color: #666666;
+                background-color: var(--moeflow-sliderThumb);
               }
               .ant-slider-handle {
-                border: 2px solid #666666;
+                border: 2px solid var(--moeflow-sliderThumb);
                 &:focus {
                   box-shadow: 0 0 0 5px rgba(0, 0, 0, 0.06);
                 }
               }
               .ant-slider-handle-click-focused {
-                border: 2px solid #666666;
+                border: 2px solid var(--moeflow-sliderThumb);
                 box-shadow: 0 0 0 5px rgba(0, 0, 0, 0.16);
               }
               .ant-slider-step {
                 .ant-slider-dot-active {
-                  border: 2px solid #666666;
+                  border: 2px solid var(--moeflow-sliderThumb);
                 }
               }
             }

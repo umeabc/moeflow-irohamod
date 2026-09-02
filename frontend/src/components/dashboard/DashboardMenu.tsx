@@ -1,5 +1,5 @@
 import { css } from '@emotion/core';
-import { Badge, MenuProps } from 'antd';
+import { Badge, MenuProps, Switch } from 'antd';
 import classNames from 'classnames';
 import React from 'react';
 import { useIntl } from 'react-intl';
@@ -9,7 +9,9 @@ import { Avatar, Dropdown, Icon, ListItem, TeamList, Tooltip } from '..';
 import { FC } from '@/interfaces';
 import { AppState } from '@/store';
 import { resetProjectsState } from '@/store/project/slice';
+import { setDarkMode } from '@/store/site/slice';
 import { setUserToken, UserState } from '@/store/user/slice';
+import { themeStorage } from '@/utils/storage';
 import style from '../../style';
 import { clickEffect } from '@/utils/style';
 import { routes } from '@/pages/routes';
@@ -90,7 +92,7 @@ export const DashboardMenu: FC<
                   color: ${style.textColorLightest};
                   border: 1px solid ${style.borderColorLight};
                   border-radius: ${style.borderRadiusBase};
-                  background-color: #fff;
+                  background-color: var(--moeflow-surface);
                 }
               }
             }
@@ -359,6 +361,7 @@ function useMenuProps(
   const { formatMessage } = useIntl();
   const dispatch = useDispatch();
   const history = useHistory();
+  const darkMode = useSelector((state: AppState) => state.site.darkMode);
   const buttonStyle = css`
     margin: 0 auto;
     width: 150px;
@@ -374,6 +377,15 @@ function useMenuProps(
     dispatch(setUserToken({ token: '' }));
     history.push(routes.login);
   };
+  /** 切换暗色模式 */
+  const toggleDarkMode = (checked: boolean) => {
+    dispatch(setDarkMode(checked));
+    themeStorage.save(checked);
+    document.documentElement.setAttribute(
+      'data-theme',
+      checked ? 'dark' : 'light',
+    );
+  };
   return {
     // @ts-expect-error until filter(Boolean) lands
     items: [
@@ -383,6 +395,23 @@ function useMenuProps(
         ),
         key: 'auth.logout',
         onClick: logout,
+      },
+      {
+        key: 'darkMode',
+        label: (
+          <div
+            css={buttonStyle}
+            style={{ justifyContent: 'space-between', gap: 8 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span>{formatMessage({ id: 'site.darkMode' })}</span>
+            <Switch
+              size="small"
+              checked={darkMode}
+              onChange={toggleDarkMode}
+            />
+          </div>
+        ),
       },
       {
         dashed: 'true',

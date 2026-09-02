@@ -96,3 +96,20 @@ class TranslationNotUniqueError(FileRootError):
 
     code = 8007
     message = lazy_gettext("翻译不唯一")
+
+
+class FileDuplicateError(FileRootError):
+    """
+    @apiDefine FileDuplicateError
+    @apiError 8008 相同内容的图片已存在于同组，请勿重复上传
+    """
+
+    code = 8008
+    message = lazy_gettext("相同内容的图片已存在于同组，请勿重复上传")
+
+    def __init__(self, message=None):
+        """
+        :param message: 附加message（通常包含已有图片的具体位置）
+        """
+        if message:
+            self.message = message

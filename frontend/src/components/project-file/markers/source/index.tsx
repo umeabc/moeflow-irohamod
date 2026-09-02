@@ -1,7 +1,6 @@
 import { css } from '@emotion/core';
 import TextArea, { TextAreaRef } from 'antd/lib/input/TextArea';
 import classNames from 'classnames';
-import { darken } from 'polished';
 import React, { useEffect, useRef } from 'react';
 import { useIntl } from 'react-intl';
 import { useDispatch, useSelector } from 'react-redux';
@@ -179,7 +178,7 @@ export const ImageSourceViewerSource: FC<ImageSourceViewerSourceProps> = ({
           width: 100%;
           margin-top: 4px;
           padding-top: 4px;
-          border-top: 1px dashed ${darken(0.03, style.borderColorBase)};
+          border-top: 1px dashed ${style.borderColorBase};
           white-space: pre-wrap;
           word-break: break-all;
         }

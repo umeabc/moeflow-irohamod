@@ -89,3 +89,12 @@ export const llmConfStorage = {
     }
   },
 } as const;
+
+export const themeStorage = {
+  load(): boolean {
+    return store.get('darkMode', false);
+  },
+  save(dark: boolean) {
+    store.set('darkMode', dark);
+  },
+} as const;

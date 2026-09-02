@@ -156,7 +156,7 @@ export const ModelConfigForm: React.FC<ModelConfigFormProps> = ({
           ]}
         >
           <Input
-            placeholder="e.g., gemini-2.5-flash, gpt-4-vision-preview"
+            placeholder="e.g., gemini-3.5-flash, gpt-5.6-sol, deepseek-v4-flash-vision-exp"
             autoComplete="llm-model"
           />
         </Form.Item>

@@ -1,5 +1,5 @@
 import { css, Global } from '@emotion/core';
-import { Button as AntdButton, Drawer, message, Modal, Spin } from 'antd';
+import { AutoComplete, Button as AntdButton, Drawer, message, Modal, Spin } from 'antd';
 import loadImage from 'blueimp-load-image';
 import classNames from 'classnames';
 import { useRef, useState } from 'react';
@@ -7,10 +7,12 @@ import { FilePond } from 'react-filepond';
 import { useIntl } from 'react-intl';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
+import { useDebouncedCallback } from 'use-debounce';
 import { Button, EmptyTip, List } from '@/components';
 import { OutputList } from './OutputList';
 import { FileItem } from './FileItem';
 import { api, resultTypes } from '@/apis';
+import { APIFileSearchItem } from '@/apis/file';
 import {
   FILE_NOT_EXIST_REASON,
   FILE_SAFE_STATUS,
@@ -90,6 +92,58 @@ export const FileList: FC<FileListProps> = ({
       .filter(Boolean) as MFile[],
     target,
   );
+
+  // ===== 跨组（团队）文件搜索 =====
+  const [searchWord, setSearchWord] = useState('');
+  const [searchResults, setSearchResults] = useState<APIFileSearchItem[]>([]);
+
+  const handleFileSearch = (word: string) => {
+    const w = word.trim();
+    if (!w) {
+      setSearchResults([]);
+      return;
+    }
+    api.file
+      .searchFiles({ word: w, limit: 20 })
+      .then((result) => {
+        setSearchResults(result.data || []);
+      })
+      .catch(() => {
+        setSearchResults([]);
+      });
+  };
+  const debouncedFileSearch = useDebouncedCallback(handleFileSearch, 300);
+
+  const searchOptions: any[] = searchResults.map((item) => ({
+    value: item.name,
+    disabled: !item.can_access,
+    __item: item as APIFileSearchItem,
+    label: (
+      <div className="FileSearch__Item">
+        <div className="FileSearch__Name">{item.name}</div>
+        <div className="FileSearch__Path">
+          {item.team_name} &gt; {item.project_set_name} &gt; {item.project_name}
+        </div>
+        {!item.can_access && (
+          <span className="FileSearch__Tag">
+            {formatMessage({ id: 'file.searchNotJoined' })}
+          </span>
+        )}
+      </div>
+    ),
+  }));
+
+  const onSelectFile = (_value: string, option: any) => {
+    const item = option && option.__item ? option.__item : null;
+    if (!item || !item.can_access) {
+      return;
+    }
+    history.push(
+      routes.dashboard.project.show.replace(':projectId', item.project_id),
+    );
+    setSearchWord('');
+    setSearchResults([]);
+  };
 
   const openInTranslator = (file: MFile) => {
     history.push(routes.imageTranslator.build(file.id, target.id));
@@ -297,6 +351,42 @@ export const FileList: FC<FileListProps> = ({
           .ant-drawer-body {
             padding: 0 !important;
           }
+          .FileList__Search {
+            flex: none;
+            width: 100%;
+            padding: 0 ${style.paddingBase}px;
+            margin-top: ${style.paddingBase}px;
+            margin-bottom: ${style.paddingBase}px;
+            .ant-select-selector,
+            .ant-input-affix-wrapper {
+              border-radius: ${style.borderRadiusBase} !important;
+            }
+          }
+          .FileSearch__Item {
+            display: flex;
+            flex-direction: column;
+            .FileSearch__Name {
+              font-size: 14px;
+              color: ${style.textColor};
+              font-weight: bold;
+            }
+            .FileSearch__Path {
+              font-size: 12px;
+              color: ${style.textColorSecondary};
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+            .FileSearch__Tag {
+              align-self: flex-start;
+              margin-top: 2px;
+              font-size: 12px;
+              color: ${style.textColorSecondary};
+              background-color: ${style.backgroundColorLight};
+              border-radius: ${style.borderRadiusBase};
+              padding: 0 6px;
+            }
+          }
         `}
       />
       <FilePond
@@ -350,8 +440,24 @@ export const FileList: FC<FileListProps> = ({
           });
         }}
         // 上传失败
-        onerror={(error, file) => {
-          if (file && file.id) {
+        onerror={(error, file, _status, respMsg) => {
+          if (!file || !file.id) {
+            return;
+          }
+          // 识别重复图片（后端 code=8008），提示已有位置并移除占位卡片
+          let isDuplicate = false;
+          try {
+            const body =
+              typeof respMsg === 'string' ? JSON.parse(respMsg) : respMsg;
+            if (body && body.code === 8008) {
+              isDuplicate = true;
+              message.warning(body.message, 4);
+              setItems((items) => items.filter((item) => item.id !== file.id));
+            }
+          } catch (e) {
+            // 非 JSON 响应体，忽略
+          }
+          if (!isDuplicate) {
             setItems((items) =>
               items.map((item) => {
                 if (item.id === file.id) {
@@ -432,6 +538,31 @@ export const FileList: FC<FileListProps> = ({
           </Button>
         )}
       </div>
+      <div className="FileList__Search">
+        <AutoComplete
+          value={searchWord}
+          options={searchOptions}
+          style={{ width: '100%' }}
+          onSearch={(value) => {
+            setSearchWord(value);
+            debouncedFileSearch(value);
+          }}
+          onChange={(value) => {
+            setSearchWord(value);
+            if (!value) {
+              setSearchResults([]);
+            }
+          }}
+          onSelect={onSelectFile}
+          filterOption={false}
+          placeholder={formatMessage({ id: 'file.searchPlaceholder' })}
+          notFoundContent={
+            searchWord.trim()
+              ? formatMessage({ id: 'file.searchEmpty' })
+              : null
+          }
+        />
+      </div>
       {selectedFileIds.length > 0 && (
         <div className="FileList__SubHeader">
           <AntdButton
@@ -488,6 +619,7 @@ export const FileList: FC<FileListProps> = ({
       <List
         id={project.id}
         className="FileList__List"
+        searchInputVisible={false}
         onChange={loadPage}
         loading={loading}
         total={total}

@@ -2,7 +2,7 @@ import { css } from '@emotion/core';
 import { Button, Popconfirm } from 'antd';
 import TextArea, { TextAreaRef } from 'antd/lib/input/TextArea';
 import classNames from 'classnames';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { useDispatch, useSelector } from 'react-redux';
 import { DebounceStatus } from '@/components';
@@ -22,6 +22,31 @@ import { hover } from '@/utils/style';
 import { Source } from './Source';
 
 /** 校对模式的属性接口 */
+/** 符号工具：与翻译模式一致的字符集合 */
+const SYMBOLS = [
+  '…',
+  '～',
+  '♡',
+  '♠',
+  '「',
+  '」',
+  '『',
+  '』',
+  '（',
+  '）',
+  '○',
+  '●',
+  '※',
+  '☆',
+  '★',
+  '□',
+  '◇',
+  '♪',
+  '♬',
+  '·',
+  '〆',
+];
+
 interface ImageSourceViewerProofreaderProps {
   file?: File;
   sources: ISource[];
@@ -100,9 +125,89 @@ export const ImageSourceViewerProofreader: FC<
     mergedStatus = undefined;
   }
 
-  const responsiveHeight = isMobile ? 60 : 250;
+  const defaultBottomHeight = isMobile ? 60 : 420;
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(defaultBottomHeight);
+  const bottomHeight = focusedSource ? bottomPanelHeight : 0;
+  const resizeStartRef = useRef<{ startY: number; startH: number } | null>(
+    null,
+  );
 
-  const bottomHeight = focusedSource ? responsiveHeight : 0;
+  /** 拖动底部面板顶部的拉伸条调整高度 */
+  const onResizeHandleStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    resizeStartRef.current = { startY: e.clientY, startH: bottomPanelHeight };
+    const onMove = (ev: MouseEvent) => {
+      const start = resizeStartRef.current;
+      if (!start) {
+        return;
+      }
+      const delta = start.startY - ev.clientY;
+      const next = Math.max(80, Math.min(620, start.startH + delta));
+      setBottomPanelHeight(next);
+    };
+    const onUp = () => {
+      resizeStartRef.current = null;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
+  /** 符号工具是否显示 */
+  const [symbolToolVisible, setSymbolToolVisible] = useState(true);
+
+  /** 向当前活动输入框（无翻译时为翻译输入，否则为校对输入）光标处插入符号 */
+  const insertSymbol = (symbol: string) => {
+    if (focusedSourceCreating || focusedSourceDeleting) {
+      return;
+    }
+    const isTranslationActive = isNoTranslation;
+    if (
+      !isTranslationActive &&
+      (focusedSource.myTranslationContentStatus === 'saving' ||
+        focusedSource.myTranslationContentStatus === 'debouncing')
+    ) {
+      return;
+    }
+    let textArea: HTMLTextAreaElement | undefined;
+    let value: string;
+    if (isTranslationActive) {
+      textArea = translationTextAreaRef.current?.resizableTextArea?.textArea;
+      value = focusedTranslation?.content || '';
+    } else {
+      textArea = proofreadTextAreaRef.current?.resizableTextArea?.textArea;
+      value = focusedTranslation?.proofreadContent || '';
+    }
+    const start = textArea ? textArea.selectionStart : value.length;
+    const end = textArea ? textArea.selectionEnd : value.length;
+    const newValue = value.slice(0, start) + symbol + value.slice(end);
+    if (isTranslationActive) {
+      dispatch(
+        editMyTranslationSaga({
+          sourceID: focusedSourceID,
+          targetID,
+          content: newValue,
+          focus: true,
+        }),
+      );
+    } else {
+      dispatch(
+        editProofreadSaga({
+          sourceID: focusedSourceID,
+          translationID: focusedTranslationID,
+          proofreadContent: newValue,
+        }),
+      );
+    }
+    if (textArea) {
+      const pos = start + symbol.length;
+      requestAnimationFrame(() => {
+        textArea.focus();
+        textArea.setSelectionRange(pos, pos);
+      });
+    }
+  };
 
   const isNoTranslationRef = useRef(isNoTranslation);
   isNoTranslationRef.current = isNoTranslation;
@@ -224,7 +329,7 @@ export const ImageSourceViewerProofreader: FC<
           }
           .ImageSourceViewerProofreader__FunctionBar,
           .ImageSourceViewerProofreader__TranslationArea {
-            background-color: #fff;
+            background-color: var(--moeflow-surface);
           }
           .ImageSourceViewerProofreader__AreaLine,
           .ImageSourceViewerProofreader__ProofreaderArea {
@@ -233,17 +338,17 @@ export const ImageSourceViewerProofreader: FC<
         }
         .ImageSourceViewerProofreader__Bottom--disabled {
           cursor: not-allowed;
-          background-color: #f7f7f7;
+          background-color: var(--moeflow-surface2);
         }
         .ImageSourceViewerProofreader__Bottom--myTranslation {
           .ImageSourceViewerProofreader__FunctionBar,
           .ImageSourceViewerProofreader__TranslationArea {
-            background-color: #fff;
+            background-color: var(--moeflow-surface);
           }
         }
         .ImageSourceViewerProofreader__FunctionBar {
           padding: 5px 5px 0;
-          background-color: ${isMobile ? '#fff' : '#f7f7f7'};
+          background-color: ${isMobile ? 'var(--moeflow-surface)' : 'var(--moeflow-surface2)'};
           display: flex;
           justify-content: space-between;
         }
@@ -251,13 +356,13 @@ export const ImageSourceViewerProofreader: FC<
           margin-right: 6px;
           &,
           button {
-            background-color: #fff;
+            background-color: var(--moeflow-surface);
             color: ${style.textColorSecondaryLight};
             border: 1px solid ${style.borderColorBase};
             border-radius: ${style.borderRadiusSm};
             cursor: pointer;
             ${hover(css`
-              background-color: #f7f7f7;
+              background-color: var(--moeflow-surface2);
             `)};
           }
           &.ant-popover-disabled-compatible-wrapper {
@@ -269,7 +374,7 @@ export const ImageSourceViewerProofreader: FC<
           display: ${isMobile ? 'none' : 'block'};
           max-height: 78px;
           overflow-y: auto;
-          background-color: #f7f7f7;
+          background-color: var(--moeflow-surface2);
         }
         .ImageSourceViewerProofreader__AreaLine {
           display: ${isMobile ? 'none' : 'block'};
@@ -282,6 +387,80 @@ export const ImageSourceViewerProofreader: FC<
           flex: auto;
           width: 100%;
           overflow-y: auto;
+        }
+        .ImageSourceViewerProofreader__ResizeHandle {
+          flex: none;
+          height: 8px;
+          width: 100%;
+          cursor: ns-resize;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          user-select: none;
+          &:hover {
+            .ImageSourceViewerProofreader__ResizeHandleLine {
+              background-color: ${style.primaryColor};
+            }
+          }
+          .ImageSourceViewerProofreader__ResizeHandleLine {
+            width: 44px;
+            height: 3px;
+            border-radius: 2px;
+            background-color: ${style.borderColorLight};
+          }
+        }
+        .ImageSourceViewerProofreader__SymbolTool {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 4px;
+          padding: 5px 8px;
+          border-bottom: 1px solid ${style.borderColorBase};
+          background-color: ${style.backgroundColorLight};
+          .SymbolTool__Key {
+            min-width: 26px;
+            height: 26px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid ${style.borderColorLight};
+            border-radius: ${style.borderRadiusSm};
+            background-color: var(--moeflow-surface);
+            color: ${style.textColor};
+            font-size: 15px;
+            cursor: pointer;
+            &:hover {
+              background-color: ${style.hoverColor};
+            }
+          }
+          .SymbolTool__Hide {
+            margin-left: auto;
+            height: 26px;
+            padding: 0 8px;
+            border: 1px solid ${style.borderColorLight};
+            border-radius: ${style.borderRadiusSm};
+            background-color: var(--moeflow-surface);
+            color: ${style.textColorSecondary};
+            font-size: 12px;
+            cursor: pointer;
+            &:hover {
+              background-color: ${style.hoverColor};
+            }
+          }
+        }
+        .SymbolTool__Toggle {
+          height: 26px;
+          margin-left: 6px;
+          padding: 0 8px;
+          border: 1px solid ${style.borderColorLight};
+          border-radius: ${style.borderRadiusSm};
+          background-color: var(--moeflow-surface);
+          color: ${style.textColorSecondary};
+          font-size: 12px;
+          cursor: pointer;
+          &:hover {
+            background-color: ${style.hoverColor};
+          }
         }
         .ImageSourceViewerProofreader__TranslationUser {
           position: absolute;
@@ -360,6 +539,12 @@ export const ImageSourceViewerProofreader: FC<
               isMyTranslation,
           })}
         >
+          <div
+            className="ImageSourceViewerProofreader__ResizeHandle"
+            onMouseDown={onResizeHandleStart}
+          >
+            <div className="ImageSourceViewerProofreader__ResizeHandleLine" />
+          </div>
           <div className="ImageSourceViewerProofreader__FunctionBar">
             <Popconfirm
               title={formatMessage({
@@ -394,7 +579,32 @@ export const ImageSourceViewerProofreader: FC<
               className="ImageSourceViewerProofreader__DebounceStatus"
               status={mergedStatus}
             />
+            <button
+              type="button"
+              className="SymbolTool__Toggle"
+              onClick={() => setSymbolToolVisible((v) => !v)}
+            >
+              {formatMessage({
+                id: symbolToolVisible
+                  ? 'imageTranslator.hideSymbolTool'
+                  : 'imageTranslator.showSymbolTool',
+              })}
+            </button>
           </div>
+          {symbolToolVisible && (
+            <div className="ImageSourceViewerProofreader__SymbolTool">
+              {SYMBOLS.map((s) => (
+                <button
+                  type="button"
+                  key={s}
+                  className="SymbolTool__Key"
+                  onClick={() => insertSymbol(s)}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="ImageSourceViewerProofreader__TranslationArea">
             <TranslationUser
               className="ImageSourceViewerProofreader__TranslationUser"

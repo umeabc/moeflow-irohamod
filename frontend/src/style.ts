@@ -95,10 +95,57 @@ const antdVarsM = {
   colorTextSecondary: antdVars.textColorSecondary, // 辅助色
 };
 // 供项目中直接引用
-export default {
-  ...antdVars,
-  ...otherVars,
-} as const;
+// 颜色键改为 CSS 变量（明/暗主题互换），非颜色键保持字面量
+const toVar = (key: string) => `var(--moeflow-${key})`;
+const themeColorKeys = [
+  'primaryColor',
+  'infoColor',
+  'successColor',
+  'processingColor',
+  'errorColor',
+  'highlightColor',
+  'warningColor',
+  'normalColor',
+  'textColor',
+  'textColorSecondary',
+  'textColorInverse',
+  'borderColorBase',
+  'boxShadowBase',
+  'translatorColorBackground',
+  'backgroundColorLight',
+  'backgroundFocus',
+  'textColorLight',
+  'textColorLighter',
+  'textColorLightest',
+  'textColorSecondaryLight',
+  'textColorSecondaryLighter',
+  'textColorSecondaryLightest',
+  'primaryColorDarker',
+  'primaryColorLighter',
+  'primaryColorLightest',
+  'warningColorLighter',
+  'warningColorLightest',
+  'hoverColor',
+  'activeColor',
+  'selectedColor',
+  'widgetButtonHoverBackgroundColor',
+  'widgetButtonActiveBackgroundColor',
+  'widgetButtonActiveColor',
+  'borderColorLight',
+  'borderColorLighter',
+  'avatarBorderColor',
+] as const;
+
+const themeObject: Record<string, string | number> = {
+  ...(antdVars as Record<string, string>),
+  ...(otherVars as Record<string, string | number>),
+} as Record<string, string | number>;
+for (const key of themeColorKeys) {
+  themeObject[key] = toVar(key);
+}
+// 供项目中直接引用（明/暗主题自动跟随 CSS 变量）
+// 颜色键为 var() 字符串、其余为字面量；放宽为 any 以便传给 string 属性时不报错
+export default themeObject as Record<string, any>;
 // 供 config-overrides.js 引用，转换成 antd Less 连字符格式，用于覆盖其 Less 配置
 export const antdLessVars = toHyphenCase(antdVars) as Record<string, string>;
 export const antdLessVarsM = toHyphenCase(antdVarsM) as Record<string, string>;

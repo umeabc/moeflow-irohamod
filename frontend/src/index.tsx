@@ -11,7 +11,12 @@ import App from './App';
 import './fontAwesome'; // Font Awesome
 import './index.css';
 import store from './store';
-import { setOSName, setPlatform, setRuntimeConfig } from './store/site/slice';
+import {
+  setDarkMode,
+  setOSName,
+  setPlatform,
+  setRuntimeConfig,
+} from './store/site/slice';
 import { setUserToken } from './store/user/slice';
 import { getToken } from './utils/cookie';
 import { OSName, Platform } from './interfaces';
@@ -22,7 +27,7 @@ import {
   HotKeyState,
   setHotKey,
 } from './store/hotKey/slice';
-import { loadHotKey } from './utils/storage';
+import { loadHotKey, themeStorage } from './utils/storage';
 import { createDebugLogger } from './utils/debug-logger';
 const debugLogger = createDebugLogger('app');
 
@@ -57,8 +62,16 @@ for (const hotKeyName in hotKeyInitialState) {
   }
 }
 
+// 读取暗色模式偏好并应用到 <html>，避免首屏闪烁
+const initialDarkMode = themeStorage.load();
+document.documentElement.setAttribute(
+  'data-theme',
+  initialDarkMode ? 'dark' : 'light',
+);
+
 async function mountApp() {
   store.dispatch(setRuntimeConfig(await runtimeConfig));
+  store.dispatch(setDarkMode(initialDarkMode));
   const { intlMessages, locale, antdLocale, antdValidateMessages } =
     await initI18n;
   debugLogger('initial state', store.getState());

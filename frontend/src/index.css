@@ -1,5 +1,117 @@
 @import 'tailwindcss';
 
+/* ===== 明暗主题 CSS 变量（供 style.ts 引用） ===== */
+:root {
+  color-scheme: light;
+  --moeflow-primaryColor: #FF657C;
+  --moeflow-infoColor: #62a4ca;
+  --moeflow-successColor: #52c41a;
+  --moeflow-processingColor: #1890ff;
+  --moeflow-errorColor: #f5222d;
+  --moeflow-highlightColor: #f5222d;
+  --moeflow-warningColor: #faad14;
+  --moeflow-normalColor: #d9d9d9;
+  --moeflow-textColor: rgba(0, 0, 0, 0.85);
+  --moeflow-textColorSecondary: rgba(0, 0, 0, 0.45);
+  --moeflow-textColorInverse: #fff;
+  --moeflow-borderColorBase: #dbdbdb;
+  --moeflow-boxShadowBase: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  --moeflow-translatorColorBackground: #4f4f4f;
+  --moeflow-backgroundColorLight: #fafafa;
+  --moeflow-backgroundFocus: #fffbe3;
+  --moeflow-textColorLight: rgba(0, 0, 0, 0.75);
+  --moeflow-textColorLighter: rgba(0, 0, 0, 0.65);
+  --moeflow-textColorLightest: rgba(0, 0, 0, 0.55);
+  --moeflow-textColorSecondaryLight: rgba(0, 0, 0, 0.35);
+  --moeflow-textColorSecondaryLighter: rgba(0, 0, 0, 0.25);
+  --moeflow-textColorSecondaryLightest: rgba(0, 0, 0, 0.15);
+  --moeflow-primaryColorDarker: #d94c66;
+  --moeflow-primaryColorLighter: #ff8f9c;
+  --moeflow-primaryColorLightest: #ffbdc5;
+  --moeflow-warningColorLighter: #ffd583;
+  --moeflow-warningColorLightest: #ffe0a4;
+  --moeflow-hoverColor: #eee;
+  --moeflow-activeColor: #d9d9d9;
+  --moeflow-selectedColor: #e3e3e3;
+  --moeflow-widgetButtonHoverBackgroundColor: rgba(182, 182, 182, 0.6);
+  --moeflow-widgetButtonActiveBackgroundColor: rgba(202, 202, 202, 0.6);
+  --moeflow-widgetButtonActiveColor: #999;
+  --moeflow-borderColorLight: #eeeeee;
+  --moeflow-borderColorLighter: #f7f7f7;
+  --moeflow-avatarBorderColor: #eeeeee;
+  /* 页面兜底背景/文字（浅色） */
+  --moeflow-pageBackground: #ffffff;
+  /* 面板/内容区底、控件按钮底、控件图标色 */
+  --moeflow-surface: #ffffff;
+  --moeflow-surface2: #fafafa;
+  --moeflow-control: #ffffff;
+  --moeflow-controlIcon: rgba(0, 0, 0, 0.65);
+  /* 文件卡状态色（亮色=原浅色，暗色时压暗） */
+  --moeflow-successColorLight: #52c41a;
+  --moeflow-warningColorLight: #ffd26e;
+  --moeflow-errorColorLight: #ff4d4f;
+  --moeflow-infoColorLight: #62a4ca;
+  --moeflow-progressStatus: #ffb3bc;
+  --moeflow-progressTrack: #efefef;
+  --moeflow-sliderRail: #e1e1e1;
+  --moeflow-sliderThumb: #666666;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --moeflow-primaryColor: #FF657C;
+  --moeflow-infoColor: #5aa6d0;
+  --moeflow-successColor: #52c41a;
+  --moeflow-processingColor: #1890ff;
+  --moeflow-errorColor: #f5222d;
+  --moeflow-highlightColor: #f5222d;
+  --moeflow-warningColor: #faad14;
+  --moeflow-normalColor: #595959;
+  --moeflow-textColor: rgba(255, 255, 255, 0.85);
+  --moeflow-textColorSecondary: rgba(255, 255, 255, 0.45);
+  --moeflow-textColorInverse: #000;
+  --moeflow-borderColorBase: #3a3a3a;
+  --moeflow-boxShadowBase: 0 3px 6px -4px rgba(0, 0, 0, 0.7), 0 6px 16px 0 rgba(0, 0, 0, 0.6), 0 9px 28px 8px rgba(0, 0, 0, 0.5);
+  --moeflow-translatorColorBackground: #333333;
+  --moeflow-backgroundColorLight: #1e1e1e;
+  --moeflow-backgroundFocus: #2b2b18;
+  --moeflow-textColorLight: rgba(255, 255, 255, 0.75);
+  --moeflow-textColorLighter: rgba(255, 255, 255, 0.65);
+  --moeflow-textColorLightest: rgba(255, 255, 255, 0.55);
+  --moeflow-textColorSecondaryLight: rgba(255, 255, 255, 0.35);
+  --moeflow-textColorSecondaryLighter: rgba(255, 255, 255, 0.25);
+  --moeflow-textColorSecondaryLightest: rgba(255, 255, 255, 0.15);
+  --moeflow-primaryColorDarker: #d94c66;
+  --moeflow-primaryColorLighter: #ff8f9c;
+  --moeflow-primaryColorLightest: #ffbdc5;
+  --moeflow-warningColorLighter: #ffd583;
+  --moeflow-warningColorLightest: #ffe0a4;
+  --moeflow-hoverColor: #2f2f2f;
+  --moeflow-activeColor: #3a3a3a;
+  --moeflow-selectedColor: #3d3d3d;
+  --moeflow-widgetButtonHoverBackgroundColor: rgba(90, 90, 90, 0.6);
+  --moeflow-widgetButtonActiveBackgroundColor: rgba(110, 110, 110, 0.6);
+  --moeflow-widgetButtonActiveColor: #bbbbbb;
+  --moeflow-borderColorLight: #2a2a2a;
+  --moeflow-borderColorLighter: #222222;
+  --moeflow-avatarBorderColor: #333333;
+  --moeflow-pageBackground: #121212;
+  /* 暗色面板/控件 */
+  --moeflow-surface: #1c1c1c;
+  --moeflow-surface2: #1f1f1f;
+  --moeflow-control: #0f0f0f;
+  --moeflow-controlIcon: rgba(255, 255, 255, 0.85);
+  /* 暗色下压暗的状态色 */
+  --moeflow-successColorLight: #3f9c3f;
+  --moeflow-warningColorLight: #c98b12;
+  --moeflow-errorColorLight: #cf3a3c;
+  --moeflow-infoColorLight: #4b8bb0;
+  --moeflow-progressStatus: #8a6f78;
+  --moeflow-progressTrack: #2a2a2a;
+  --moeflow-sliderRail: #3a3a3a;
+  --moeflow-sliderThumb: #d0d0d0;
+}
+
 body {
   margin: 0;
   font-family:
@@ -7,6 +119,8 @@ body {
     'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--moeflow-pageBackground);
+  color: var(--moeflow-textColor);
 }
 
 code {

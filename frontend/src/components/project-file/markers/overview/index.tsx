@@ -40,7 +40,7 @@ export const ImageSourceViewerGod: FC<ImageSourceViewerGodProps> = ({
             }
           }
           &.ImageSourceViewerGod__Source--focus {
-            background: #fff6f6;
+            background: var(--moeflow-surface2);
           }
         }
       `}

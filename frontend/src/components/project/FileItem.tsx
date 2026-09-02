@@ -50,6 +50,7 @@ const fileItemStyle = css`
     box-shadow 100ms,
     border-color 100ms;
   border: 1px solid ${style.borderColorLight};
+  background-color: var(--moeflow-surface);
   &.FileItem--typeset { border-color: #52c41a; box-shadow: 0 0 0 2px rgba(82,196,26,0.3); }
   .FileItem__ImageOCRProgressWrapper {
     display: none;
@@ -59,7 +60,7 @@ const fileItemStyle = css`
     padding: 3px 5px;
     background-color: rgba(255, 255, 255, 0.8);
     border-radius: 4px;
-    border: 1px solid #fff;
+    border: 1px solid var(--moeflow-surface);
   }
   .FileItem__ImageWrapper {
     display: block;

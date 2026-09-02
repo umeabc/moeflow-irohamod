@@ -1,8 +1,7 @@
 import { css } from '@emotion/core';
 import TextArea, { TextAreaRef } from 'antd/lib/input/TextArea';
 import classNames from 'classnames';
-import { darken } from 'polished';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { useDispatch, useSelector } from 'react-redux';
 import { DebounceStatus, Icon, Tooltip } from '@/components';
@@ -15,6 +14,31 @@ import style from '@/style';
 import { getBestTranslation } from '@/utils/source';
 import { clickEffect, hover } from '@/utils/style';
 import { can } from '@/utils/user';
+
+/** 符号工具：可插入到翻译栏的字符 */
+const SYMBOLS = [
+  '…',
+  '～',
+  '♡',
+  '♠',
+  '「',
+  '」',
+  '『',
+  '』',
+  '（',
+  '）',
+  '○',
+  '●',
+  '※',
+  '☆',
+  '★',
+  '□',
+  '◇',
+  '♪',
+  '♬',
+  '·',
+  '〆',
+];
 
 /** 翻译模式的属性接口 */
 interface ImageSourceViewerTranslatorProps {
@@ -64,8 +88,34 @@ export const ImageSourceViewerTranslator: FC<
   const focusedSourceCreating = focusedSource?.labelStatus === 'creating';
   const focusedSourceDeleting = focusedSource?.labelStatus === 'deleting';
 
-  const responsiveHeight = isMobile ? 60 : 200;
-  const bottomHeight = focusedSource ? responsiveHeight : 0;
+  const defaultBottomHeight = isMobile ? 60 : 380;
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(defaultBottomHeight);
+  const bottomHeight = focusedSource ? bottomPanelHeight : 0;
+  const resizeStartRef = useRef<{ startY: number; startH: number } | null>(
+    null,
+  );
+
+  /** 拖动底部面板顶部的拉伸条来调整高度（向上拖增高、向下拖降低） */
+  const onResizeHandleStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    resizeStartRef.current = { startY: e.clientY, startH: bottomPanelHeight };
+    const onMove = (ev: MouseEvent) => {
+      const start = resizeStartRef.current;
+      if (!start) {
+        return;
+      }
+      const delta = start.startY - ev.clientY;
+      const next = Math.max(80, Math.min(560, start.startH + delta));
+      setBottomPanelHeight(next);
+    };
+    const onUp = () => {
+      resizeStartRef.current = null;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
 
   useEffect(() => {
     if (focusedSourceEffects.includes('focusInput')) {
@@ -95,6 +145,40 @@ export const ImageSourceViewerTranslator: FC<
         content: e.target.value,
       }),
     );
+  };
+
+  /** 符号工具是否显示 */
+  const [symbolToolVisible, setSymbolToolVisible] = useState(true);
+
+  /** 在光标处插入符号（无光标则追加到末尾），并重新派发翻译内容 */
+  const insertSymbol = (symbol: string) => {
+    if (
+      !can(currentProject, PROJECT_PERMISSION.ADD_TRA) ||
+      focusedSourceCreating ||
+      focusedSourceDeleting
+    ) {
+      return;
+    }
+    const textArea = textAreaRef.current?.resizableTextArea?.textArea;
+    const value = focusedSource?.myTranslation?.content || '';
+    const start = textArea ? textArea.selectionStart : value.length;
+    const end = textArea ? textArea.selectionEnd : value.length;
+    const newValue = value.slice(0, start) + symbol + value.slice(end);
+    dispatch(
+      editMyTranslationSaga({
+        sourceID: focusedSourceID,
+        targetID,
+        content: newValue,
+      }),
+    );
+    // 恢复光标到插入符号之后（受控 value 更新后重设选区）
+    if (textArea) {
+      const pos = start + symbol.length;
+      requestAnimationFrame(() => {
+        textArea.focus();
+        textArea.setSelectionRange(pos, pos);
+      });
+    }
   };
 
   return (
@@ -165,7 +249,7 @@ export const ImageSourceViewerTranslator: FC<
           width: 100%;
           margin-top: 4px;
           padding-top: 4px;
-          border-top: 1px dashed ${darken(0.03, style.borderColorBase)};
+          border-top: 1px dashed ${style.borderColorBase};
           white-space: pre-wrap;
           word-break: break-all;
         }
@@ -195,6 +279,27 @@ export const ImageSourceViewerTranslator: FC<
           height: ${bottomHeight}px;
           border-top: 3px solid ${style.borderColorBase};
         }
+        .ImageSourceViewerTranslator__ResizeHandle {
+          flex: none;
+          height: 8px;
+          width: 100%;
+          cursor: ns-resize;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          user-select: none;
+          &:hover {
+            .ImageSourceViewerTranslator__ResizeHandleLine {
+              background-color: ${style.primaryColor};
+            }
+          }
+          .ImageSourceViewerTranslator__ResizeHandleLine {
+            width: 44px;
+            height: 3px;
+            border-radius: 2px;
+            background-color: ${style.borderColorLight};
+          }
+        }
         .ImageSourceViewerTranslator__TextArea {
           flex: auto;
           width: 100%;
@@ -212,10 +317,67 @@ export const ImageSourceViewerTranslator: FC<
           background-color: ${style.backgroundColorLight};
           border-top: 1px solid ${style.borderColorBase};
           display: flex;
+          align-items: center;
           padding: 0 5px;
+        }
+        .ImageSourceViewerTranslator__FunctionBar {
+          flex: none;
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          padding: 5px 8px;
+          border-bottom: 1px solid ${style.borderColorBase};
+          background-color: ${style.backgroundColorLight};
         }
         .ImageSourceViewerTranslator__DebounceStatus {
           margin-left: auto;
+        }
+        .ImageSourceViewerTranslator__SymbolTool {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 4px;
+          padding: 5px 8px;
+          border-bottom: 1px solid ${style.borderColorBase};
+          background-color: ${style.backgroundColorLight};
+          .SymbolTool__Key {
+            min-width: 26px;
+            height: 26px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid ${style.borderColorLight};
+            border-radius: ${style.borderRadiusSm};
+            background-color: var(--moeflow-surface);
+            color: ${style.textColor};
+            font-size: 15px;
+            cursor: pointer;
+            ${clickEffect()};
+          }
+          .SymbolTool__Hide {
+            margin-left: auto;
+            height: 26px;
+            padding: 0 8px;
+            border: 1px solid ${style.borderColorLight};
+            border-radius: ${style.borderRadiusSm};
+            background-color: var(--moeflow-surface);
+            color: ${style.textColorSecondary};
+            font-size: 12px;
+            cursor: pointer;
+            ${clickEffect()};
+          }
+        }
+        .SymbolTool__Toggle {
+          height: 26px;
+          margin-left: 6px;
+          padding: 0 8px;
+          border: 1px solid ${style.borderColorLight};
+          border-radius: ${style.borderRadiusSm};
+          background-color: var(--moeflow-surface);
+          color: ${style.textColorSecondary};
+          font-size: 12px;
+          cursor: pointer;
+          ${clickEffect()};
         }
       `}
     >
@@ -326,6 +488,39 @@ export const ImageSourceViewerTranslator: FC<
       </div>
       {focusedSourceIndex > -1 && (
         <div className="ImageSourceViewerTranslator__Bottom">
+          <div
+            className="ImageSourceViewerTranslator__ResizeHandle"
+            onMouseDown={onResizeHandleStart}
+          >
+            <div className="ImageSourceViewerTranslator__ResizeHandleLine" />
+          </div>
+          <div className="ImageSourceViewerTranslator__FunctionBar">
+            <button
+              type="button"
+              className="SymbolTool__Toggle"
+              onClick={() => setSymbolToolVisible((v) => !v)}
+            >
+              {formatMessage({
+                id: symbolToolVisible
+                  ? 'imageTranslator.hideSymbolTool'
+                  : 'imageTranslator.showSymbolTool',
+              })}
+            </button>
+          </div>
+          {symbolToolVisible && (
+            <div className="ImageSourceViewerTranslator__SymbolTool">
+              {SYMBOLS.map((s) => (
+                <button
+                  type="button"
+                  key={s}
+                  className="SymbolTool__Key"
+                  onClick={() => insertSymbol(s)}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
           <TextArea
             className="ImageSourceViewerTranslator__TextArea"
             onChange={handleTranslationContentChange}

@@ -7,6 +7,7 @@ from app.apis.file import (
     FileOCRAPI,
     ProjectFileListAPI,
     AdminFileListAPI,
+    FileSearchAPI,
 )
 from app.apis.index import PingAPI, DocsAPI, ErrorAPI, UrlListAPI, WarningAPI
 from app.apis.invitation import InvitationAPI, InvitationListAPI
@@ -22,7 +23,7 @@ from app.apis.me import (
     MeRelatedApplicationListAPI,
 )
 from app.apis.avatar import AvatarAPI
-from app.apis.site_setting import HomepageAPI, SiteSettingAPI
+from app.apis.site_setting import HomepageAPI, SiteSettingAPI, StorageUsageAPI
 from app.apis.user import (
     AdminUserAPI,
     AdminUserAdminStatusAPI,
@@ -322,6 +323,11 @@ project.add_url_rule(
 # 文件模块
 file = Blueprint("file", __name__, url_prefix=v1_prefix + "/files")
 file.add_url_rule(
+    "/search",
+    methods=["GET", "OPTIONS"],
+    view_func=FileSearchAPI.as_view("file_search"),
+)
+file.add_url_rule(
     "/<file_id>",
     methods=["GET", "PUT", "DELETE", "OPTIONS"],
     view_func=FileAPI.as_view("file"),
@@ -454,6 +460,11 @@ admin.add_url_rule(
     "/site-setting",
     methods=["GET", "PUT", "OPTIONS"],
     view_func=SiteSettingAPI.as_view("admin_site_setting"),
+)
+admin.add_url_rule(
+    "/storage-usage",
+    methods=["GET", "OPTIONS"],
+    view_func=StorageUsageAPI.as_view("admin_storage_usage"),
 )
 admin.add_url_rule(
     "/users/<user_id>",
