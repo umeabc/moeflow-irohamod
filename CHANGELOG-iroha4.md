@@ -1,9 +1,10 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha4）
+# MoeFlow 自定义改动 CHANGELOG（iroha5）
 
 > 本次为 `moeflow-com/moeflow` 的自定义定制改动。
 > 前端基于 `moeflow-frontend:v1.1.7`，后端基于 `moeflow-backend:v1.1.8`。
-> 镜像：`moeflow-frontend:1.1.7-iroha4` / `moeflow-backend:1.1.8-iroha4`。
-> 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
+> 镜像：`moeflow-frontend:1.1.7-iroha5` / `moeflow-backend:1.1.8-iroha5`（后续进一步定制称为 irohaN，沿用此约定；历史版本 iroha4 镜像仍保留 `:1.1.x-iroha4`）。
+> 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`，最新提交 08d0ff5）。
+> 交付 tar（测试机 `/opt/`）：`moeflow-backend-1.1.8-iroha5.tar`(496M)、`moeflow-frontend-1.1.7-iroha5.tar`(74M)，适用于生产 `docker load`（勿动 env/compose）。
 
 ---
 
