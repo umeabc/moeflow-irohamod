@@ -113,3 +113,17 @@ class FileDuplicateError(FileRootError):
         """
         if message:
             self.message = message
+
+
+class FileMoveError(FileRootError):
+    """
+    @apiDefine FileMoveError
+    @apiError 8009 图片移动失败
+    """
+
+    code = 8009
+    message = lazy_gettext("图片移动失败")
+
+    def __init__(self, message=None):
+        if message:
+            self.message = message

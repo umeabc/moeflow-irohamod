@@ -125,11 +125,11 @@ class UserNameLengthError(AuthRootError):
     message = lazy_gettext("长度为2到18个字符")
 
 
-class EmailNotInWhitelistError(AuthRootError):
+class InvalidInviteCodeError(AuthRootError):
     """
-    @apiDefine EmailNotInWhitelistError
-    @apiError 1011 邮箱不在白名单中，请联系管理员添加
+    @apiDefine InvalidInviteCodeError
+    @apiError 1013 邀请码无效或已停用
     """
 
-    code = 1012
-    message = lazy_gettext("邮箱不在白名单中，请联系管理员添加")
+    code = 1013
+    message = lazy_gettext("邀请码无效或已停用")

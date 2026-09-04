@@ -1,7 +1,7 @@
-# MoeFlow 定制版（iroha5）备份仓库
+# MoeFlow 定制版（iroha6）备份仓库
 
 > 本仓库为 MoeFlow（彩翻 / 萌翻）**内部定制版本**的源码备份仓库（私有）。
-> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；镜像 tag：`moeflow-frontend:1.1.7-iroha5`、`moeflow-backend:1.1.8-iroha5`。
+> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；镜像 tag：`moeflow-frontend:1.1.7-iroha6`、`moeflow-backend:1.1.8-iroha6`。
 > 本文档为**脱敏版**，不含具体主机、域名、端口、代理与凭据信息。
 
 ---
@@ -34,6 +34,10 @@ MoeFlow（彩翻）是一款**自托管漫画翻译协作平台**：支持上传
 - **图片翻译器符号工具**：翻译 / 校对输入框插入常用符号，支持拖拽拉伸条调高输入区。
 - **AI 机翻预设**：更新 Google / OpenAI / Anthropic 预设，并新增 Deepseek、SpaceXAI。
 - **定制品牌与文案**：吉祥物立绘、favicon 像素猪、彩翻 / IRTrans 等定制文案与 i18n。
+- **一键机翻三模式**：仅标号 / 仅翻译 / 我全都要（下拉选择，置于翻译模式栏最前），按模型能力门控展示。
+- **注册重构（邀请码制）**：移除邮箱验证码与邮箱白名单，注册需有效邀请码（多次使用、可停用、一码绑一团队并自动入团）；忘记密码统一联系站点管理员重置。
+- **站点管理员管理页**：邀请码管理（创建 / 启停 / 删除，团队覆盖全站）+ 团队管理（全站团队概览 + 级联删除 + 头像）。
+- **图片移动**：同项目集批量移动勾选图片，重复 md5 失败并说明原因；标号随图保留、翻译按语言重映射到新项目，进度条与计数正确。
 
 ## 部署
 
@@ -46,8 +50,8 @@ MoeFlow（彩翻）是一款**自托管漫画翻译协作平台**：支持上传
 ### 交付
 - 镜像 `docker save` 导出为 tar → 生产侧 `docker load` → 用 Compose 替换 `backend` / `frontend` 服务（保留 mongodb / rabbitmq 数据）。
 - 涉及镜像：
-  - `moeflow-frontend:1.1.7-iroha5`（`FROM nginx:1.26` + `COPY ./build /build`）
-  - `moeflow-backend:1.1.8-iroha5`（`FROM python:3.11`）
+  - `moeflow-frontend:1.1.7-iroha6`（`FROM nginx:1.26` + `COPY ./build /build`）
+  - `moeflow-backend:1.1.8-iroha6`（`FROM python:3.11`）
 
 ## 相关文档
 

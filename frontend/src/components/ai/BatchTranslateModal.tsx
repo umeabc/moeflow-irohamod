@@ -8,11 +8,16 @@ import { getCancelToken } from '@/utils/api';
 import { useAsyncEffect } from '@jokester/ts-commonutil/lib/react/hook/use-async-effect';
 import { createDebugLogger } from '@/utils/debug-logger';
 import { api, resultTypes } from '@/apis';
+import { APISource } from '@/apis/source';
 import { toLowerCamelCase } from '@/utils';
 import {
   llmTranslateImage,
   LLMConf,
   FilePreprocessResult,
+  TranslateOnlyResult,
+  annotateImage,
+  AILabel,
+  TranslateMode,
 } from '@/services/ai/llm_preprocess';
 import { ModalHandle } from '.';
 import { Icon } from '../icon';
@@ -36,13 +41,28 @@ const stateIcons = {
   success: <Icon icon="check" />,
 } as const;
 
+/** 保证每个文本块 rank 唯一，避免与已有标号冲突 */
+function uniqueRanks(texts: FilePreprocessResult['texts']) {
+  const used = new Set<number>();
+  return texts.map((tb) => {
+    let rank = tb.rank;
+    while (used.has(rank)) {
+      rank += 1;
+    }
+    used.add(rank);
+    return { ...tb, rank };
+  });
+}
+
 export const BatchTranslateModalContent: FC<{
   llmConf: LLMConf;
   files: MFile[];
   target: Target;
+  mode?: TranslateMode;
   onFileSaved?(f: MFile): void;
   getHandle(): ModalHandle;
-}> = ({ files, target, getHandle, llmConf, onFileSaved }) => {
+}> = ({ files, target, getHandle, llmConf, mode: modeProp, onFileSaved }) => {
+  const mode = modeProp ?? 'all';
   const { formatMessage } = useIntl();
   const [fileStates, setFileStates] = useState<FileProgress[]>(() =>
     files.map(
@@ -124,7 +144,20 @@ export const BatchTranslateModalContent: FC<{
         return;
       }
       const resData = toLowerCamelCase(refetchRes.data);
-      if (resData.sourceCount) {
+      const hasLabel = Number(resData.sourceCount ?? 0) > 0;
+
+      // 按模式跳过不匹配模式前置的文件
+      if (mode === 'translate-only' && !hasLabel) {
+        setFileState(
+          f,
+          formatMessage({
+            id: 'fileList.aiTranslate.fileMessage.needLabels',
+          }),
+          stateIcons.skip,
+        );
+        return;
+      }
+      if (mode !== 'translate-only' && hasLabel) {
         setFileState(
           f,
           formatMessage({
@@ -134,6 +167,7 @@ export const BatchTranslateModalContent: FC<{
         );
         return;
       }
+
       const imgBlob = await fetch(resData.url!, { signal: abort.signal }).then(
         (r) => r.blob(),
         () => null,
@@ -155,10 +189,16 @@ export const BatchTranslateModalContent: FC<{
         stateIcons.working,
       );
 
+      if (mode === 'translate-only') {
+        await translateLabelsOnly(f, imgBlob);
+        return;
+      }
+
       const result = await llmTranslateImage(
         llmConf,
         target.language.enName,
         imgBlob,
+        { mode },
       ).catch((e: unknown) => {
         debugLogger('translate failed', e);
         return null;
@@ -169,7 +209,7 @@ export const BatchTranslateModalContent: FC<{
       }
 
       if (result) {
-        await saveTranslations(f, result);
+        await saveTranslations(f, result as FilePreprocessResult);
       } else {
         setFileState(
           f,
@@ -181,10 +221,132 @@ export const BatchTranslateModalContent: FC<{
       }
     }
 
+    async function translateLabelsOnly(f: MFile, imgBlob: Blob) {
+      const srcRes = await api.source
+        .getSources({
+          fileID: f.id,
+          params: { targetID: target.id },
+          configs: { cancelToken },
+        })
+        .catch(() => null);
+      if (srcRes?.type !== resultTypes.SUCCESS) {
+        setFileState(
+          f,
+          formatMessage({
+            id: 'fileList.aiTranslate.fileMessage.failFetchingImage',
+          }),
+          stateIcons.fail,
+        );
+        return;
+      }
+      const sources = srcRes.data as APISource[];
+      if (sources.length === 0) {
+        setFileState(
+          f,
+          formatMessage({
+            id: 'fileList.aiTranslate.fileMessage.needLabels',
+          }),
+          stateIcons.skip,
+        );
+        return;
+      }
+      const labels: AILabel[] = sources.map((s) => ({
+        rank: s.rank,
+        content: s.content,
+        x: s.x,
+        y: s.y,
+      }));
+      const existingByRank = new Map(sources.map((s) => [s.rank, s]));
+      let annotatedBlob = imgBlob;
+      try {
+        annotatedBlob = await annotateImage(imgBlob, labels);
+      } catch (e) {
+        debugLogger('annotate failed, fallback to original image', e);
+      }
+      const result = await llmTranslateImage(
+        llmConf,
+        target.language.enName,
+        annotatedBlob,
+        { mode: 'translate-only', labels },
+      ).catch((e: unknown) => {
+        debugLogger('translate-only failed', e);
+        return null;
+      });
+      debugLogger('translate-only result', result);
+      if (!running.current) {
+        return;
+      }
+      if (!result) {
+        setFileState(
+          f,
+          formatMessage({
+            id: 'fileList.aiTranslate.fileMessage.translateFailed',
+          }),
+          stateIcons.fail,
+        );
+        return;
+      }
+      const r = result as TranslateOnlyResult;
+      let matched = 0;
+      const unmatched = r.texts.filter(
+        (tb) => !existingByRank.has(tb.rank),
+      ).length;
+      try {
+        await Promise.all(
+          r.texts.map((tb) => {
+            const src = existingByRank.get(tb.rank);
+            if (!src) {
+              return Promise.resolve();
+            }
+            matched += 1;
+            return moeflowApiLimiter.use(() =>
+              api.translation.createTranslation({
+                sourceID: src.id,
+                data: { content: tb.translated, targetID: target.id },
+              }),
+            );
+          }),
+        );
+        if (matched === 0) {
+          setFileState(
+            f,
+            formatMessage({
+              id: 'fileList.aiTranslate.fileMessage.noMatch',
+            }),
+            stateIcons.fail,
+          );
+          return;
+        }
+        const successMsg =
+          formatMessage(
+            { id: 'fileList.aiTranslate.fileMessage.success' },
+            { count: matched },
+          ) +
+          (unmatched > 0
+            ? formatMessage(
+                { id: 'fileList.aiTranslate.fileMessage.unmatchedNote' },
+                { unmatched },
+              )
+            : '');
+        setFileState(f, successMsg, stateIcons.success);
+        onFileSaved?.({ ...f, translatedSourceCount: matched });
+      } catch (e) {
+        debugLogger('save translation failed', e);
+        setFileState(
+          f,
+          formatMessage({
+            id: 'fileList.aiTranslate.fileMessage.failSaving',
+          }),
+          stateIcons.fail,
+        );
+      }
+    }
+
     async function saveTextBlock(
       f: MFile,
       tf: FilePreprocessResult,
       tb: FilePreprocessResult['texts'][number],
+      withTranslation: boolean,
     ) {
       const src = await api.source.createSource({
         fileID: f.id,
@@ -192,18 +354,21 @@ export const BatchTranslateModalContent: FC<{
           x: clipTo01((tb.left + tb.width / 2) / tf.imageW),
           y: clipTo01((tb.top + tb.height / 2) / tf.imageH),
           content: tb.text,
+          rank: tb.rank,
         },
         configs: { cancelToken },
       });
-      await api.translation.createTranslation({
-        sourceID: src.data.id,
-        data: {
-          content: tb.translated,
-          targetID: target.id,
-        },
-        // not using the cancel token, to make the saving operation closer to atomic
-        // configs: { cancelToken },
-      });
+      if (withTranslation) {
+        await api.translation.createTranslation({
+          sourceID: src.data.id,
+          data: {
+            content: tb.translated,
+            targetID: target.id,
+          },
+          // not using the cancel token, to make the saving operation closer to atomic
+          // configs: { cancelToken },
+        });
+      }
     }
 
     async function saveTranslations(f: MFile, r: FilePreprocessResult) {
@@ -221,25 +386,42 @@ export const BatchTranslateModalContent: FC<{
         formatMessage({ id: 'fileList.aiTranslate.fileMessage.saving' }),
         stateIcons.working,
       );
+      const withTranslation = mode === 'all';
+      const texts = uniqueRanks(r.texts);
       try {
         await Promise.all(
-          r.texts.map((tb) =>
-            moeflowApiLimiter.use(() => saveTextBlock(f, r, tb)),
+          texts.map((tb) =>
+            moeflowApiLimiter.use(() => saveTextBlock(f, r, tb, withTranslation)),
           ),
         );
-        setFileState(
-          f,
-          formatMessage(
-            { id: 'fileList.aiTranslate.fileMessage.success' },
-            { count: r.texts.length },
-          ),
-          stateIcons.success,
-        );
-        onFileSaved?.({
-          ...f,
-          sourceCount: r.texts.length,
-          translatedSourceCount: r.texts.length,
-        });
+        if (withTranslation) {
+          setFileState(
+            f,
+            formatMessage(
+              { id: 'fileList.aiTranslate.fileMessage.success' },
+              { count: texts.length },
+            ),
+            stateIcons.success,
+          );
+          onFileSaved?.({
+            ...f,
+            sourceCount: texts.length,
+            translatedSourceCount: texts.length,
+          });
+        } else {
+          setFileState(
+            f,
+            formatMessage(
+              { id: 'fileList.aiTranslate.fileMessage.labeledCount' },
+              { count: texts.length },
+            ),
+            stateIcons.success,
+          );
+          onFileSaved?.({
+            ...f,
+            sourceCount: texts.length,
+          });
+        }
       } catch (e) {
         debugLogger('save text block failed', e);
         setFileState(

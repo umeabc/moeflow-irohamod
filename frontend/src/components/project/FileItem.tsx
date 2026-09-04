@@ -58,7 +58,7 @@ const fileItemStyle = css`
     top: ${imageHeight - 17}px;
     left: 6px;
     padding: 3px 5px;
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: var(--moeflow-control);
     border-radius: 4px;
     border: 1px solid var(--moeflow-surface);
   }
@@ -85,7 +85,7 @@ const fileItemStyle = css`
     justify-content: center;
     align-items: center;
     text-align: center;
-    background-color: #f3f3f3;
+    background-color: var(--moeflow-surface2);
     font-weight: bold;
   }
   .FileItem__Name {

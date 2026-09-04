@@ -32,6 +32,7 @@ import { ListPageSpec } from '@/components/shared/List';
 import { FilePondFile } from 'filepond';
 import { createDebugLogger } from '@/utils/debug-logger';
 import { useAiTranslate } from '@/components/ai';
+import { FileMoveModal } from '@/components/file/FileMoveModal';
 
 /** 文件列表的属性接口 */
 interface FileListProps {
@@ -66,6 +67,7 @@ export const FileList: FC<FileListProps> = ({
   const platform = useSelector((state: AppState) => state.site.platform);
   const isMobile = platform === 'mobile';
   const [outputDrawerVisible, setOutputDrawerVisible] = useState(false);
+  const [moveModalVisible, setMoveModalVisible] = useState(false);
   const coverWidth = IMAGE_COVER.WIDTH;
   const coverHeight = IMAGE_COVER.HEIGHT;
 
@@ -480,6 +482,14 @@ export const FileList: FC<FileListProps> = ({
       />
       <div className="FileList__Header">
         <Button
+          icon="arrows-alt"
+          disabled={selectedFileIds.length === 0}
+          onClick={() => setMoveModalVisible(true)}
+        >
+          {formatMessage({ id: 'file.moveImages' })}
+          {selectedFileIds.length > 0 && ` (${selectedFileIds.length})`}
+        </Button>
+        <Button
           className="FileList__ChangeTargetButton"
           icon="exchange-alt"
           iconProps={{
@@ -732,6 +742,18 @@ export const FileList: FC<FileListProps> = ({
         />
       </Drawer>
       {aiModalHolder}
+      <FileMoveModal
+        open={moveModalVisible}
+        onClose={() => setMoveModalVisible(false)}
+        projectID={project.id}
+        files={[...new Set(selectedFileIds)]
+          .map((id) => items.find((item) => item.id === id))
+          .filter(Boolean) as MFile[]}
+        onSaved={(movedIds) => {
+          // 移动成功后从当前列表移除已移动的图片（失败的保留）
+          setItems((prev) => prev.filter((it) => !movedIds.includes(it.id)));
+        }}
+      />
     </div>
   );
 };

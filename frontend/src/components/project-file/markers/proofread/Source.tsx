@@ -263,7 +263,7 @@ const SourceWithoutRef: React.ForwardRefRenderFunction<
             border-color: #8c8c8c;
           }
           .ant-checkbox-input:focus + .ant-checkbox-inner {
-            border-color: #dbdbdb;
+            border-color: ${style.borderColorBase};
           }
         }
       `}

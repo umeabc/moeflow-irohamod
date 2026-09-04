@@ -17,6 +17,8 @@ import { AdminUserList } from '@/components/admin/AdminUserList';
 import { AdminImageSafeCheck } from '@/components/admin/AdminImageSafeCheck';
 import { AdminSiteSetting } from '@/components/admin/AdminSiteSetting';
 import { AdminVCodeList } from '@/components/admin/AdminVCodeList';
+import { AdminInviteCode } from '@/components/admin/AdminInviteCode';
+import { AdminTeam } from '@/components/admin/AdminTeam';
 
 const { Sider } = Layout;
 
@@ -90,6 +92,22 @@ const Admin: FC<AdminProps> = () => {
             >
               {formatMessage({ id: 'admin.captchas' })}
             </Menu.Item>
+            <Menu.Item
+              key="invite-codes"
+              onClick={() => {
+                history.push(`${url}/invite-codes`);
+              }}
+            >
+              {formatMessage({ id: 'admin.inviteCodes' })}
+            </Menu.Item>
+            <Menu.Item
+              key="team-manage"
+              onClick={() => {
+                history.push(`${url}/team-manage`);
+              }}
+            >
+              {formatMessage({ id: 'admin.teamManage' })}
+            </Menu.Item>
           </Menu>
         </Sider>
         <Layout className="site-layout">
@@ -108,6 +126,12 @@ const Admin: FC<AdminProps> = () => {
             </Route>
             <Route path={`${path}/site-v-code`}>
               <AdminVCodeList />
+            </Route>
+            <Route path={`${path}/invite-codes`}>
+              <AdminInviteCode />
+            </Route>
+            <Route path={`${path}/team-manage`}>
+              <AdminTeam />
             </Route>
           </Switch>
         </Layout>

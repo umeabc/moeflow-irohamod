@@ -57,6 +57,10 @@ const filePreprocessResultSchema = z.object({
   imageH: z.number({ message: 'the height of the image in PX' }),
   texts: z.array(
     z.object({
+      rank: z
+        .number()
+        .int()
+        .describe('unique label/rank number within the image, follow reading order'),
       left: z
         .number()
         .describe('left coordinate of the text in PX, in the whole image'),
@@ -77,18 +81,100 @@ const filePreprocessResultSchema = z.object({
 
 export type FilePreprocessResult = z.infer<typeof filePreprocessResultSchema>;
 
+/** 仅翻译：坐标无需输出，减少 VLM 出错面 */
+const translateOnlyResultSchema = z.object({
+  texts: z.array(
+    z.object({
+      rank: z
+        .number()
+        .int()
+        .describe('must equal one of the known label numbers'),
+      translated: z.string().describe('translated text'),
+    }),
+  ),
+});
+
+export type TranslateOnlyResult = z.infer<typeof translateOnlyResultSchema>;
+
+export type TranslateMode = 'all' | 'label-only' | 'translate-only';
+
+export interface AILabel {
+  rank: number;
+  content: string;
+  x: number;
+  y: number;
+}
+
+export interface LLMTranslateOptions {
+  mode?: TranslateMode;
+  labels?: AILabel[];
+}
+
+/**
+ * 调用视觉大模型：
+ * - mode 'all'：检测文字框 + 生成标号 + 翻译（沿用原逻辑）
+ * - mode 'label-only'：仅检测文字框 + 生成标号（不翻译）
+ * - mode 'translate-only'：图已有标号，注入 rank->原文 + 画框标注，模型仅输出 rank+译文
+ */
 export async function llmTranslateImage(
   llmConf: LLMConf,
   targetLang: string,
   imgBlob: Blob,
+  opts: LLMTranslateOptions = {},
   abortSignal?: AbortSignal,
-): Promise<FilePreprocessResult> {
+): Promise<FilePreprocessResult | TranslateOnlyResult> {
+  const { mode = 'all', labels = [] } = opts;
+
+  if (mode === 'translate-only') {
+    const labelList = labels
+      .map((label) => `- label ${label.rank}: \"${label.content ?? ''}\"`)
+      .join('\n');
+    const userMessage: UserMessage = {
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text:
+            `The image contains numbered labels. For each label, translate the text in that region to ${targetLang}.\n` +
+            `The known labels are:\n${labelList}\n` +
+            `Return one item per label, setting rank to one of the known label numbers above. Do not invent new labels.` +
+            ` ${llmConf.extraPrompt || ''}`,
+        },
+        {
+          type: 'image_url',
+          image_url: {
+            url: await img2dataurl(imgBlob),
+            detail: 'high',
+          },
+        },
+      ],
+    };
+    const messages: (UserMessage | SystemMessage)[] = [
+      {
+        content:
+          'You are a helpful assistant. Please do as user instructs. The translations should be submitted using the provided tool.',
+        role: 'system',
+      },
+      userMessage,
+    ];
+    return callModelWithTools<TranslateOnlyResult>(
+      messages,
+      translateOnlyResultSchema,
+      llmConf,
+      abortSignal,
+    );
+  }
+
+  const instruction =
+    mode === 'label-only'
+      ? 'Please detect every text box in the image. Assign each text box a unique rank number following reading order. Output text, rank and coordinates. Do NOT translate — leave the translated field empty.'
+      : `Please translate the image to ${targetLang}.`;
   const userMessage: UserMessage = {
     role: 'user',
     content: [
       {
         type: 'text',
-        text: `Please translate the image to ${targetLang}. ${llmConf.extraPrompt || ''}`,
+        text: `${instruction} ${llmConf.extraPrompt || ''}`,
       },
       {
         type: 'image_url',
@@ -109,7 +195,12 @@ export async function llmTranslateImage(
     userMessage,
   ];
 
-  let ret = await callModelWithTools();
+  let ret = await callModelWithTools<FilePreprocessResult>(
+    messages,
+    filePreprocessResultSchema,
+    llmConf,
+    abortSignal,
+  );
   if (llmConf.model?.toLowerCase().includes('gemini-')) {
     debugLogger('gemini workaround: set coords to 1000 scale');
     ret = {
@@ -121,40 +212,95 @@ export async function llmTranslateImage(
     };
   }
   return ret;
+}
 
-  //
-  async function callModelWithTools(): Promise<FilePreprocessResult> {
-    let submittedResult: FilePreprocessResult | null = null;
-    const submitTool = await tool({
-      execute: (_result) => {
-        submittedResult = _result;
-        return 'saved';
-      },
-      parameters: filePreprocessResultSchema,
-      name: 'submit',
-      description: 'Submit the result of preprocessing the image',
+async function callModelWithTools<T>(
+  messages: (UserMessage | SystemMessage)[],
+  schema: any,
+  llmConf: LLMConf,
+  abortSignal?: AbortSignal,
+): Promise<T> {
+  let submittedResult: T | null = null;
+  const submitTool = await tool({
+    execute: (_result) => {
+      submittedResult = _result as T;
+      return 'saved';
+    },
+    parameters: schema,
+    name: 'submit',
+    description: 'Submit the result of preprocessing the image',
+  });
+
+  const generateConf: GenerateTextOptions = {
+    messages,
+    headers: {
+      // Anthropic-only workaround, to call API from browser (otherwise it rejects with CORS error).
+      ...(llmConf.model.toLowerCase().includes('claude-') && {
+        'anthropic-dangerous-direct-browser-access': 'true',
+      }),
+    },
+    tools: [submitTool],
+    baseURL: llmConf.baseUrl,
+    model: llmConf.model,
+    apiKey: llmConf.apiKey,
+    abortSignal,
+  };
+  await generateText(generateConf);
+
+  if (!submittedResult) {
+    throw new Error('LLM did not submit the result using the tool.');
+  }
+  return submittedResult;
+}
+
+/**
+ * 在图上画标号标记：以 (x*W, y*H) 为中心画半透明圆点，并在旁边写 rank 号。
+ * 供「仅翻译」在喂给模型前标注已有标号位置。
+ */
+export async function annotateImage(
+  imgBlob: Blob,
+  labels: { rank: number; x: number; y: number }[],
+): Promise<Blob> {
+  const url = URL.createObjectURL(imgBlob);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('Failed to load image for annotation'));
+      el.src = url;
     });
-
-    const generateConf: GenerateTextOptions = {
-      messages,
-      headers: {
-        // Anthropic-only workaround, to call API from browser (otherwise it rejects with CORS error).
-        ...(llmConf.model.toLowerCase().includes('claude-') && {
-          'anthropic-dangerous-direct-browser-access': 'true',
-        }),
-      },
-      tools: [submitTool],
-      baseURL: llmConf.baseUrl,
-      model: llmConf.model,
-      apiKey: llmConf.apiKey,
-      abortSignal,
-    };
-    await generateText(generateConf);
-
-    if (!submittedResult) {
-      throw new Error('LLM did not submit the result using the tool.');
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('canvas 2d context unavailable');
     }
-    return submittedResult;
+    ctx.drawImage(img, 0, 0);
+    const W = canvas.width;
+    const H = canvas.height;
+    const radius = Math.max(12, Math.round(W / 70));
+    ctx.font = `bold ${Math.max(18, Math.round(W / 55))}px sans-serif`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    for (const label of labels) {
+      const cx = label.x * W;
+      const cy = label.y * H;
+      ctx.fillStyle = 'rgba(255, 101, 124, 0.85)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.fillText(String(label.rank), cx, cy);
+    }
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error('canvas.toBlob failed'))),
+        'image/png',
+      );
+    });
+  } finally {
+    URL.revokeObjectURL(url);
   }
 }
 

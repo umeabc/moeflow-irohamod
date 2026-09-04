@@ -74,7 +74,7 @@ const getResetEmailVCode = ({
 /** 注册的请求数据 */
 interface RegisterData {
   email: string;
-  vCode: string;
+  inviteCode: string;
   name: string;
   password: string;
 }

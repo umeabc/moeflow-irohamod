@@ -6,6 +6,8 @@ from app.apis.file import (
     FileAPI,
     FileOCRAPI,
     ProjectFileListAPI,
+    ProjectFileMoveAPI,
+    MoveTargetProjectsAPI,
     AdminFileListAPI,
     FileSearchAPI,
 )
@@ -66,8 +68,9 @@ from app.apis.v_code import (
     CaptchaAPI,
     ConfirmEmailVCodeAPI,
     ResetEmailVCodeAPI,
-    ResetPasswordVCodeAPI,
 )
+from app.apis.invitation_code import InvitationCodeAPI, InvitationCodeListAPI
+from app.apis.admin_team import AdminTeamAPI, AdminTeamListAPI
 from app.apis.language import LanguageListAPI
 from app.apis.target import TargetAPI
 from app.apis.manga_image_translator import (
@@ -155,11 +158,6 @@ me.add_url_rule(
     view_func=MeTokenAPI.as_view("me_token"),
 )
 me.add_url_rule(
-    "/password",
-    methods=["DELETE", "OPTIONS"],
-    view_func=MePasswordAPI.as_view("me_reset_password"),
-)
-me.add_url_rule(
     "/projects",
     methods=["GET", "OPTIONS"],
     view_func=MeProjectListAPI.as_view("me_project_list"),
@@ -185,11 +183,6 @@ v_code.add_url_rule(
     "/reset-email-codes",
     methods=["POST", "OPTIONS"],
     view_func=ResetEmailVCodeAPI.as_view("reset_email_v_code"),
-)
-v_code.add_url_rule(
-    "/reset-password-codes",
-    methods=["POST", "OPTIONS"],
-    view_func=ResetPasswordVCodeAPI.as_view("reset_password_v_code"),
 )
 # 团队模块
 team = Blueprint("team", __name__, url_prefix=v1_prefix + "/teams")
@@ -299,6 +292,16 @@ project.add_url_rule(
     "/<project_id>/files",
     methods=["GET", "POST", "OPTIONS"],
     view_func=ProjectFileListAPI.as_view("project_file_list"),
+)
+project.add_url_rule(
+    "/<project_id>/files/move",
+    methods=["PUT", "OPTIONS"],
+    view_func=ProjectFileMoveAPI.as_view("project_file_move"),
+)
+project.add_url_rule(
+    "/<project_id>/move-target-projects",
+    methods=["GET", "OPTIONS"],
+    view_func=MoveTargetProjectsAPI.as_view("project_move_target_projects"),
 )
 project.add_url_rule(
     "/<project_id>/targets",
@@ -475,6 +478,26 @@ admin.add_url_rule(
     "/v-codes",
     methods=["GET", "OPTIONS"],
     view_func=AdminVCodeListAPI.as_view("admin_v_code_list"),
+)
+admin.add_url_rule(
+    "/invitation-codes",
+    methods=["GET", "POST", "OPTIONS"],
+    view_func=InvitationCodeListAPI.as_view("admin_invitation_code_list"),
+)
+admin.add_url_rule(
+    "/invitation-codes/<invitation_code_id>",
+    methods=["PUT", "DELETE", "OPTIONS"],
+    view_func=InvitationCodeAPI.as_view("admin_invitation_code"),
+)
+admin.add_url_rule(
+    "/teams",
+    methods=["GET", "OPTIONS"],
+    view_func=AdminTeamListAPI.as_view("admin_team_list"),
+)
+admin.add_url_rule(
+    "/teams/<team_id>",
+    methods=["DELETE", "OPTIONS"],
+    view_func=AdminTeamAPI.as_view("admin_team_delete"),
 )
 
 if app_config["MIT_STORAGE_ROOT"]:

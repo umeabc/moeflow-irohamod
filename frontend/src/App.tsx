@@ -228,11 +228,17 @@ const App: React.FC = () => {
           html[data-theme='dark'] .ant-tabs-ink-bar {
             background-color: var(--moeflow-primaryColor);
           }
-          html[data-theme='dark'] .ant-form-item-label > label,
           html[data-theme='dark'] .ant-form-item,
           html[data-theme='dark'] .ant-upload-list-item-name,
           html[data-theme='dark'] .ant-upload-list-item {
             color: rgba(255, 255, 255, 0.85);
+          }
+          html[data-theme='dark'] .ant-form-item-label > label {
+            color: rgba(255, 255, 255, 0.85) !important;
+          }
+          /* admin 内容区为浅色 Layout.site-layout，标签需为深色以保证可读 */
+          html[data-theme='dark'] .site-layout .ant-form-item-label > label {
+            color: rgba(0, 0, 0, 0.85) !important;
           }
           html[data-theme='dark'] .ant-divider,
           html[data-theme='dark'] .ant-divider-horizontal {

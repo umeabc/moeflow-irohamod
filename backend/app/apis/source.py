@@ -110,6 +110,7 @@ class FileSourceListAPI(MoeAPIView):
             x=data["x"],
             y=data["y"],
             position_type=data["position_type"],
+            rank=data.get("rank"),
         )
         file.update_cache("edit_time", datetime.datetime.utcnow())
         return source.to_api()

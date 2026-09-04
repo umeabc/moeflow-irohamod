@@ -8,6 +8,7 @@ export interface APISource {
   id: string;
   x: number;
   y: number;
+  rank: number;
   content: string;
   myTranslation?: APITranslation;
   positionType: number;
@@ -43,6 +44,7 @@ interface CreateSourceData {
   x: number;
   y: number;
   content?: string;
+  rank?: number;
 }
 /** 新增原文 */
 const createSource = ({

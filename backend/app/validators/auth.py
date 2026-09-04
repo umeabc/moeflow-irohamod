@@ -30,16 +30,12 @@ class RegisterSchema(DefaultSchema):
         validate=[UserValidate.password_length],
         error_messages={**required_message},
     )
-    # 邮件验证码
-    v_code = fields.Str(
+    # 邀请码（必需，校验有效+启用在注册接口内做）
+    invite_code = fields.Str(
         required=True,
         validate=[cant_empty],
         error_messages={**required_message},
     )
-
-    @validates_schema
-    def verify_v_code(self, data):
-        v_code_validator(VCodeType.CONFIRM_EMAIL, data["email"].lower(), data["v_code"])
 
 
 class LoginSchema(DefaultSchema):

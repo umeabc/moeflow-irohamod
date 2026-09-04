@@ -3,10 +3,14 @@ import { File as MFile, Target } from '@/interfaces';
 import { createDebugLogger } from '@/utils/debug-logger';
 import { ModalStaticFunctions } from 'antd/lib/modal/confirm';
 
-import { ModelConfigForm } from './ModelConfigForm';
+import { ModelConfigForm, TranslateModeAvailability } from './ModelConfigForm';
 import { BatchTranslateModalContent } from './BatchTranslateModal';
 import { useMemo } from 'react';
-import { LLMConf, llmPresets } from '@/services/ai/llm_preprocess';
+import {
+  LLMConf,
+  llmPresets,
+  TranslateMode,
+} from '@/services/ai/llm_preprocess';
 import { llmConfStorage } from '@/utils/storage';
 import { IntlShape, useIntl } from 'react-intl';
 
@@ -22,21 +26,36 @@ interface TranslatorApi {
   start(callbacks: TranslationCallbacks): Promise<void>;
   testModel?(modelConf: LLMConf): Promise<{ worked: boolean; message: string }>;
 }
+
+/** 由选中文件的 sourceCount 判定一键机翻模式可用性 */
+function computeAvailability(files: MFile[]): TranslateModeAvailability {
+  const counts = files.map((f) => f.sourceCount ?? 0);
+  const allNoLabels = counts.length > 0 && counts.every((c) => c === 0);
+  const allHasLabels = counts.length > 0 && counts.every((c) => c > 0);
+  return { allNoLabels, allHasLabels, mixed: !allNoLabels && !allHasLabels };
+}
+
 function bind(
   files: MFile[],
   target: Target,
   modal: ModalStaticFunctions,
   { formatMessage }: IntlShape,
 ): TranslatorApi {
+  const availability = computeAvailability(files);
   return {
     start,
     // testModel,
   };
   async function start(callbacks: TranslationCallbacks) {
-    const llmConf = await new Promise<LLMConf | null>((resolve, reject) => {
+    const llmConfAndMode = await new Promise<
+      { config: LLMConf; mode: TranslateMode } | null
+    >((resolve, reject) => {
       let confValue: LLMConf = llmConfStorage.load() ?? {
         ...llmPresets.at(0)!,
       };
+      let modeValue: TranslateMode = availability.allHasLabels
+        ? 'translate-only'
+        : 'all';
       const onChange = (conf: LLMConf) => {
         debugLogger('model configured', conf);
         confValue = conf;
@@ -44,24 +63,34 @@ function bind(
           handle.update({ okButtonProps: {} });
         }
       };
+      const onModeChange = (mode: TranslateMode) => {
+        modeValue = mode;
+      };
       const handle = modal.confirm({
         icon: null,
         content: (
-          <ModelConfigForm initialValue={confValue} onChange={onChange} />
+          <ModelConfigForm
+            initialValue={confValue}
+            onChange={onChange}
+            availability={availability}
+            defaultMode={modeValue}
+            onModeChange={onModeChange}
+          />
         ),
         okText: formatMessage({ id: 'fileList.aiTranslate.startTranslate' }),
         okButtonProps: { disabled: true },
         onOk: () => {
-          resolve(confValue);
+          resolve({ config: confValue, mode: modeValue });
         },
         onCancel: () => {
           resolve(null);
         },
       });
     });
-    if (!llmConf) {
+    if (!llmConfAndMode) {
       return;
     }
+    const { config: llmConf, mode } = llmConfAndMode;
     llmConfStorage.save(llmConf);
 
     await new Promise<boolean>((resolve) => {
@@ -70,6 +99,7 @@ function bind(
         content: (
           <BatchTranslateModalContent
             llmConf={llmConf}
+            mode={mode}
             files={files}
             target={target}
             onFileSaved={callbacks.onFileSaved}

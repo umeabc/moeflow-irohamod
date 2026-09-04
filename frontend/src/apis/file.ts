@@ -162,6 +162,49 @@ const searchFiles = ({
   });
 };
 
+export interface APIMoveTargetProject {
+  id: string;
+  name: string;
+}
+/** 获取同一项目集下的其它项目（移动目标） */
+const getMoveTargetProjects = ({
+  projectID,
+  configs,
+}: {
+  projectID: string;
+  configs?: AxiosRequestConfig;
+}) => {
+  return request<APIMoveTargetProject[]>({
+    method: 'GET',
+    url: `/v1/projects/${projectID}/move-target-projects`,
+    ...configs,
+  });
+};
+
+export interface APIFileMoveResult {
+  file_id: string;
+  name: string;
+  status: 'moved' | 'failed' | 'skipped';
+  reason: string;
+}
+/** 批量移动图片到同一项目集下的其它项目 */
+const moveFiles = ({
+  projectID,
+  data,
+  configs,
+}: {
+  projectID: string;
+  data: { fileIds: string[]; targetProjectId: string };
+  configs?: AxiosRequestConfig;
+}) => {
+  return request<APIFileMoveResult[]>({
+    method: 'PUT',
+    url: `/v1/projects/${projectID}/files/move`,
+    data: toUnderScoreCase(data),
+    ...configs,
+  });
+};
+
 export default {
   getProjectFiles,
   getFile,
@@ -170,4 +213,6 @@ export default {
   adminGetFiles,
   adminSafeCheck,
   searchFiles,
+  getMoveTargetProjects,
+  moveFiles,
 };

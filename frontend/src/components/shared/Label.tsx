@@ -136,7 +136,7 @@ export const Label: FC<LabelProps> = ({
           width: 220px;
         }
         .Label__Content {
-          background-color: #fff;
+          background-color: var(--moeflow-surface);
           border-radius: ${style.borderRadiusSm};
           box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
           padding: 3px 5px;

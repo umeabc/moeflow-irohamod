@@ -1,10 +1,62 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha5）
+# MoeFlow 自定义改动 CHANGELOG（iroha6）
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 镜像 tag：`moeflow-frontend:1.1.7-iroha5` / `moeflow-backend:1.1.8-iroha5`（后续进一步定制沿用 irohaN 约定；历史 `iroha4` 镜像保留 `:1.1.x-iroha4`）。
+> 镜像 tag：`moeflow-frontend:1.1.7-iroha6` / `moeflow-backend:1.1.8-iroha6`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5` 镜像保留各自版本 tag）。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：以 `docker save` 导出镜像 tar → 生产侧 `docker load` 导入（仅替换前端/后端镜像，勿改动 env / compose）。
+
+---
+
+## iroha6 新增特性（基于 iroha5）
+
+### 一、一键机翻「三模式」
+
+- 一键机翻在原有「全自动/整页」基础上拆分为**三种模式**（下拉选择，置于翻译模式等下拉栏**最前**）：**仅标号** / **仅翻译** / **我全都要**。
+- **仅标号**：用 LLM 识别文字区并只生成标号（框选），不产出译文。
+- **仅翻译**：用 LLM 识别已标号区域的文字并只翻译到对应标号框，不生成新标号。
+- **我全都要**：完整的「标号 + 翻译」流程。
+- 可用性门控：仅当所选模型能力满足时展示对应模式。`services/ai/llm_preprocess.ts` 的 `llmPresets` 增 `availability`/`mode` 字段；`ModelConfigForm` 为模式三选一；`BatchTranslateModal` 按模式分支处理。
+- 相关：图片选择器可选模式；`Source.to_api()` 返回 `rank`，`CreateImageSourceSchema` 支持 `rank`，POST 透传。
+- 文件：`frontend/src/services/ai/llm_preprocess.ts`、`frontend/src/components/ai/{ModelConfigForm,index,BatchTranslateModal}.tsx`、`frontend/src/apis/source.ts`、`backend/app/{models,validators,apis}/source.py|file.py`、`frontend/src/locales/*`、`messages.yaml`。
+
+### 二、注册系统重构（邀请码制）
+
+- **移除邮箱验证码**整块功能：注册不再需要邮箱验证码，注册页「验证码」改为**邀请码**；必须持有效邀请码才能注册。
+- **邀请码**：**多次使用**、可**停用**；一码**绑定一个团队**（注册成功后自动加入该团队并赋予对应角色）。
+- **忘记密码**：移除自助重置（邮箱验证码/找回），统一**联系站点管理员重置**（`ResetPassword` 页改为说明文案）。
+- **移除邮箱白名单**：任意邮箱 + 有效邀请码均可注册（`enable_whitelist`/`whitelist_emails` 字段声明保留以兼容旧文档，但不参与校验）。
+- 后端：`InvitationCode` 模型（`backend/app/models/invitation_code.py`：code/team/role/enabled/use_count/create_time/create_user；`generate_code()` 生成 8 位大写、避开 0/O/1/I）；`UserAPI.post` 校验邀请码并 `user.join(invite.team, role)`、递增 `use_count`；`RegisterSchema` 用 `invite_code` 替代 `v_code`；`exceptions/auth.py` 新增邀请码无效/不可用异常。
+- 前端：`Register.tsx`（邮箱+邀请码+昵称+密码）、`ResetPassword.tsx`（联系管理员文案）、`locales/*`。
+
+### 三、站点管理员「邀请码管理」
+
+- `admin/settings` 支持对邀请码的**创建 / 列表 / 启停用 / 删除**（`admin_required` 保护）。
+- 团队下拉**覆盖全站团队**（`api.adminTeam.listTeams`），供管理员为不同团队发不同邀请码。
+- 后端：`backend/app/apis/invitation_code.py`（`InvitationCodeListAPI` GET/POST、`InvitationCodeAPI` PUT/DELETE），路由 `/v1/admin/invitation-codes`、`/<invitation_code_id>`。
+- 前端：`AdminInviteCode.tsx`（表格 + 创建表单），`apis/invitationCode.ts`，`locales/*`（`admin.inviteCodes.*`）。
+
+### 四、站点管理员「团队管理」+ 团队头像
+
+- `admin` 新增「团队管理」页：全站团队**按行概览**（名称、团队 id、项目集数、项目数、图片数）+ **删除团队**（级联清空）。
+- 团队名称旁展示团队头像（`Avatar`）。
+- 后端：`backend/app/apis/admin_team.py`（`AdminTeamListAPI.get`、`AdminTeamAPI.delete`，`team.clear()` 级联），路由 `/v1/admin/teams`、`/<team_id>`。
+- 前端：`AdminTeam.tsx`，`apis/adminTeam.ts`，`locales/*`（`admin.teamManage.*`）。
+
+### 五、图片移动（同项目集，含翻译随移）
+
+- 文件列表「全选本页 / 反选本页 / 取消选择」**最前**新增「**图片移动**」按钮，勾选后点击 → 弹窗选择**同项目集下的另一项目** → 批量移动。
+- **仅限同一项目集（ProjectSet）** 下移动；目标项目已存在 **md5 相同**图片 → 该张 `失败` 并说明原因（`FileDuplicateError`，code 8008「目标项目已存在相同图片」）。
+- 移动后**标号（Source）随图保留**；**翻译随图迁移**：`File.move_to_project` 按**语言**将各 `Translation.target` 重映射到新项目同语言 target，并按实际翻译**重算**新旧项目的目标缓存/计数（进度条正确，不再归零/错乱）。
+- 后端：`File.move_to_project`（`backend/app/models/file.py`，重算式对账：`recompute_source_counts_for_target` 按实际翻译计算 translated/checked 贡献，不依赖旧缓存是否存在）；`ProjectFileMoveAPI` PUT `/v1/projects/<id>/files/move`、`MoveTargetProjectsAPI` GET `/v1/projects/<id>/move-target-projects`；`validators/file.py` 增 `FileMoveSchema`；`exceptions/file.py` 增 `FileMoveError`。
+- 前端：`FileList.tsx`（移动按钮 + 弹窗）、`FileMoveModal.tsx`、`apis/file.ts`（`getMoveTargetProjects`/`moveFiles`）、`locales/*`（`file.moveImages`/`file.moveStatusMoved/Failed/Skipped`/`file.moveDuplicateReason`/`form.confirm` 等）。
+
+### 六、登录页文案 3 处
+
+- 「还没有帐号？去找组长注册吧」→「还没有账号？去注册吧」。
+- 登录页右上角 GitHub 图标超链接 → `https://github.com/umeabc/moeflow-backup`。
+- 「忘记密码？」→「忘记密码？请联系站点管理员为您重置密码。」。
+- 文件：`frontend/src/components/shared/Header.tsx`、`frontend/src/locales/{zh-cn,en}.json`、`messages.yaml`（键 `auth.toReigsterTip` / `auth.toResetPasswordTip`）。
 
 ---
 
@@ -180,4 +232,4 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 
 - 本改动为定制版本，与上游 moeflow 官方代码存在差异；如需回退，可用官方 tag `v1.1.7` / `v1.1.8` 重新构建。
 - 涉及权限与交互调整（角色编辑、项目集删除/移动、搜索范围、上传去重、主题切换、符号工具），请按实际团队与权限配置确认。
-- 交付：前端/后端镜像已按 `docker save` 打包为 tar（`moeflow-*-1.1.x-iroha5.tar`），生产侧 `docker load` 后替换对应镜像即可（仅替换镜像，不动 env/compose）。
+- 交付：前端/后端镜像已按 `docker save` 打包为 tar（`moeflow-*-1.1.x-iroha6.tar`），生产侧 `docker load` 后替换对应镜像即可（仅替换镜像，不动 env/compose）。

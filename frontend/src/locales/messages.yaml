@@ -25,11 +25,20 @@ auth.login:
   zhCn: 登录
   en: Log In
 auth.toReigsterTip:
-  zhCn: 还没有帐号？前往注册
+  zhCn: 还没有账号？去注册吧
   en: Don't have an account? Sign up here.
 auth.resetPassword:
   zhCn: 重置密码
   en: Reset Password
+auth.emailFormatTip:
+  zhCn: 请输入正确的邮箱
+  en: Please enter a valid email
+register.inviteCode:
+  zhCn: 邀请码
+  en: Invitation Code
+reset.contactAdmin:
+  zhCn: 忘记密码？请联系站点管理员为您重置密码。
+  en: Forgot your password? Please contact the site administrator to reset it.
 auth.back:
   zhCn: 返回
   en: Back
@@ -151,8 +160,8 @@ auth.accountSetting:
   zhCn: 用户设置
   en: User settings
 auth.toResetPasswordTip:
-  zhCn: 忘记密码？
-  en: Forgot password?
+  zhCn: 忘记密码？请联系站点管理员为您重置密码。
+  en: Forgot your password? Contact the site administrator to reset it.
 site.setting.autoJoinTeamIDs:
   zhCn: 自动加入的团队 ID
   en: Add new user to team id
@@ -835,6 +844,25 @@ fileList.aiTranslate:
   startTranslate:
     zhCn: 开始翻译
     en: Start Translate
+  mode:
+    title:
+      zhCn: 翻译模式
+      en: Translate Mode
+    desc:
+      zhCn: 无标号图片可选「仅标号 / 我全都要」，有标号图片可选「仅翻译」；混合批次将对不匹配的图片自动跳过。
+      en: Images without labels allow Label Only / All. Images with labels allow Translate Only. Files not matching the mode will be skipped.
+    all:
+      label:
+        zhCn: 我全都要（检测+翻译）
+        en: All (detect + translate)
+    labelOnly:
+      label:
+        zhCn: 仅标号
+        en: Label Only
+    translateOnly:
+      label:
+        zhCn: 仅翻译
+        en: Translate Only
   configModal:
     title:
       zhCn: 配置LLM
@@ -920,6 +948,18 @@ fileList.aiTranslate:
     success:
       zhCn: 识别并翻译了 {count} 处文字
       en: Recognized and translated {count} text blocks
+    labeledCount:
+      zhCn: 已生成 {count} 个标号
+      en: Generated {count} labels
+    needLabels:
+      zhCn: 图片无标号，无法仅翻译
+      en: No labels in image, cannot translate-only
+    noMatch:
+      zhCn: 未匹配到已有标号
+      en: No matching label found
+    unmatchedNote:
+      zhCn: （{unmatched} 个未匹配）
+      en: ({unmatched} unmatched)
 project.startOCR:
   zhCn: 开始自动标记
   en: Start Auto Tagging
@@ -1078,6 +1118,30 @@ file.blockTip:
 file.generating:
   zhCn: 缩略图生成中...
   en: Generating thumbnail...
+file.moveImages:
+  zhCn: 移动图片
+  en: Move Images
+file.moveTargetProject:
+  zhCn: 移动到项目
+  en: Move to Project
+file.moveTargetPlaceholder:
+  zhCn: 请选择目标项目
+  en: Select target project
+file.moveConfirm:
+  zhCn: 确认移动
+  en: Confirm Move
+file.moveStatusMoved:
+  zhCn: 已移动
+  en: Moved
+file.moveStatusFailed:
+  zhCn: 移动失败
+  en: Failed
+file.moveStatusSkipped:
+  zhCn: 跳过
+  en: Skipped
+form.confirm:
+  zhCn: 确认
+  en: Confirm
 output.outputAll:
   zhCn: 导出项目内所有文件
   en: Export all files in the project
@@ -1311,3 +1375,63 @@ admin.imageModeration:
 admin.captchas:
   zhCn: 验证码
   en: Captchas
+admin.inviteCodes:
+  zhCn: 邀请码
+  en: Invitation Codes
+admin.inviteCodeCode:
+  zhCn: 邀请码
+  en: Code
+admin.inviteCodeTeam:
+  zhCn: 团队
+  en: Team
+admin.inviteCodeRole:
+  zhCn: 角色
+  en: Role
+admin.inviteCodeUseCount:
+  zhCn: 已用次数
+  en: Used
+admin.inviteCodeEnabled:
+  zhCn: 启用
+  en: Enabled
+admin.inviteCodeDelete:
+  zhCn: 删除
+  en: Delete
+admin.inviteCodeCreate:
+  zhCn: 新建邀请码
+  en: Create Code
+admin.inviteCodeCreated:
+  zhCn: 创建成功
+  en: Created
+admin.inviteCodeDeleted:
+  zhCn: 已删除
+  en: Deleted
+admin.inviteCodeDefaultRole:
+  zhCn: 使用团队默认角色
+  en: Use team default role
+admin.inviteCodeDeleteConfirm:
+  zhCn: 确定删除该邀请码吗？
+  en: Delete this invitation code?
+admin.teamManage:
+  zhCn: 团队管理
+  en: Team Management
+admin.teamName:
+  zhCn: 名称
+  en: Name
+admin.teamID:
+  zhCn: 团队 ID
+  en: Team ID
+admin.teamProjectSets:
+  zhCn: 项目集数
+  en: Project Sets
+admin.teamProjects:
+  zhCn: 项目数
+  en: Projects
+admin.teamImages:
+  zhCn: 图片数
+  en: Images
+admin.teamDelete:
+  zhCn: 删除
+  en: Delete
+admin.teamDeleteConfirm:
+  zhCn: 确定删除该团队吗？将级联删除其下所有项目与文件，且不可恢复。
+  en: Delete this team? This will cascade-delete all its projects and files permanently.

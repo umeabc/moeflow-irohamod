@@ -21,6 +21,7 @@ class CreateImageSourceSchema(DefaultSchema):
     position_type = fields.Int(
         missing=SourcePositionType.IN, validate=[need_in(SourcePositionType.ids())]
     )
+    rank = fields.Int(missing=None, allow_none=True, validate=Range(min=0))
 
 
 class BatchSelectTranslationSchema(DefaultSchema):

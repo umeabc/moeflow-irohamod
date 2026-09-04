@@ -6,14 +6,6 @@ from app.validators.custom_validate import object_id
 
 
 class SiteSettingSchema(DefaultSchema):
-    enable_whitelist = fields.Boolean(
-        required=True, error_messages={**required_message}
-    )
-    whitelist_emails = fields.List(
-        fields.Email(),
-        required=True,
-        error_messages={**required_message},
-    )
     only_allow_admin_create_team = fields.Boolean(
         required=True, error_messages={**required_message}
     )

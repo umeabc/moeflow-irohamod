@@ -8,6 +8,7 @@ from app.decorators.auth import admin_required, token_required
 from app.decorators.url import fetch_model
 from app.exceptions import (
     FileDuplicateError,
+    FileMoveError,
     NoPermissionError,
     UploadFileNotFoundError,
 )
@@ -20,6 +21,7 @@ from app.constants.project import ProjectStatus
 from app.constants.file import FileNotExistReason, FileType
 from app.validators.file import (
     AdminFileSearchSchema,
+    FileMoveSchema,
     FileSearchSchema,
     FileUploadSchema,
     FileGetSchema,
@@ -168,6 +170,86 @@ class ProjectFileListAPI(MoeAPIView):
         data = file.to_api()
         data["upload_overwrite"] = old_file is not None
         return data
+
+
+class ProjectFileMoveAPI(MoeAPIView):
+    @token_required
+    @fetch_model(Project)
+    def put(self, project):
+        """把勾选的图片批量移动到同一项目集下的其它项目"""
+        if not self.current_user.admin_can() and not self.current_user.can(
+            project, ProjectPermission.MOVE_FILE
+        ):
+            raise NoPermissionError(gettext("您没有权限移动文件"))
+        data = self.get_json(FileMoveSchema())
+        target = Project.objects(id=data["target_project_id"]).first()
+        if target is None:
+            raise ValidateError(gettext("目标项目不存在"))
+        if target.id == project.id:
+            raise FileMoveError(gettext("不能移动到当前项目"))
+        if target.project_set != project.project_set:
+            raise FileMoveError(gettext("只能移动到同一项目集下的其它项目"))
+        if not self.current_user.admin_can() and not self.current_user.can(
+            target, ProjectPermission.ACCESS
+        ):
+            raise NoPermissionError(gettext("您没有权限访问目标项目"))
+        files = list(File.objects(id__in=data["file_ids"], project=project))
+        results = []
+        for file in files:
+            if file.type != FileType.IMAGE or not file.activated:
+                results.append(
+                    {
+                        "file_id": str(file.id),
+                        "name": file.name,
+                        "status": "skipped",
+                        "reason": "",
+                    }
+                )
+                continue
+            dup = File.objects(md5=file.md5, activated=True, project=target).first()
+            if dup:
+                results.append(
+                    {
+                        "file_id": str(file.id),
+                        "name": file.name,
+                        "status": "failed",
+                        "reason": gettext("目标项目已存在相同图片"),
+                    }
+                )
+                continue
+            try:
+                file.move_to_project(target)
+                results.append(
+                    {
+                        "file_id": str(file.id),
+                        "name": file.name,
+                        "status": "moved",
+                        "reason": "",
+                    }
+                )
+            except Exception as e:
+                results.append(
+                    {
+                        "file_id": str(file.id),
+                        "name": file.name,
+                        "status": "failed",
+                        "reason": str(getattr(e, "message", e)) or gettext("移动失败"),
+                    }
+                )
+        return results
+
+
+class MoveTargetProjectsAPI(MoeAPIView):
+    @token_required
+    @fetch_model(Project)
+    def get(self, project):
+        """返回同一项目集下的其它项目（供前端选择移动目标）"""
+        if not self.current_user.can(project, ProjectPermission.ACCESS):
+            raise NoPermissionError
+        projects = Project.objects(
+            project_set=project.project_set, id__ne=project.id
+        ).only("id", "name")
+        return [{"id": str(p.id), "name": p.name} for p in projects]
 
 
 class FileAPI(MoeAPIView):

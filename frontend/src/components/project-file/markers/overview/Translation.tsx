@@ -193,7 +193,7 @@ export const Translation: FC<TranslationProps> = ({
           flex: none;
           font-size: 12px;
           cursor: pointer;
-          color: #ffdade;
+          color: ${style.primaryColorLightest};
           user-select: none;
           margin-right: 3px;
           &:hover {
@@ -254,7 +254,7 @@ export const Translation: FC<TranslationProps> = ({
             border-color: #8c8c8c;
           }
           .ant-checkbox-input:focus + .ant-checkbox-inner {
-            border-color: #dbdbdb;
+            border-color: ${style.borderColorBase};
           }
         }
         .Translation__SelectText {

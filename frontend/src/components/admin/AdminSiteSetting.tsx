@@ -44,8 +44,7 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
   const [siteSetting, setSiteSetting] = useState<APISiteSetting | null>(null);
 
   interface APISiteSettingFormData
-    extends Omit<APISiteSetting, 'whitelistEmails' | 'autoJoinTeamIDs'> {
-    whitelistEmails: string;
+    extends Omit<APISiteSetting, 'autoJoinTeamIDs'> {
     autoJoinTeamIDs: string;
   }
 
@@ -54,13 +53,11 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
       .editSiteSetting({
         data: {
           ...values,
-          whitelistEmails: textareaToArray(values.whitelistEmails),
           autoJoinTeamIDs: textareaToArray(values.autoJoinTeamIDs),
         },
       })
       .then((result) => {
         const data = toLowerCamelCase(result.data);
-        data.whitelistEmails = data.whitelistEmails.join('\n');
         data.autoJoinTeamIDs = data.autoJoinTeamIDs.join('\n');
         form.setFieldsValue(data);
         // 弹出提示
@@ -68,17 +65,6 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
       })
       .catch((error) => {
         console.log(error);
-        if (error.data?.message?.whitelistEmails) {
-          const line = error.data.message.whitelistEmails
-            .map((line: number) => line + 1)
-            .join(', ');
-          error.data.message.whitelistEmails = [
-            formatMessage(
-              { id: 'site.setting.whitelistEmailsError' },
-              { line },
-            ),
-          ];
-        }
         if (error.data?.message?.autoJoinTeamIDs) {
           const line = error.data.message.autoJoinTeamIDs
             .map((line: number) => line + 1)
@@ -103,7 +89,6 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
       .getSiteSetting({})
       .then((result) => {
         const data = toLowerCamelCase(result.data);
-        data.whitelistEmails = arrayToTextarea(data.whitelistEmails);
         data.autoJoinTeamIDs = arrayToTextarea(data.autoJoinTeamIDs);
         setSiteSetting(data);
         form.setFieldsValue(data);
@@ -123,19 +108,6 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
       `}
     >
       <Form form={form} onFinish={handleFinish} autoComplete="off">
-        <FormItem
-          label={formatMessage({ id: 'site.setting.enableWhitelist' })}
-          name="enableWhitelist"
-        >
-          <Switch defaultChecked={siteSetting?.enableWhitelist} />
-        </FormItem>
-        <FormItem
-          label={formatMessage({ id: 'site.setting.whitelistEmails' })}
-          name="whitelistEmails"
-          tooltip={formatMessage({ id: 'site.setting.whitelistEmailsTip' })}
-        >
-          <TextArea rows={10} />
-        </FormItem>
         <FormItem
           label={formatMessage({ id: 'site.setting.onlyAllowAdminCreateTeam' })}
           name="onlyAllowAdminCreateTeam"

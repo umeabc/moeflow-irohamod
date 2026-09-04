@@ -3,8 +3,6 @@ import { request } from '.';
 import { toUnderScoreCase } from '@/utils';
 
 export interface APISiteSetting {
-  enableWhitelist: boolean;
-  whitelistEmails: string[];
   onlyAllowAdminCreateTeam: boolean;
   autoJoinTeamIDs: string[];
 }

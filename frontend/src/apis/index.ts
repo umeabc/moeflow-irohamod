@@ -34,6 +34,8 @@ import type from './type';
 import user from './user';
 import group from './group';
 import insight from './insight';
+import invitationCode from './invitationCode';
+import adminTeam from './adminTeam';
 import siteSetting from './siteSetting';
 import { lazyThenable } from '@jokester/ts-commonutil/lib/concurrency/lazy-thenable';
 
@@ -294,6 +296,8 @@ export const api = {
   file,
   group,
   insight,
+  invitationCode,
+  adminTeam,
   // invitation,
   language,
   // mitPreprocess,
@@ -335,4 +339,6 @@ export default {
   ...output,
   ...insight,
   ...siteSetting,
+  ...invitationCode,
+  ...adminTeam,
 };

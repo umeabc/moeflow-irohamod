@@ -80,7 +80,7 @@ export const Header: FC<HeaderProps> = ({ className }) => {
   };
 
   const githubLink = (
-    <a className="login" href="https://github.com/moeflow-com" target="_blank">
+    <a className="login" href="https://github.com/umeabc/moeflow-backup" target="_blank">
       <Icon icon={['fab', 'github']} size="1x" />
     </a>
   );

@@ -28,7 +28,7 @@ export const FileUploadProgress: FC<FileUploadProgressProps> = ({
           position: relative;
           width: 100%;
           height: 10px;
-          background: #efefef;
+          background: var(--moeflow-progressTrack);
           border-radius: ${style.borderRadiusBase};
         }
         .FileUploadProgress__ProgressLine {

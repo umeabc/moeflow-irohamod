@@ -17,6 +17,7 @@ class SiteSetting(Document):
     """
 
     type = StringField(db_field="n", required=True, unique=True)
+    # 兼容历史文档：字段保留在模型中（存在 DB 中但不再启用），功能层面已移除
     enable_whitelist = BooleanField(db_field="ew", default=True)
     whitelist_emails = ListField(StringField(), db_field="we", default=list)
     only_allow_admin_create_team = BooleanField(db_field="oacg", default=True)
@@ -44,8 +45,6 @@ class SiteSetting(Document):
 
     def to_api(self):
         return {
-            "enable_whitelist": self.enable_whitelist,
-            "whitelist_emails": self.whitelist_emails,
             "only_allow_admin_create_team": self.only_allow_admin_create_team,
             "auto_join_team_ids": [str(id) for id in self.auto_join_team_ids],
             "homepage_html": self.homepage_html,

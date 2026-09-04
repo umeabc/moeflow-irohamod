@@ -1,19 +1,41 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Form, Input, Select, Divider, Typography } from 'antd';
 import * as LlmService from '@/services/ai/llm_preprocess';
 import { useIntl } from 'react-intl';
 
+/** 一键机翻模式可用性（由选中文件的 sourceCount 判定） */
+export interface TranslateModeAvailability {
+  allNoLabels: boolean;
+  allHasLabels: boolean;
+  mixed: boolean;
+}
+
 interface ModelConfigFormProps {
   initialValue?: LlmService.LLMConf;
   onChange?: (config: LlmService.LLMConf) => void;
+  availability?: TranslateModeAvailability;
+  defaultMode?: LlmService.TranslateMode;
+  onModeChange?: (mode: LlmService.TranslateMode) => void;
 }
 
 export const ModelConfigForm: React.FC<ModelConfigFormProps> = ({
   initialValue,
   onChange,
+  availability,
+  defaultMode,
+  onModeChange,
 }) => {
   const { formatMessage } = useIntl();
   const [form] = Form.useForm();
+  const [mode, setMode] = useState<LlmService.TranslateMode>(
+    defaultMode ?? 'all',
+  );
+
+  useEffect(() => {
+    if (defaultMode) {
+      setMode(defaultMode);
+    }
+  }, [defaultMode]);
 
   // Find matching preset index for initial value
   const findPresetIndex = (config: LlmService.LLMConf): number => {
@@ -115,7 +137,54 @@ export const ModelConfigForm: React.FC<ModelConfigFormProps> = ({
           id: 'fileList.aiTranslate.configModal.configsAreLocal',
         })}
       </p>
+
       <Form form={form} layout="vertical" onValuesChange={handleFormChange}>
+        {/* 翻译模式：下拉选择，置于下方各下拉栏前方 */}
+        <Form.Item
+          label={formatMessage({ id: 'fileList.aiTranslate.mode.title' })}
+        >
+          <Select
+            value={mode}
+            style={{ width: '100%' }}
+            onChange={(v) => {
+              const next = v as LlmService.TranslateMode;
+              setMode(next);
+              onModeChange?.(next);
+            }}
+          >
+            <Select.Option
+              value="all"
+              disabled={availability?.allHasLabels}
+            >
+              {formatMessage({ id: 'fileList.aiTranslate.mode.all.label' })}
+            </Select.Option>
+            <Select.Option
+              value="label-only"
+              disabled={availability?.allHasLabels}
+            >
+              {formatMessage({ id: 'fileList.aiTranslate.mode.labelOnly.label' })}
+            </Select.Option>
+            <Select.Option
+              value="translate-only"
+              disabled={availability?.allNoLabels}
+            >
+              {formatMessage({
+                id: 'fileList.aiTranslate.mode.translateOnly.label',
+              })}
+            </Select.Option>
+          </Select>
+        </Form.Item>
+        <p
+          style={{
+            color: 'var(--moeflow-textColorSecondary)',
+            marginTop: -8,
+            marginBottom: 12,
+            fontSize: 12,
+          }}
+        >
+          {formatMessage({ id: 'fileList.aiTranslate.mode.desc' })}
+        </p>
+
         <Form.Item
           label={formatMessage({
             id: 'fileList.aiTranslate.configModal.presets.label',

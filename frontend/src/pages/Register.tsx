@@ -1,24 +1,10 @@
 import { css } from '@emotion/core';
-import {
-  Button,
-  Form as AntdForm,
-  Input,
-  InputRef,
-  message,
-  Modal,
-} from 'antd';
-import React, { useRef } from 'react';
+import { Button, Form as AntdForm, Input, Modal } from 'antd';
+import React from 'react';
 import { useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import { api, FailureResults, resultTypes } from '../apis';
-import {
-  AuthFormWrapper,
-  EmailVCodeInputItem,
-  FormItem,
-  Header,
-  VCodeInput,
-  Form,
-} from '../components';
+import { AuthFormWrapper, FormItem, Header, Form } from '../components';
 import { setUserToken } from '../store/user/slice';
 import { useTitle } from '../hooks';
 import { FC } from '../interfaces';
@@ -28,7 +14,7 @@ import { useHistory } from 'react-router-dom';
 /** 注册页的属性接口 */
 interface RegisterProps {}
 /**
- * 注册页
+ * 注册页（需邀请码）
  */
 const Register: FC<RegisterProps> = () => {
   const { formatMessage } = useIntl(); // i18n
@@ -36,9 +22,6 @@ const Register: FC<RegisterProps> = () => {
   const dispatch = useDispatch();
   const [form] = AntdForm.useForm();
   const history = useHistory();
-
-  // 用于输入完人机验证码后自动定位到邮件验证码输入框
-  const emailVCodeInputRef = useRef<InputRef>(null);
 
   /** 提交表单 */
   const handleFinish = (values: any) => {
@@ -93,27 +76,24 @@ const Register: FC<RegisterProps> = () => {
         navLink="/login"
       >
         <Form name="register-form" form={form} onFinish={handleFinish}>
-          <EmailVCodeInputItem
-            vCodeType="confirmEmail"
-            onSend={(waiting) => {
-              // 发送成功且不在等待中
-              if (!waiting) {
-                const tip = formatMessage({ id: 'auth.sendEmailSuccessTip' });
-                message.success({ content: tip, duration: 6 });
-              }
-              emailVCodeInputRef.current?.focus();
-            }}
+          <FormItem
             name="email"
-            inputProps={{
-              prefix: formatMessage({ id: 'site.email' }),
-              size: 'large',
-            }}
-          ></EmailVCodeInputItem>
-          <FormItem name="vCode" rules={[{ required: true }, { len: 6 }]}>
-            <VCodeInput
-              maxLength={6}
-              ref={emailVCodeInputRef}
-              prefix={formatMessage({ id: 'site.vCode' })}
+            rules={[
+              { required: true },
+              {
+                type: 'email',
+                message: formatMessage({ id: 'auth.emailFormatTip' }),
+              },
+            ]}
+          >
+            <Input
+              prefix={formatMessage({ id: 'site.email' })}
+              size="large"
+            />
+          </FormItem>
+          <FormItem name="inviteCode" rules={[{ required: true }]}>
+            <Input
+              prefix={formatMessage({ id: 'register.inviteCode' })}
               size="large"
             />
           </FormItem>

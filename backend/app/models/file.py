@@ -31,6 +31,7 @@ from app.exceptions import (
     FileIsActivatedError,
     FilenameDuplicateError,
     FilenameIllegalError,
+    FileMoveError,
     FileNotExistError,
     FileParentIsSameError,
     FileParentIsSelfError,
@@ -521,6 +522,84 @@ class File(Document):
                     update_project=False,
                     target=target,
                 )
+
+    @need_activated
+    def move_to_project(self, target_project):
+        """把当前图片移动到同一项目集下的其它项目（含标号/翻译随项目迁移）"""
+        self.reload()
+        old_project = self.project
+        if target_project.id == self.project.id:
+            raise FileMoveError(gettext("不能移动到当前项目"))
+        if target_project.project_set != self.project.project_set:
+            raise FileMoveError(gettext("只能移动到同一项目集下的其它项目"))
+        old_project_targets = list(old_project.targets())
+        new_project_targets = list(target_project.targets())
+        # 记录旧项目下该文件对各 target 的实际贡献（此时翻译仍指向旧 target）
+        old_contrib = {}
+        for t in old_project_targets:
+            old_contrib[t.id] = self.recompute_source_counts_for_target(t)
+        # 按语言把翻译重映射到新项目 target（同语言则指向新项目 target）
+        lang_to_new_target = {
+            t.language.id: t for t in new_project_targets if t.language
+        }
+        for source in Source.objects(file=self):
+            for tr in Translation.objects(source=source):
+                if tr.target and tr.target.language:
+                    new_target = lang_to_new_target.get(tr.target.language.id)
+                    if new_target and new_target.id != tr.target.id:
+                        tr.target = new_target
+                        tr.save()
+        # 移动到新项目根目录（clean() 禁止跨项目父级）
+        self.parent = None
+        self.ancestors = []
+        self.dir_sort_name = ""
+        self.project = target_project
+        self.save()
+        # 旧项目对账：扣除该文件的计数 + 各 target 的实际贡献，并清旧目标缓存
+        old_project.inc_cache("file_count", -1)
+        old_project.inc_cache("file_size", -self.file_size)
+        old_project.inc_cache("source_count", -self.source_count)
+        for t in old_project_targets:
+            tr_count, ck_count = old_contrib[t.id]
+            old_project.inc_cache("translated_source_count", -tr_count, target=t)
+            old_project.inc_cache("checked_source_count", -ck_count, target=t)
+            old_cache = FileTargetCache.objects(file=self, target=t).first()
+            if old_cache:
+                old_cache.delete()
+        # 新项目对账：增加计数 + 按实际翻译重算目标缓存
+        target_project.inc_cache("file_count", 1)
+        target_project.inc_cache("file_size", self.file_size)
+        target_project.inc_cache("source_count", self.source_count)
+        for t in new_project_targets:
+            tr_count, ck_count = self.recompute_source_counts_for_target(t)
+            cache = self.create_target_cache(t)
+            old_t = cache.translated_source_count
+            old_c = cache.checked_source_count
+            if old_t != tr_count or old_c != ck_count:
+                cache.translated_source_count = tr_count
+                cache.checked_source_count = ck_count
+                cache.save()
+                target_project.inc_cache(
+                    "translated_source_count", tr_count - old_t, target=t
+                )
+                target_project.inc_cache(
+                    "checked_source_count", ck_count - old_c, target=t
+                )
+        return self
+
+    def recompute_source_counts_for_target(self, target):
+        """按实际翻译重算某 target 下本文件的已翻译/已校对 source 数"""
+        translated = 0
+        checked = 0
+        for source in Source.objects(file=self):
+            if source.blank:
+                continue
+            translations = Translation.objects(source=source, target=target)
+            if translations.count() > 0:
+                translated += 1
+                if translations.filter(selected=True).count() > 0:
+                    checked += 1
+        return translated, checked
 
     def create_target_cache(self, target):
         # 已有缓存则不创建
@@ -1435,6 +1514,7 @@ class Source(Document):
             "content": self.content,
             "x": self.x,
             "y": self.y,
+            "rank": self.rank,
             "position_type": self.position_type,
             "machine": self.machine,
         }
