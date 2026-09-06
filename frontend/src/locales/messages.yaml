@@ -1549,6 +1549,21 @@ admin.brandAssetUploaded:
 admin.brandAssetUploadFail:
   zhCn: 图片上传失败
   en: Failed to upload image
+admin.brandText:
+  zhCn: 品牌文案
+  en: Brand Texts
+admin.brandTextDesc:
+  zhCn: 站点名、标语与英文名，中英文可分别设置，留空则恢复默认
+  en: Site name, slogan and English name; set separately per language, leave blank to restore defaults
+admin.brandTextSiteName:
+  zhCn: 站点名
+  en: Site Name
+admin.brandTextSlogan:
+  zhCn: 标语
+  en: Slogan
+admin.brandTextEnglishName:
+  zhCn: 英文名
+  en: English Name
 admin.customMsgPlaceholder:
   zhCn: 请输入自定义文案，留空则恢复默认
   en: Enter custom text; leave blank to restore default

@@ -87,20 +87,45 @@ export const AdminCustomMessages: FC<AdminCustomMessagesProps> = ({
   const handleSave = async () => {
     setSaving(true);
     try {
-      // 按语言分组提交：{ "zh-CN": {key: msg}, "en": {key: msg} }；空字符串表示恢复默认
+      // 读取当前完整 custom_messages（含站点设置页管理的品牌文案），
+      // 只覆盖本页负责的 DEFS key，其余原样保留，避免覆盖丢失。
+      const existingRes = await api.siteSetting.getCustomMessages({});
+      const existing = existingRes.data || {};
       const messages: Record<string, Record<string, string>> = {
-        [LOCALE_ZH]: {},
-        [LOCALE_EN]: {},
+        [LOCALE_ZH]: {
+          ...(typeof existing[LOCALE_ZH] === 'object' &&
+          existing[LOCALE_ZH] !== null
+            ? existing[LOCALE_ZH]
+            : {}),
+        },
+        [LOCALE_EN]: {
+          ...(typeof existing[LOCALE_EN] === 'object' &&
+          existing[LOCALE_EN] !== null
+            ? existing[LOCALE_EN]
+            : {}),
+        },
       };
+      // 兼容旧扁平结构：把扁平 key 并入 zh 分区
+      for (const key of Object.keys(existing)) {
+        if (key === LOCALE_ZH || key === LOCALE_EN) continue;
+        if (typeof existing[key] === 'string') {
+          messages[LOCALE_ZH][key] = existing[key];
+        }
+      }
+      // 应用本页编辑值；空字符串表示恢复默认（即从覆盖中移除）
       for (const def of CUSTOM_MESSAGE_DEFS) {
         const v = values[def.key] || { zh: '', en: '' };
         const zh = v.zh.trim();
         const en = v.en.trim();
         if (zh !== '' && zh !== def.default) {
           messages[LOCALE_ZH][def.key] = zh;
+        } else {
+          delete messages[LOCALE_ZH][def.key];
         }
         if (en !== '' && en !== def.defaultEn) {
           messages[LOCALE_EN][def.key] = en;
+        } else {
+          delete messages[LOCALE_EN][def.key];
         }
       }
       await api.siteSetting.saveCustomMessages({ messages });
