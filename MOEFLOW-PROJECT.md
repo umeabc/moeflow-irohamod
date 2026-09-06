@@ -1,4 +1,4 @@
-# MoeFlow 项目交接档案（iroha6 定制版）
+# MoeFlow 项目交接档案（iroha7 定制版）
 
 > 项目已稳定并正式上线。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
 > 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。
@@ -9,7 +9,7 @@
 ## 1. 项目概览
 - 名称：MoeFlow（萌翻 / 彩翻）—— 自托管漫画翻译协作平台。
 - 基线：前端 `v1.1.7`、后端 `v1.1.8`。
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha6`、`moeflow-backend:1.1.8-iroha6`。
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha7`、`moeflow-backend:1.1.8-iroha7`。
 
 ## 2. 部署拓扑（通用）
 - 一组 Docker Compose 服务：mongodb、rabbitmq、backend、celery-default、celery-output、frontend。
@@ -19,7 +19,7 @@
 
 ## 3. 部署迁移方式
 - 镜像 `docker save` 导出 tar → 生产侧 `docker load` → compose（**只替换 backend/frontend，保留 mongodb/rabbitmq 数据**）。
-- 镜像 tar 命名：`moeflow-backend-1.1.8-iroha6.tar`（约 496MB）、`moeflow-frontend-1.1.7-iroha6.tar`（约 74MB）。
+- 镜像 tar 命名：`moeflow-backend-1.1.8-iroha7.tar`（约 496MB）、`moeflow-frontend-1.1.7-iroha7.tar`（约 74MB）。
 
 ## 4. 本次改动摘要
 详见 `CHANGELOG-iroha4.md`。
@@ -32,6 +32,13 @@
 - **站点管理员管理页**：邀请码管理（创建 / 启停 / 删除，团队覆盖全站）+ 团队管理（全站团队概览、级联删除、头像）。
 - **图片移动**：同项目集批量移动勾选图片，重复 md5 失败并说明原因；标号随图保留、翻译按语言重映射到新项目，进度条与计数正确。
 
+## 4.2 iroha7 新增（基于 iroha6）
+- **自定义文案（按语言分组）**：`custom_messages` 按 `zh-CN`/`en` 分区存储；修复 `toUnderScoreCase` 破坏 key（如 `site.englishName`）导致改英文名不生效的坑；新增 `site.englishName` 配置项，标题展示 `站点名 · 英文名`。
+- **品牌文案移至站点设置页**：站点名 / 标语 / 英文名在站点设置页中英文分别编辑（留空恢复默认），自定义文案入口已移除。
+- **站点品牌图片（mascot / favicon）**：站点设置页上传 / 替换立绘与标签页图标（未设置回退默认）；公开 `/v1/site/brand-asset/<type>` 服务图片。
+- **上传文件名去 emoji**：图片上传时自动清除文件名中的 emoji。
+- **全体用户通知系统**：管理员发布公告（`/v1/admin/notices`），登录弹未读通知（点已读不再弹），用户菜单「通知一览」查历史；删除通知自动清理用户已读记录。
+
 ## 5. 关键环境坑（务必牢记）
 1. **前端 build 在资源充足的开发机上做**，再上传远程 `docker build`；远程内存不足跑不动前端构建（OOM）。
 2. **Docker Hub 不稳定** → 用 daocloud `docker.m.daocloud.io` 拉基础镜像再 retag。
@@ -41,7 +48,7 @@
 
 ## 6. 备份
 - 源码快照：GitHub 私有仓库 `umeabc/moeflow-backup`（`frontend/` + `backend/`）。
-- 改动清单：`CHANGELOG-iroha4.md`（当前镜像版本 iroha6）。
+- 改动清单：`CHANGELOG-iroha4.md`（当前镜像版本 iroha7）。
 
 ## 7. 回退
 - 如要回到官方：用官方 tag `v1.1.7` / `v1.1.8` 重新构建即可（本定制版与上游存在差异）。

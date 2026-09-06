@@ -1,10 +1,57 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha6）
+# MoeFlow 自定义改动 CHANGELOG（iroha7）
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 镜像 tag：`moeflow-frontend:1.1.7-iroha6` / `moeflow-backend:1.1.8-iroha6`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5` 镜像保留各自版本 tag）。
+> 镜像 tag：`moeflow-frontend:1.1.7-iroha7` / `moeflow-backend:1.1.8-iroha7`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6` 镜像保留各自版本 tag）。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：以 `docker save` 导出镜像 tar → 生产侧 `docker load` 导入（仅替换前端/后端镜像，勿改动 env / compose）。
+
+---
+
+## iroha7 新增特性（基于 iroha6）
+
+### 一、自定义文案重构：按语言分组 + 站点名/标语/英文名配置项
+
+- `custom_messages` 存储结构升级为**按语言分组**：`{ "zh-CN": {key: msg}, "en": {key: msg} }`（兼容旧扁平结构自动迁移）。
+- **修复坑**：保存自定义文案不再经 `toUnderScoreCase` 转换——该转换会把带点号/大小写的 key（如 `site.englishName`）破坏成 `site_english_name`，导致后台改英文名不生效。key 原样透传。
+- 新增**英文名配置项** `site.englishName`（默认 `Moetran`），浏览器标题展示 `站点名 · 英文名`。
+- 后端：`CustomMessagesAPI`（公开 GET `/v1/site/custom-messages`）、`AdminCustomMessagesAPI`（GET/PUT `/v1/admin/custom-messages`）、`SiteSetting.custom_messages`（`DictField`）。
+- 前端：`locales/index.ts` `doInitI18n` 按 `matchLocale(locale)` 取语言分区合并覆盖；`locales/custom-messages.ts`（`CUSTOM_MESSAGE_DEFS` 每项含 `default`+`defaultEn`）；`AdminCustomMessages.tsx` 每项中英两个输入框。
+
+### 二、品牌文案移至站点设置页
+
+- 站点名 `site.name`、标语 `site.slogan`、英文名 `site.englishName` 三个品牌文案项从「自定义文案」页**移至站点设置页**编辑（中英文分别可编辑，留空恢复默认）。
+- `AdminCustomMessages` 保存改为「读完整 custom_messages → 仅覆盖本页负责的 key → 整体提交」，避免覆盖移走的品牌文案；`AdminSiteSetting` 新增「品牌文案」区块，同样保留其它 key。
+
+### 三、移除「自定义文案」后台入口
+
+- 删除 `AdminCustomMessages` 组件与 `locales/custom-messages.ts`（DEFS/GROUPS/BRAND_TEXT_KEYS）。
+- `Admin.tsx` 移除路由、`AdminSidebar` 移除导航项、`AdminTopbar` 移除快捷入口。
+- 清理 `admin.customMessages` / `admin.customMsg*` 系列 i18n（保留 `admin.customMsgZh/En` 供站点设置品牌文案语言标签使用）。
+- **保留** `custom-messages` API 与后端存储（i18n 覆盖机制 + 站点设置品牌文案仍在用）。
+
+### 四、站点品牌图片（mascot / favicon）配置
+
+- 后台「站点设置」可**上传/替换 mascot（立绘）与 favicon（标签页图标）**，未设置时回退站点默认图。
+- 后端：`SiteSetting` 加 `mascot_name`(db_field `ma`) / `favicon_name`(`fi`)；`PUT /v1/admin/site-brand-assets`（multipart `type=mascot|favicon` + `file`，校验扩展名 png/jpg/jpeg/webp/gif，`oss.upload` 存 `site-brand/` 前缀，替换时删旧文件）；公开 `GET /v1/site/brand-assets`（返回已配置访问 URL 或 `''`）+ `GET /v1/site/brand-asset/<type>`（LOCAL_STORAGE `send_file` / OSS redirect）。
+- 前端：`apis/siteSetting.ts` 加 `getBrandAssets`/`uploadBrandAsset`；`hooks/useBrandAssets.ts`（`useBrandMascot` + `applyBrandFavicon`，模块级缓存）；`index.tsx` 启动时应用自定义 favicon；`AuthFormWrapper`（登录/注册页背景）与 `Index`（首页大图）mascot 用配置图（未配置回退默认）；`AdminSiteSetting.tsx` 加上传区（预览 + 上传）。
+
+### 五、上传图片文件名去 emoji
+
+- 图片上传时，文件名中的 **emoji 自动去除**（保留其它字符、去首尾空白）。
+- 前端 `utils/index.ts` 新增 `stripEmoji` / `sanitizeFilename`（unicode 正则覆盖 emoji 主区 + 修饰符 + 旗帜/符号区）；`FileList.tsx` 的 FilePond `server.process.ondata` 在构造 multipart 前清洗文件名；后端 `real_file.filename` 即入库名，链路完整。
+
+### 六、全体用户通知系统
+
+- 站点管理员可**发布面向全体用户的通知公告**（纯文本多行）；每次登录若有**未读**通知则**弹窗展示**，点「知道了」/关闭即全部标记已读，之后不再弹。
+- 用户菜单「**暗色模式**」开关下方新增「**通知一览**」：列出全部历史通知（含已读/未读标记），打开即把未读标记已读。
+- 管理员后台新增「**通知管理**」页：发布 / 编辑 / 启用停用 / 删除（删除时自动清理所有用户已读记录）。
+- 后端：
+  - `Notice` 模型（title/content/enabled/create_time/create_user）、`UserNoticeRead` 模型（每用户一份已读 id 列表）。
+  - 用户侧：`GET /v1/user/notices`（`?scope=unread` 只看未读，返回带 `read` 标记）、`PUT /v1/user/notices/read`。
+  - 管理侧：`GET/POST /v1/admin/notices`、`PUT/DELETE /v1/admin/notices/<notice_id>`（`admin_required`）。
+  - 异常：`exceptions/notice.py`（`NoticeRootError` 7100 / `NoticeNotExistError` 7101）。
+- 前端：`apis/notice.ts`；`components/notice/{NoticeLoginPopup,NoticeHistoryModal,NoticeListView}.tsx`；`DashboardMenu.tsx` 用户菜单项；`AdminNoticeList.tsx` + 侧栏入口；i18n `notice.*` / `admin.notices.*`。
 
 ---
 
@@ -232,4 +279,4 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 
 - 本改动为定制版本，与上游 moeflow 官方代码存在差异；如需回退，可用官方 tag `v1.1.7` / `v1.1.8` 重新构建。
 - 涉及权限与交互调整（角色编辑、项目集删除/移动、搜索范围、上传去重、主题切换、符号工具），请按实际团队与权限配置确认。
-- 交付：前端/后端镜像已按 `docker save` 打包为 tar（`moeflow-*-1.1.x-iroha6.tar`），生产侧 `docker load` 后替换对应镜像即可（仅替换镜像，不动 env/compose）。
+- 交付：前端/后端镜像已按 `docker save` 打包为 tar（`moeflow-*-1.1.x-iroha7.tar`），生产侧 `docker load` 后替换对应镜像即可（仅替换镜像，不动 env/compose）。
