@@ -41,10 +41,6 @@ export const AdminTopbar: FC<AdminTopbarProps> = ({
         label: formatMessage({ id: 'admin.siteSettings' }),
         to: `${routes.admin}/site-setting`,
       },
-      {
-        label: formatMessage({ id: 'admin.customMessages' }),
-        to: `${routes.admin}/custom-messages`,
-      },
     ],
     [formatMessage],
   );

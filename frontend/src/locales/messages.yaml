@@ -1507,12 +1507,6 @@ admin.imageModeration:
 admin.captchas:
   zhCn: 验证码
   en: Captchas
-admin.customMessages:
-  zhCn: 自定义文案
-  en: Custom Messages
-admin.customMsgDefault:
-  zhCn: 默认
-  en: Default
 admin.customMsgZh:
   zhCn: 简体中文
   en: Simplified Chinese
@@ -1564,39 +1558,6 @@ admin.brandTextSlogan:
 admin.brandTextEnglishName:
   zhCn: 英文名
   en: English Name
-admin.customMsgPlaceholder:
-  zhCn: 请输入自定义文案，留空则恢复默认
-  en: Enter custom text; leave blank to restore default
-admin.customMsgSaved:
-  zhCn: 文案已保存，正在刷新生效
-  en: Messages saved, refreshing to apply
-admin.customMsgGroup.login:
-  zhCn: 登录与注册
-  en: Login & Registration
-admin.customMsgGroup.admin:
-  zhCn: 管理员后台
-  en: Admin Console
-admin.customMsgGroup.move:
-  zhCn: 图片移动
-  en: Image Move
-admin.customMsgGroup.search:
-  zhCn: 跨组搜索
-  en: Cross-Group Search
-admin.customMsgGroup.ai:
-  zhCn: AI 智能翻译
-  en: AI Translation
-admin.customMsgGroup.editor:
-  zhCn: 编辑器
-  en: Editor
-admin.customMsgGroup.appearance:
-  zhCn: 界面外观
-  en: Appearance
-admin.customMsgGroup.other:
-  zhCn: 其他
-  en: Other
-admin.customMsgGroup.brand:
-  zhCn: 品牌
-  en: Brand
 admin.inviteCodes:
   zhCn: 邀请码
   en: Invitation Codes

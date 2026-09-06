@@ -195,12 +195,6 @@ export const AdminSidebar: FC<AdminSidebarProps> = ({ onNavigate }) => {
             label={formatMessage({ id: 'admin.siteSettings' })}
             onNavigate={onNavigate}
           />
-          <AdminNavItem
-            to={`${routes.admin}/custom-messages`}
-            icon="edit"
-            label={formatMessage({ id: 'admin.customMessages' })}
-            onNavigate={onNavigate}
-          />
         </div>
       </nav>
       <div className="AdminSidebar__Bottom">

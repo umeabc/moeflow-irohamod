@@ -15,7 +15,6 @@ import { toLowerCamelCase } from '@/utils';
 import { Form } from '@/components/shared-form/Form';
 import { FormItem } from '@/components/shared-form/FormItem';
 import style from '@/style';
-import { BRAND_TEXT_KEYS } from '@/locales/custom-messages';
 
 /** 语言分区 key（与前端 matchLocale 返回值一致） */
 const LOCALE_ZH = 'zh-CN';
