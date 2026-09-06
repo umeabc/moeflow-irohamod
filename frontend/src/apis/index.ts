@@ -37,6 +37,7 @@ import insight from './insight';
 import invitationCode from './invitationCode';
 import adminTeam from './adminTeam';
 import siteSetting from './siteSetting';
+import notice from './notice';
 import { lazyThenable } from '@jokester/ts-commonutil/lib/concurrency/lazy-thenable';
 
 const debugLogger = createDebugLogger('apis');
@@ -303,6 +304,7 @@ export const api = {
   // mitPreprocess,
   me,
   member,
+  notice,
   output,
   project,
   projectSet,
@@ -341,4 +343,5 @@ export default {
   ...siteSetting,
   ...invitationCode,
   ...adminTeam,
+  ...notice,
 };

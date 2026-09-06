@@ -25,7 +25,7 @@ import { FC, File as MFile, Project, Target } from '@/interfaces';
 import { AppState } from '@/store';
 import { setFilesState } from '@/store/file/slice';
 import style from '@/style';
-import { toLowerCamelCase } from '@/utils';
+import { sanitizeFilename, toLowerCamelCase } from '@/utils';
 import { can } from '@/utils/user';
 import { routes } from '@/pages/routes';
 import { ListPageSpec } from '@/components/shared/List';
@@ -477,6 +477,20 @@ export const FileList: FC<FileListProps> = ({
           process: {
             url: uploadAPI,
             headers: { Authorization: `Bearer ${token}` },
+            // 上传前去掉文件名中的 emoji（后端以 multipart 文件名为入库名）
+            ondata: (fd) => {
+              const file = fd.get('file');
+              if (file instanceof File) {
+                const cleanName = sanitizeFilename(file.name);
+                if (cleanName && cleanName !== file.name) {
+                  fd.set(
+                    'file',
+                    new File([file], cleanName, { type: file.type }),
+                  );
+                }
+              }
+              return fd;
+            },
           },
         }}
       />

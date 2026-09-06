@@ -2,6 +2,7 @@ import { css, Global } from '@emotion/core';
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { Redirect, Route, Switch, useLocation } from 'react-router-dom';
+import { NoticeLoginPopup } from './components/notice/NoticeLoginPopup';
 import Admin from './pages/Admin';
 import Dashboard from './pages/Dashboard';
 import ImageTranslator from './pages/ImageTranslator';
@@ -349,6 +350,8 @@ const App: React.FC = () => {
           </Route>
         </Switch>
       )}
+      {/* 登录后弹未读站点通知（全局挂载，仅在已登录时生效） */}
+      <NoticeLoginPopup />
     </>
   );
 };

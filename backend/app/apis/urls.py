@@ -80,6 +80,12 @@ from app.apis.v_code import (
     ResetEmailVCodeAPI,
 )
 from app.apis.invitation_code import InvitationCodeAPI, InvitationCodeListAPI
+from app.apis.notice import (
+    AdminNoticeAPI,
+    AdminNoticeListAPI,
+    NoticeListAPI,
+    NoticeReadAPI,
+)
 from app.apis.admin_team import AdminTeamAPI, AdminTeamListAPI
 from app.apis.language import LanguageListAPI
 from app.apis.target import TargetAPI
@@ -191,6 +197,16 @@ me.add_url_rule(
     "/teams",
     methods=["GET", "OPTIONS"],
     view_func=MeTeamListAPI.as_view("me_team_list"),
+)
+me.add_url_rule(
+    "/notices",
+    methods=["GET", "OPTIONS"],
+    view_func=NoticeListAPI.as_view("me_notice_list"),
+)
+me.add_url_rule(
+    "/notices/read",
+    methods=["PUT", "OPTIONS"],
+    view_func=NoticeReadAPI.as_view("me_notice_read"),
 )
 # 验证码模块
 v_code = Blueprint("v_code", __name__, url_prefix=v1_prefix)
@@ -543,6 +559,16 @@ admin.add_url_rule(
     "/teams/<team_id>",
     methods=["DELETE", "OPTIONS"],
     view_func=AdminTeamAPI.as_view("admin_team_delete"),
+)
+admin.add_url_rule(
+    "/notices",
+    methods=["GET", "POST", "OPTIONS"],
+    view_func=AdminNoticeListAPI.as_view("admin_notice_list"),
+)
+admin.add_url_rule(
+    "/notices/<notice_id>",
+    methods=["PUT", "DELETE", "OPTIONS"],
+    view_func=AdminNoticeAPI.as_view("admin_notice"),
 )
 
 if app_config["MIT_STORAGE_ROOT"]:

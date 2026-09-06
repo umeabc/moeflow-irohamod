@@ -12,6 +12,7 @@ import { AdminImageSafeCheck } from '@/components/admin/AdminImageSafeCheck';
 import { AdminSiteSetting } from '@/components/admin/AdminSiteSetting';
 import { AdminInviteCode } from '@/components/admin/AdminInviteCode';
 import { AdminTeam } from '@/components/admin/AdminTeam';
+import { AdminNoticeList } from '@/components/admin/AdminNoticeList';
 import { routes } from './routes';
 
 /** 管理员页面 */
@@ -47,6 +48,9 @@ const Admin: FC = () => {
         </Route>
         <Route path={`${path}/site-setting`}>
           {page('admin.siteSettings', 'admin.pageDescription.siteSettings', <AdminSiteSetting />)}
+        </Route>
+        <Route path={`${path}/notices`}>
+          {page('admin.notices', 'admin.noticesDesc', <AdminNoticeList />)}
         </Route>
         <Route path={`${path}/invite-codes`}>
           {page('admin.inviteCodes', 'admin.pageDescription.inviteCodes', <AdminInviteCode />)}

@@ -1,11 +1,12 @@
 import { css } from '@emotion/core';
 import { Badge, MenuProps, Switch } from 'antd';
 import classNames from 'classnames';
-import React from 'react';
+import React, { useState } from 'react';
 import { useIntl } from 'react-intl';
 import { useDispatch, useSelector } from 'react-redux';
 import { matchPath, useHistory, useLocation } from 'react-router-dom';
 import { Avatar, Dropdown, Icon, ListItem, TeamList, Tooltip } from '..';
+import { NoticeHistoryModal } from '../notice/NoticeHistoryModal';
 import { FC } from '@/interfaces';
 import { AppState } from '@/store';
 import { resetProjectsState } from '@/store/project/slice';
@@ -59,11 +60,17 @@ export const DashboardMenu: FC<
   const collapsedWidth = MENU_COLLAPSED_WIDTH - 1;
   const uncollapsedWidth = MENU_UNCOLLAPSED_WIDTH - 1;
   const currentUser = useSelector((state: AppState) => state.user);
+  // 通知一览弹窗
+  const [noticeVisible, setNoticeVisible] = useState(false);
+  const showNotices = () => {
+    setNoticeVisible(true);
+  };
 
   const menuProps = useMenuProps(
     currentUser,
     newInvitationsCount,
     relatedApplicationsCount,
+    showNotices,
   );
 
   return (
@@ -349,6 +356,10 @@ export const DashboardMenu: FC<
           </div>
         </Dropdown>
       )}
+      <NoticeHistoryModal
+        visible={noticeVisible}
+        onClose={() => setNoticeVisible(false)}
+      />
     </div>
   );
 };
@@ -357,6 +368,7 @@ function useMenuProps(
   currentUser: UserState,
   newInvitationsCount: number,
   relatedApplicationsCount: number,
+  onShowNotices: () => void,
 ): MenuProps {
   const { formatMessage } = useIntl();
   const dispatch = useDispatch();
@@ -412,6 +424,13 @@ function useMenuProps(
             />
           </div>
         ),
+      },
+      {
+        label: (
+          <div css={buttonStyle}>{formatMessage({ id: 'notice.list' })}</div>
+        ),
+        key: 'notice.list',
+        onClick: onShowNotices,
       },
       {
         dashed: 'true',

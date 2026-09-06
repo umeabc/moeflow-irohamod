@@ -141,10 +141,30 @@ const toPlural = (value: string) => {
   return value + 's';
 };
 
+/**
+ * 去掉文件名（或任意字符串）中的 emoji/emoji 修饰符，保留其它字符
+ */
+const stripEmoji = (value: string) => {
+  // eslint-disable-next-line no-control-regex
+  return value.replace(
+    /[\u{1F000}-\u{1FAFF}\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{2764}\u{3030}\u{303D}\u{3297}\u{3299}\u{1F1E6}-\u{1F1FF}\u{2190}-\u{21FF}]/gu,
+    '',
+  );
+};
+
+/**
+ * 清理上传文件名：去掉 emoji 并去除首尾空白，返回可用文件名
+ */
+const sanitizeFilename = (value: string) => {
+  return stripEmoji(value).trim();
+};
+
 export {
   toHyphenCase,
   toUnderScoreCase,
   toLowerCamelCase,
   toFormErrors,
   toPlural,
+  stripEmoji,
+  sanitizeFilename,
 };
