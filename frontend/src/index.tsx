@@ -18,6 +18,7 @@ import {
   setRuntimeConfig,
 } from './store/site/slice';
 import { setUserToken } from './store/user/slice';
+import { applyBrandFavicon } from './hooks/useBrandAssets';
 import { getToken } from './utils/cookie';
 import { OSName, Platform } from './interfaces';
 import { runtimeConfig } from './configs';
@@ -82,6 +83,9 @@ async function mountApp() {
   if (cookieToken) {
     store.dispatch(setUserToken({ token: cookieToken, refresh: true }));
   }
+
+  // 应用自定义 favicon（未配置时保持默认静态 favicon）
+  applyBrandFavicon();
 
   // 渲染 APP
   ReactDOM.render(

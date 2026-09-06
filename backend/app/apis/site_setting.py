@@ -3,13 +3,19 @@ import platform
 import re
 import shutil
 import time
+from urllib.parse import quote
 
+from bson import ObjectId
+from flask import current_app, redirect, request, send_file
 from flask_babel import gettext
 
+from app import STORAGE_PATH, app_config, oss
 from app.constants.storage import StorageType
 from app.core.views import MoeAPIView
 from app.decorators.auth import admin_required
+from app.exceptions import UploadFileNotFoundError
 from app.models.site_setting import SiteSetting
+from app.utils.logging import logger
 from app.validators.site_setting import CustomMessagesSchema, SiteSettingSchema
 
 
@@ -99,6 +105,110 @@ class AdminCustomMessagesAPI(MoeAPIView):
         site_setting.save()
         site_setting.reload()
         return {"message": gettext("保存成功"), "custom_messages": site_setting.custom_messages}
+
+
+BRAND_ASSET_TYPES = ("mascot", "favicon")
+BRAND_ASSET_PREFIX = "site-brand/"
+
+
+class BrandAssetAPI(MoeAPIView):
+    """公开：站点品牌图片（mascot/favicon）查询与访问"""
+
+    def get(self, asset_type=None):
+        """
+        @api {get} /v1/site/brand-assets 查询已配置的品牌图片 URL
+        @apiVersion 1.0.0
+        @apiName getBrandAssets
+        @apiGroup SiteSetting
+
+        @apiSuccessExample {json} 返回示例
+        {
+            "mascot": "/api/v1/site/brand-asset/mascot",
+            "favicon": ""
+        }
+        """
+        if asset_type is None:
+            # 查询：返回每个类型当前配置的访问 URL（未配置则为空串）
+            ss = SiteSetting.get()
+            result = {}
+            for t in BRAND_ASSET_TYPES:
+                name = getattr(ss, f"{t}_name", "") or ""
+                result[t] = (
+                    f"/api/v1/site/brand-asset/{t}"
+                    if name
+                    else ""
+                )
+            return result
+        if asset_type not in BRAND_ASSET_TYPES:
+            return {"message": gettext("不支持的品牌图片类型")}, 404
+        ss = SiteSetting.get()
+        name = getattr(ss, f"{asset_type}_name", "") or ""
+        if not name:
+            return {"message": gettext("未设置该品牌图片")}, 404
+        # LOCAL_STORAGE：直接返回本地文件；OSS：重定向到签名 URL
+        if app_config["STORAGE_TYPE"] == StorageType.LOCAL_STORAGE:
+            file_path = os.path.join(STORAGE_PATH, BRAND_ASSET_PREFIX, name)
+            if not os.path.isfile(file_path):
+                return {"message": gettext("图片文件不存在")}, 404
+            return send_file(
+                file_path,
+                mimetype="image/png",
+                max_age=3600,
+            )
+        return redirect(oss.sign_url(BRAND_ASSET_PREFIX, name))
+
+
+class AdminBrandAssetAPI(MoeAPIView):
+    """管理：上传/替换站点品牌图片（mascot/favicon）"""
+
+    @admin_required
+    def put(self):
+        """
+        @api {put} /v1/admin/site-brand-assets 上传/替换站点品牌图片
+        @apiVersion 1.0.0
+        @apiName putBrandAsset
+        @apiGroup SiteSetting
+        @apiUse APIHeader
+        @apiUse TokenHeader
+
+        @apiParam {String} type 类型：mascot | favicon
+        @apiParam {File} file 图片文件（png/jpg/jpeg/webp/gif）
+
+        @apiSuccessExample {json} 返回示例
+        {
+            "message": "上传成功"
+        }
+        """
+        asset_type = request.form.get("type")
+        file = request.files.get("file")
+        if asset_type not in BRAND_ASSET_TYPES:
+            return {"message": gettext("不支持的品牌图片类型")}, 400
+        if not file:
+            raise UploadFileNotFoundError(gettext("请选择图片"))
+        filename = file.filename or ""
+        ext = os.path.splitext(filename)[1].lower()
+        if ext not in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
+            return {"message": gettext("仅支持 png/jpg/jpeg/webp/gif 图片")}, 400
+        save_name = str(ObjectId()) + ext
+        try:
+            oss.upload(BRAND_ASSET_PREFIX, save_name, file)
+        except Exception as e:
+            logger.error("upload brand asset failed: %s", e)
+            return {"message": gettext("图片上传失败")}, 500
+        ss = SiteSetting.get()
+        old_name = getattr(ss, f"{asset_type}_name", "") or ""
+        setattr(ss, f"{asset_type}_name", save_name)
+        ss.save()
+        # 删除旧文件（尽力而为，失败不阻塞）
+        if old_name:
+            try:
+                oss.delete(BRAND_ASSET_PREFIX, old_name)
+            except Exception as e:
+                logger.error("delete old brand asset failed: %s", e)
+        return {
+            "message": gettext("上传成功"),
+            "url": f"/api/v1/site/brand-asset/{asset_type}",
+        }
 
 
 class StorageUsageAPI(MoeAPIView):

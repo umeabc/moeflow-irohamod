@@ -3,9 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Header } from '../components';
 import { Spin } from 'antd';
-import brandJump from '../images/brand/mascot-jump1.png';
+import defaultBrandJump from '../images/brand/mascot-jump1.png';
 import { FC } from '../interfaces';
-import { useTitle } from '../hooks';
+import { useTitle, useBrandMascot } from '../hooks';
 import { api } from '../apis';
 
 /** 首页的属性接口 */
@@ -16,6 +16,8 @@ interface IndexProps {}
 export const IndexPage: FC<IndexProps> = () => {
   const { formatMessage } = useIntl(); // i18n
   useTitle({ suffix: formatMessage({ id: 'site.slogan' }) }); // 设置标题
+  const customMascot = useBrandMascot();
+  const brandJump = customMascot || defaultBrandJump;
   const [homepageHtml, setHomepageHtml] = useState<string>();
   const [homepageCss, setHomepageCss] = useState<string>();
 

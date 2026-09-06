@@ -6,10 +6,11 @@ import classNames from 'classnames';
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { AuthLoginedTip } from './AuthLoginedTip';
-import mascot from '@/images/brand/mascot-jump1.png';
+import defaultMascot from '@/images/brand/mascot-jump1.png';
 import { AppState } from '@/store';
 import style from '@/style';
 import { FC } from '@/interfaces';
+import { useBrandMascot } from '@/hooks';
 
 /** 身份验证页面通用的表单外框的属性接口 */
 interface AuthFormWrapperProps {
@@ -36,6 +37,8 @@ export const AuthFormWrapper: FC<AuthFormWrapperProps & FormProps> = ({
   const platform = useSelector((state: AppState) => state.site.platform);
   const token = useSelector((state: AppState) => state.user.token);
   const isMobile = platform === 'mobile';
+  const customMascot = useBrandMascot();
+  const mascot = customMascot || defaultMascot;
 
   return (
     <>

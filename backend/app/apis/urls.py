@@ -26,7 +26,9 @@ from app.apis.me import (
 )
 from app.apis.avatar import AvatarAPI
 from app.apis.site_setting import (
+    AdminBrandAssetAPI,
     AdminCustomMessagesAPI,
+    BrandAssetAPI,
     CustomMessagesAPI,
     HomepageAPI,
     SiteSettingAPI,
@@ -119,6 +121,16 @@ site.add_url_rule(
     "/custom-messages",
     methods=["GET", "OPTIONS"],
     view_func=CustomMessagesAPI.as_view("custom_messages"),
+)
+site.add_url_rule(
+    "/brand-assets",
+    methods=["GET", "OPTIONS"],
+    view_func=BrandAssetAPI.as_view("brand_assets"),
+)
+site.add_url_rule(
+    "/brand-asset/<asset_type>",
+    methods=["GET", "OPTIONS"],
+    view_func=BrandAssetAPI.as_view("brand_asset"),
 )
 # type模块
 type = Blueprint("type", __name__, url_prefix=v1_prefix + "/types")
@@ -486,6 +498,11 @@ admin.add_url_rule(
     "/system-status",
     methods=["GET", "OPTIONS"],
     view_func=SystemStatusAPI.as_view("admin_system_status"),
+)
+admin.add_url_rule(
+    "/site-brand-assets",
+    methods=["PUT", "OPTIONS"],
+    view_func=AdminBrandAssetAPI.as_view("admin_site_brand_assets"),
 )
 admin.add_url_rule(
     "/custom-messages",

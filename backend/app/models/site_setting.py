@@ -27,6 +27,9 @@ class SiteSetting(Document):
     homepage_css = StringField(db_field="hc", default="")
     # 站点自定义文案覆盖（key -> message）：管理员后台可编辑，前端运行时合并覆盖默认 locale
     custom_messages = DictField(db_field="cm", default=dict)
+    # 站点品牌图片（存 oss 文件名，site-brand/ 前缀下）：可后台上传替换 mascot / favicon
+    mascot_name = StringField(db_field="ma", default="")
+    favicon_name = StringField(db_field="fi", default="")
 
     meta = {
         "indexes": [
@@ -53,4 +56,6 @@ class SiteSetting(Document):
             "homepage_html": self.homepage_html,
             "homepage_css": self.homepage_css,
             "custom_messages": self.custom_messages or {},
+            "mascot_name": self.mascot_name or "",
+            "favicon_name": self.favicon_name or "",
         }

@@ -108,6 +108,42 @@ const saveCustomMessages = ({
   });
 };
 
+export type BrandAssetType = 'mascot' | 'favicon';
+/** 站点品牌图片：{ type: 访问 URL 或 '' } */
+export type APIBrandAssets = Record<BrandAssetType, string>;
+const getBrandAssets = ({
+  configs,
+}: {
+  configs?: AxiosRequestConfig;
+} = {}) => {
+  return request<APIBrandAssets>({
+    method: 'GET',
+    url: `/v1/site/brand-assets`,
+    ...configs,
+  });
+};
+
+const uploadBrandAsset = ({
+  type,
+  file,
+  configs,
+}: {
+  type: BrandAssetType;
+  file: File;
+  configs?: AxiosRequestConfig;
+}) => {
+  const formData = new FormData();
+  formData.append('type', type);
+  formData.append('file', file);
+  return request<{ message: string; url: string }>({
+    method: 'PUT',
+    url: `/v1/admin/site-brand-assets`,
+    data: formData,
+    headers: { 'Content-Type': 'multipart/form-data' },
+    ...configs,
+  });
+};
+
 export default {
   getSiteSetting,
   editSiteSetting,
@@ -116,4 +152,6 @@ export default {
   getSystemStatus,
   getCustomMessages,
   saveCustomMessages,
+  getBrandAssets,
+  uploadBrandAsset,
 };
