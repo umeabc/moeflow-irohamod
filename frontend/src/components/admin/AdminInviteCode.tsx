@@ -14,6 +14,7 @@ import { useIntl } from 'react-intl';
 import { api } from '@/apis';
 import { toLowerCamelCase } from '@/utils';
 import { FC } from '@/interfaces';
+import style from '@/style';
 
 interface InviteRow {
   id: string;
@@ -151,7 +152,7 @@ export const AdminInviteCode: FC = () => {
       ),
     },
     {
-      title: formatMessage({ id: 'form.actions' }),
+      title: formatMessage({ id: 'admin.actions' }),
       key: 'actions',
       width: 100,
       render: (_: unknown, row: InviteRow) => (
@@ -171,14 +172,26 @@ export const AdminInviteCode: FC = () => {
     <div
       className="AdminInviteCode"
       css={css`
-        padding: 24px;
+        width: 100%;
+        .AdminInviteCode__Create {
+          display: flex;
+          align-items: flex-end;
+          gap: 12px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid ${style.borderColorLight};
+        }
+        .AdminInviteCode__Table { overflow-x: auto; padding-top: 16px; }
+        .AdminInviteCode__Table .ant-table-wrapper { min-width: 720px; }
+        @media (max-width: 700px) {
+          .AdminInviteCode__Create { align-items: stretch; flex-direction: column; }
+        }
       `}
     >
       <Form
+        className="AdminInviteCode__Create"
         form={form}
         layout="inline"
         onFinish={handleCreate}
-        style={{ marginBottom: 16 }}
       >
         <Form.Item
           name="teamId"
@@ -220,12 +233,9 @@ export const AdminInviteCode: FC = () => {
       {loading ? (
         <Spin />
       ) : (
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={rows}
-          pagination={false}
-        />
+        <div className="AdminInviteCode__Table">
+          <Table rowKey="id" columns={columns} dataSource={rows} pagination={false} />
+        </div>
       )}
     </div>
   );

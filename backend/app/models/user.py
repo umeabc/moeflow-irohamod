@@ -204,6 +204,21 @@ class User(Document):
             raise BadTokenError(gettext("密码已修改，请重新登录"))
         return user
 
+    def deactivate(self):
+        """注销用户：脱敏并使其无法登录（保留数据库记录）"""
+        redacted = md5(str(self.id))
+        self.email = "{0}@{0}.invalid".format(redacted)  # 唯一化脱敏、unique
+        self.name = "[Redacted]{0}".format(redacted[:8])  # 唯一化脱敏、unique；展示由 to_api 统一返回 [Redacted]
+        self._avatar = ""  # 头像改默认（has_avatar() False → avatar 返默认）
+        self.password = redacted  # 随机 md5 作密码，旧 token 因密码变更立即失效
+        self.banned = True
+        self.save()
+
+    @property
+    def is_deactivated(self):
+        """是否已被注销"""
+        return bool(self.banned)
+
     @property
     def avatar(self):
         if self._avatar:
@@ -231,7 +246,8 @@ class User(Document):
         """
         data = {
             "id": str(self.id),
-            "name": self.name,
+            # 已注销用户统一展示 [Redacted]，不暴露唯一化存储值
+            "name": "[Redacted]" if self.banned else self.name,
             "signature": self.signature,
             "avatar": self.avatar,
             "has_avatar": self.has_avatar(),

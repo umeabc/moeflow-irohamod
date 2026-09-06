@@ -13,6 +13,7 @@ import { toLowerCamelCase } from '@/utils';
 import classNames from 'classnames';
 import { Button, Pagination, Radio, Spin } from 'antd';
 import { useIntl } from 'react-intl';
+import style from '@/style';
 
 /** 图片安全检查页面的属性接口 */
 interface AdminImageSafeCheckProps {
@@ -63,28 +64,17 @@ export const AdminImageSafeCheck: FC<AdminImageSafeCheckProps> = ({
   const safeCheck = () => {
     setSubmitting(true);
     apis
-      .adminSafeCheck({
-        safeFileIDs,
-        unsafeFileIDs,
-      })
+      .adminSafeCheck({ safeFileIDs, unsafeFileIDs })
       .then(() => {
         fetchAdminFiles({ page: 1, safeStatus });
         setSubmitting(false);
       });
   };
 
-  const fetchAdminFiles = ({
-    page,
-    safeStatus,
-  }: {
-    page: number;
-    safeStatus: FileSafeStatuses[];
-  }) => {
+  const fetchAdminFiles = ({ page, safeStatus }: { page: number; safeStatus: FileSafeStatuses[] }) => {
     setLoading(true);
     apis
-      .adminGetFiles({
-        params: { safeStatus, page, limit: pageSize },
-      })
+      .adminGetFiles({ params: { safeStatus, page, limit: pageSize } })
       .then((result) => {
         const data = toLowerCamelCase(result.data);
         setPage(page);
@@ -102,132 +92,43 @@ export const AdminImageSafeCheck: FC<AdminImageSafeCheckProps> = ({
   }, []);
 
   return (
-    <div
-      className={classNames('AdminImageSafeCheck', className)}
-      css={css`
-        .AdminImageSafeCheck__Top {
-          padding: 10px 10px 0;
-          display: flex;
-        }
-        .AdminImageSafeCheck__TopButton {
-          margin-right: 10px;
-        }
-        .AdminImageSafeCheck__Images {
-          display: flex;
-          flex-wrap: wrap;
-        }
-        .AdminImageSafeCheck__Image {
-          margin: 10px;
-          border: 2px solid #c0c0c0;
-          background: repeating-linear-gradient(
-            45deg,
-            rgb(238, 238, 238),
-            rgb(238, 238, 238) 15px,
-            rgb(248, 248, 248) 0px,
-            rgb(248, 248, 248) 30px
-          );
-          img {
-            width: 400px;
-            height: 500px;
-            object-fit: contain;
-          }
-        }
-        .AdminImageSafeCheck__Image--safe {
-          border-color: #03c903;
-        }
-        .AdminImageSafeCheck__Image--unsafe {
-          border-color: red;
-        }
-        .AdminImageSafeCheck__Bottom {
-          padding-bottom: 100px;
-          display: flex;
-        }
-        .AdminImageSafeCheck__SubmitButton {
-          flex: auto;
-        }
-      `}
-    >
+    <div className={classNames('AdminImageSafeCheck', className)} css={css`
+      width: 100%;
+      .AdminImageSafeCheck__Top { display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid ${style.borderColorLight}; }
+      .AdminImageSafeCheck__Images { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; padding: 20px 0; }
+      .AdminImageSafeCheck__Image { min-width: 0; aspect-ratio: 4 / 5; display: flex; align-items: center; justify-content: center; border: 2px solid ${style.borderColorBase}; border-radius: ${style.borderRadiusBase}; overflow: hidden; background: repeating-linear-gradient(45deg, ${style.backgroundColorLight}, ${style.backgroundColorLight} 15px, var(--moeflow-surface2) 0, var(--moeflow-surface2) 30px); cursor: pointer; }
+      .AdminImageSafeCheck__Image:focus-visible { outline: 3px solid ${style.primaryColor}; outline-offset: 2px; }
+      .AdminImageSafeCheck__Image img { width: 100%; height: 100%; object-fit: contain; }
+      .AdminImageSafeCheck__Image--safe { border-color: ${style.successColor}; }
+      .AdminImageSafeCheck__Image--unsafe { border-color: ${style.errorColor}; }
+      .AdminImageSafeCheck__Bottom { display: flex; align-items: center; gap: 16px; padding-top: 16px; border-top: 1px solid ${style.borderColorLight}; }
+      .AdminImageSafeCheck__SubmitButton { flex: 1; }
+      @media (max-width: 600px) { .AdminImageSafeCheck__Images { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .AdminImageSafeCheck__Top { align-items: flex-start; flex-direction: column; gap: 10px; } .AdminImageSafeCheck__Bottom { align-items: stretch; flex-direction: column; } }
+    `}>
       <div className="AdminImageSafeCheck__Top">
         <Radio.Group
-          options={[
-            { label: 'Pending', value: 'pending' },
-            { label: 'Safe', value: 'safe' },
-            { label: 'Unsafe', value: 'unsafe' },
-          ]}
+          options={[{ label: 'Pending', value: 'pending' }, { label: 'Safe', value: 'safe' }, { label: 'Unsafe', value: 'unsafe' }]}
           defaultValue="pending"
           onChange={(e) => {
-            let safeStatus = pendingStatus;
+            let nextStatus = pendingStatus;
             switch (e.target.value) {
-              case 'safe':
-                safeStatus = [FILE_SAFE_STATUS.SAFE];
-                setSafeStatus(safeStatus);
-                fetchAdminFiles({ page: 1, safeStatus });
-                break;
-              case 'unsafe':
-                safeStatus = [FILE_SAFE_STATUS.BLOCK];
-                setSafeStatus(safeStatus);
-                fetchAdminFiles({ page: 1, safeStatus });
-                break;
-              default:
-                setSafeStatus(pendingStatus);
-                fetchAdminFiles({ page: 1, safeStatus });
-                break;
+              case 'safe': nextStatus = [FILE_SAFE_STATUS.SAFE]; setSafeStatus(nextStatus); fetchAdminFiles({ page: 1, safeStatus: nextStatus }); break;
+              case 'unsafe': nextStatus = [FILE_SAFE_STATUS.BLOCK]; setSafeStatus(nextStatus); fetchAdminFiles({ page: 1, safeStatus: nextStatus }); break;
+              default: setSafeStatus(pendingStatus); fetchAdminFiles({ page: 1, safeStatus: pendingStatus });
             }
           }}
         />
       </div>
       <div className="AdminImageSafeCheck__Images">
-        {loading ? (
-          <Spin />
-        ) : (
-          files?.map((file) => (
-            <div
-              key={file.id}
-              className={classNames('AdminImageSafeCheck__Image', {
-                'AdminImageSafeCheck__Image--safe':
-                  file.safeStatus === FILE_SAFE_STATUS.SAFE,
-                'AdminImageSafeCheck__Image--unsafe':
-                  unsafeFileIDs.includes(file.id) ||
-                  file.safeStatus === FILE_SAFE_STATUS.BLOCK,
-              })}
-              onClick={() => {
-                toggle(file.id);
-              }}
-            >
-              {file.saveName ? (
-                <img src={file.safeCheckUrl} alt={file.name} />
-              ) : (
-                <div>
-                  文件不存在（
-                  {getFileNotExistReasonText(file.fileNotExistReason)}）
-                </div>
-              )}
-            </div>
-          ))
-        )}
+        {loading ? <Spin /> : files?.map((file) => (
+          <div key={file.id} role="button" tabIndex={0} aria-label={`${file.name} ${file.safeStatus === FILE_SAFE_STATUS.SAFE ? 'safe' : 'unsafe'}`} className={classNames('AdminImageSafeCheck__Image', { 'AdminImageSafeCheck__Image--safe': file.safeStatus === FILE_SAFE_STATUS.SAFE, 'AdminImageSafeCheck__Image--unsafe': unsafeFileIDs.includes(file.id) || file.safeStatus === FILE_SAFE_STATUS.BLOCK })} onClick={() => toggle(file.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(file.id); } }}>
+            {file.saveName ? <img src={file.safeCheckUrl} alt={file.name} /> : <div>文件不存在（{getFileNotExistReasonText(file.fileNotExistReason)}）</div>}
+          </div>
+        ))}
       </div>
       <div className="AdminImageSafeCheck__Bottom">
-        <Pagination
-          className="AdminImageSafeCheck__Pagination"
-          defaultCurrent={1}
-          current={page}
-          onChange={(page) => {
-            fetchAdminFiles({ page, safeStatus });
-          }}
-          defaultPageSize={pageSize}
-          showSizeChanger={false}
-          total={total}
-        />
-        {safeStatus.includes(FILE_SAFE_STATUS.BLOCK) || (
-          <Button
-            type="primary"
-            className="AdminImageSafeCheck__SubmitButton"
-            onClick={safeCheck}
-            loading={submitting}
-          >
-            {formatMessage({ id: 'form.submit' })}
-          </Button>
-        )}
+        <Pagination current={page} onChange={(nextPage) => fetchAdminFiles({ page: nextPage, safeStatus })} defaultPageSize={pageSize} showSizeChanger={false} total={total} />
+        {safeStatus.includes(FILE_SAFE_STATUS.BLOCK) || <Button type="primary" className="AdminImageSafeCheck__SubmitButton" onClick={safeCheck} loading={submitting}>{formatMessage({ id: 'form.submit' })}</Button>}
       </div>
     </div>
   );

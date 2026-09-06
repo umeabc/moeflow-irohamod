@@ -103,9 +103,7 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
   ) : (
     <div
       className={classNames('AdminSiteSetting', className)}
-      css={css`
-        padding: 24px;
-      `}
+      css={css``}
     >
       <Form form={form} onFinish={handleFinish} autoComplete="off">
         <FormItem

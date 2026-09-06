@@ -161,12 +161,13 @@ class AdminUserListAPI(MoeAPIView):
         objects = (
             (
                 User.objects(name__icontains=query["word"])
+                .filter(banned__ne=True)
                 .skip(p.skip)
                 .limit(p.limit)
                 .order_by("-create_time")
             )
             if word
-            else User.objects.skip(p.skip).limit(p.limit).order_by("-create_time")
+            else User.objects.filter(banned__ne=True).skip(p.skip).limit(p.limit).order_by("-create_time")
         )
         return p.set_objects(objects)
 
@@ -192,6 +193,18 @@ class AdminUserAPI(MoeAPIView):
         user.password = data["password"]
         user.save()
         return {"message": gettext("修改成功")}
+
+
+class AdminUserDeactivateAPI(MoeAPIView):
+    @admin_required
+    @fetch_model(User)
+    def put(self, user):
+        """
+        @api {put} /v1/admin/users/<user_id>/deactivate 注销用户
+        将用户脱敏并使其无法登录（保留数据库记录、不再出现在用户列表）
+        """
+        user.deactivate()
+        return {"message": gettext("注销成功")}
 
 
 class AdminUserAdminStatusAPI(MoeAPIView):

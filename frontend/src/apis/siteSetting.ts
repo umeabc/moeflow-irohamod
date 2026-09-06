@@ -56,9 +56,64 @@ const getStorageUsage = ({ configs }: { configs?: AxiosRequestConfig }) => {
   });
 };
 
+export interface APISystemStatus {
+  cpuPercent: number | null;
+  memoryPercent: number | null;
+  diskPercent: number | null;
+  diskTotal: number | null;
+  diskUsed: number | null;
+  diskFree: number | null;
+  systemVersion: string | null;
+  storageType: string;
+}
+const getSystemStatus = ({
+  configs,
+}: {
+  configs?: AxiosRequestConfig;
+} = {}) => {
+  return request<APISystemStatus>({
+    method: 'GET',
+    url: `/v1/admin/system-status`,
+    ...configs,
+  });
+};
+
+/** 站点自定义文案覆盖（按语言分组）：{ locale: { key: message } }；兼容旧单层结构 { key: message }。公开可读（登录页文案也需可覆盖） */
+export type APICustomMessages = Record<string, Record<string, string>>;
+const getCustomMessages = ({
+  configs,
+}: {
+  configs?: AxiosRequestConfig;
+} = {}) => {
+  return request<APICustomMessages>({
+    method: 'GET',
+    url: `/v1/site/custom-messages`,
+    ...configs,
+  });
+};
+
+const saveCustomMessages = ({
+  messages,
+  configs,
+}: {
+  messages: APICustomMessages;
+  configs?: AxiosRequestConfig;
+}) => {
+  return request<{ message: string; customMessages: APICustomMessages }>({
+    method: 'PUT',
+    url: `/v1/admin/custom-messages`,
+    // 注意：key 含点号/大小写（如 site.englishName），不可经 toUnderScoreCase 转换
+    data: { messages },
+    ...configs,
+  });
+};
+
 export default {
   getSiteSetting,
   editSiteSetting,
   getHomepage,
   getStorageUsage,
+  getSystemStatus,
+  getCustomMessages,
+  saveCustomMessages,
 };

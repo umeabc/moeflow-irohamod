@@ -8,6 +8,7 @@ import {
   Input,
   message,
   Modal,
+  Popconfirm,
   Space,
   Table,
   TablePaginationConfig,
@@ -21,6 +22,7 @@ import { FormItem } from '@/components/shared-form/FormItem';
 import { Form } from '@/components/shared-form/Form';
 import { EmailInput } from '@/components/shared-form/EmailInput';
 import { EMAIL_REGEX, USER_NAME_REGEX } from '@/utils/regex';
+import style from '@/style';
 
 interface TableParams {
   pagination?: TablePaginationConfig;
@@ -150,6 +152,19 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
     }
   };
 
+  const handleDeactivate = async (record: APIUser) => {
+    setLoading(true);
+    try {
+      await api.user.adminDeactivateUser({ userID: record.id });
+      message.success(formatMessage({ id: 'admin.deactivateSuccess' }));
+      fetchData();
+    } catch (error) {
+      error.default();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const columns = [
     {
       title: formatMessage({ id: 'site.userName' }),
@@ -183,19 +198,52 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
           >
             {formatMessage({ id: 'admin.resetPassword' })}
           </a>
+          <Popconfirm
+            title={formatMessage({ id: 'admin.deactivateUserConfirm' })}
+            okText={formatMessage({ id: 'form.confirm' })}
+            cancelText={formatMessage({ id: 'form.cancel' })}
+            onConfirm={() => handleDeactivate(record)}
+          >
+            <a className="AdminUserList__Deactivate">
+              {formatMessage({ id: 'admin.deactivateUser' })}
+            </a>
+          </Popconfirm>
         </Space>
       ),
     },
   ];
 
   return (
-    <div className={classNames('AdminUserList', className)} css={css``}>
-      <header
-        css={css`
+    <div
+      className={classNames('AdminUserList', className)}
+      css={css`
+        width: 100%;
+        .AdminUserList__Toolbar {
           display: flex;
-          padding: 8px;
-        `}
-      >
+          align-items: center;
+          gap: 12px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid ${style.borderColorLight};
+          .ant-input {
+            max-width: 420px;
+          }
+        }
+        .AdminUserList__Table {
+          overflow-x: auto;
+          padding-top: 16px;
+        }
+        @media (max-width: 600px) {
+          .AdminUserList__Toolbar {
+            align-items: stretch;
+            flex-direction: column;
+            .ant-input {
+              max-width: none;
+            }
+          }
+        }
+      `}
+    >
+      <header className="AdminUserList__Toolbar">
         <Input
           value={word}
           onChange={(e) => {
@@ -215,14 +263,17 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
           {formatMessage({ id: 'admin.createUser' })}
         </Button>
       </header>
-      <Table
-        dataSource={data}
-        rowKey={(record) => record.id}
-        columns={columns}
-        pagination={pagination}
-        loading={loading}
-        onChange={handleTableChange}
-      />
+      <div className="AdminUserList__Table">
+        <Table
+          dataSource={data}
+          rowKey={(record) => record.id}
+          columns={columns}
+          pagination={pagination}
+          loading={loading}
+          onChange={handleTableChange}
+          scroll={{ x: 680 }}
+        />
+      </div>
       <Modal
         title={formatMessage({ id: 'admin.resetPassword' })}
         visible={changePasswordModalOpen}

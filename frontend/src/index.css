@@ -41,6 +41,10 @@
   --moeflow-avatarBorderColor: #eeeeee;
   /* 页面兜底背景/文字（浅色） */
   --moeflow-pageBackground: #ffffff;
+  /* 管理员中心专用页面背景（浅灰，不污染全局） */
+  --moeflow-adminBackground: #f7f7f9;
+  --moeflow-adminNavActive: #2563eb;
+  --moeflow-adminNavActiveBg: #eff6ff;
   /* 面板/内容区底、控件按钮底、控件图标色 */
   --moeflow-surface: #ffffff;
   --moeflow-surface2: #fafafa;
@@ -96,6 +100,10 @@ html[data-theme='dark'] {
   --moeflow-borderColorLighter: #222222;
   --moeflow-avatarBorderColor: #333333;
   --moeflow-pageBackground: #121212;
+  /* 管理员中心专用页面背景（暗色与全局页面一致，卡片用 surface 保持正确层级） */
+  --moeflow-adminBackground: #121212;
+  --moeflow-adminNavActive: #60a5fa;
+  --moeflow-adminNavActiveBg: rgba(59, 130, 246, 0.16);
   /* 暗色面板/控件 */
   --moeflow-surface: #1c1c1c;
   --moeflow-surface2: #1f1f1f;

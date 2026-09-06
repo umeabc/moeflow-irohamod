@@ -7,7 +7,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import utc from 'dayjs/plugin/utc';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
-import { setRequestLanguage } from '@/apis';
+import { api, setRequestLanguage } from '@/apis';
 
 dayjs.extend(localizedFormat);
 dayjs.extend(relativeTime);
@@ -193,11 +193,29 @@ async function doInitI18n(locale: string, locales: string[]) {
    * TODO: ensure all locale stuff is DI-able via React tree (Store or Context)
    */
   /** get 1st preference locale from navigator */
-  const [intlMessages, _dayjs, antdLocale] = await Promise.all([
+  const [baseMessages, _dayjs, antdLocale] = await Promise.all([
     loadI18nLocale(locales),
     initDayjs(locale),
     loadAntdLocale(locale),
   ]);
+  // 合并站点自定义文案覆盖：支持按语言分组 { locale: {key: msg} }，兼容旧扁平 { key: msg }
+  // 拉取失败时静默回退到默认文案
+  let overrides = {};
+  try {
+    const res = await api.siteSetting.getCustomMessages();
+    const localeKey = matchLocale(locale);
+    const data = res.data || {};
+    if (typeof data[localeKey] === 'object' && data[localeKey] !== null) {
+      // 按语言分组：使用当前语言分区
+      overrides = data[localeKey] || {};
+    } else {
+      // 兼容旧扁平结构
+      overrides = data;
+    }
+  } catch (e) {
+    /* ignore */
+  }
+  const intlMessages = { ...baseMessages, ...overrides };
   singletonIntl = createIntl(
     {
       locale,

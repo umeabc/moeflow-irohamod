@@ -6,6 +6,7 @@ import { library } from '@fortawesome/fontawesome-svg-core';
 import {
   faSyncAlt,
   faBars,
+  faSearch,
   faSearchMinus,
   faSearchPlus,
   faArrowsAltH,
@@ -27,6 +28,7 @@ import {
   faBook,
   faAngleLeft,
   faEllipsisH,
+  faBell,
   faPlus,
   faBan,
   faCaretLeft,
@@ -67,6 +69,7 @@ library.add(
   ...[
     faSyncAlt,
     faBars,
+    faSearch,
     faSearchMinus,
     faSearchPlus,
     faArrowsAltH,
@@ -88,6 +91,7 @@ library.add(
     faBook,
     faAngleLeft,
     faEllipsisH,
+    faBell,
     faPlus,
     faBan,
     faCaretLeft,

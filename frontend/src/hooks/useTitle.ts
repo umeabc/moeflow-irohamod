@@ -24,9 +24,15 @@ export const useTitle: UseTitle = (
   if (prefix !== '') prefix = prefix + hyphen;
   if (suffix !== '') suffix = hyphen + suffix;
   useEffect(() => {
-    document.title = prefix + formatMessage({ id: 'site.name' }) + suffix;
+    const siteName = formatMessage({ id: 'site.name' });
+    const englishName = formatMessage({ id: 'site.englishName' });
+    const fullName =
+      englishName && englishName !== siteName
+        ? `${siteName} · ${englishName}`
+        : siteName;
+    document.title = prefix + fullName + suffix;
     return () => {
-      document.title = formatMessage({ id: 'site.name' });
+      document.title = fullName;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);

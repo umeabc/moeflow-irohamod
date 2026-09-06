@@ -1,10 +1,16 @@
+import os
+import platform
+import re
 import shutil
+import time
+
+from flask_babel import gettext
 
 from app.constants.storage import StorageType
 from app.core.views import MoeAPIView
 from app.decorators.auth import admin_required
 from app.models.site_setting import SiteSetting
-from app.validators.site_setting import SiteSettingSchema
+from app.validators.site_setting import CustomMessagesSchema, SiteSettingSchema
 
 
 class SiteSettingAPI(MoeAPIView):
@@ -68,6 +74,33 @@ class HomepageAPI(MoeAPIView):
         }
 
 
+class CustomMessagesAPI(MoeAPIView):
+    """公开：返回站点自定义文案覆盖（key -> message），登录页文案也需可覆盖"""
+
+    def get(self):
+        return SiteSetting.get().custom_messages or {}
+
+
+class AdminCustomMessagesAPI(MoeAPIView):
+    """管理：读取/保存站点自定义文案覆盖"""
+
+    @admin_required
+    def get(self):
+        return SiteSetting.get().custom_messages or {}
+
+    @admin_required
+    def put(self):
+        data = self.get_json(CustomMessagesSchema())
+        # 支持按语言分组：{ "zh-CN": {key: msg}, "en": {key: msg} }，或旧扁平 {"key": msg}
+        # 注意值可为 dict（语言组）或 str（旧扁平），不能 str() 化，原样保存
+        messages = data["messages"]
+        site_setting = SiteSetting.get()
+        site_setting.custom_messages = messages
+        site_setting.save()
+        site_setting.reload()
+        return {"message": gettext("保存成功"), "custom_messages": site_setting.custom_messages}
+
+
 class StorageUsageAPI(MoeAPIView):
     @admin_required
     def get(self):
@@ -98,4 +131,78 @@ class StorageUsageAPI(MoeAPIView):
             "total": total,
             "used": used,
             "free": free,
+        }
+
+
+class SystemStatusAPI(MoeAPIView):
+    """获取后端服务器的基础资源使用情况（仅管理员）"""
+
+    @admin_required
+    def get(self):
+        from app import STORAGE_PATH, app_config
+
+        cpu_percent = None
+        try:
+            with open("/proc/stat", "r", encoding="utf-8") as f:
+                first = f.readline().split()
+            if first and first[0] == "cpu":
+                values = [int(value) for value in first[1:]]
+                idle = values[3] + (values[4] if len(values) > 4 else 0)
+                total = sum(values)
+                time.sleep(0.08)
+                with open("/proc/stat", "r", encoding="utf-8") as f:
+                    second = f.readline().split()
+                values2 = [int(value) for value in second[1:]]
+                idle2 = values2[3] + (values2[4] if len(values2) > 4 else 0)
+                total2 = sum(values2)
+                delta_total = total2 - total
+                delta_idle = idle2 - idle
+                if delta_total > 0:
+                    cpu_percent = round((1 - delta_idle / delta_total) * 100, 1)
+        except (OSError, ValueError, IndexError):
+            pass
+
+        memory_percent = None
+        try:
+            memory = {}
+            with open("/proc/meminfo", "r", encoding="utf-8") as f:
+                for line in f:
+                    match = re.match(r"^(MemTotal|MemAvailable):\s+(\d+)", line)
+                    if match:
+                        memory[match.group(1)] = int(match.group(2))
+            if memory.get("MemTotal") and "MemAvailable" in memory:
+                memory_percent = round(
+                    (1 - memory["MemAvailable"] / memory["MemTotal"]) * 100, 1
+                )
+        except (OSError, ValueError):
+            pass
+
+        disk_percent = None
+        disk_total = disk_used = disk_free = None
+        try:
+            disk_total, disk_used, disk_free = shutil.disk_usage(STORAGE_PATH)
+            if disk_total:
+                disk_percent = round(disk_used / disk_total * 100, 1)
+        except OSError:
+            pass
+
+        system_version = platform.platform()
+        try:
+            with open("/etc/os-release", "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.startswith("PRETTY_NAME="):
+                        system_version = line.split("=", 1)[1].strip().strip('"')
+                        break
+        except OSError:
+            pass
+
+        return {
+            "cpu_percent": cpu_percent,
+            "memory_percent": memory_percent,
+            "disk_percent": disk_percent,
+            "disk_total": disk_total,
+            "disk_used": disk_used,
+            "disk_free": disk_free,
+            "system_version": system_version,
+            "storage_type": app_config["STORAGE_TYPE"],
         }

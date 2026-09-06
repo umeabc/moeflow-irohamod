@@ -51,6 +51,9 @@ auth.toLogin:
 site.name:
   zhCn: 萌翻
   en: Moeflow
+site.englishName:
+  zhCn: Moetran
+  en: Moetran
 site.slogan:
   zhCn: 让翻译加速！
   en: Accelerate Translation!
@@ -145,8 +148,8 @@ auth.logout:
   zhCn: 登出
   en: Log Out
 auth.storageFreeSpace:
-  zhCn: 存储剩余空间：{space}
-  en: Storage free space: {space}
+  zhCn: '存储剩余空间：{space}'
+  en: 'Storage free space: {space}'
 router.goDashboard:
   zhCn: 前往仪表盘
   en: Go to Dashboard
@@ -1345,6 +1348,126 @@ mit.preprocessStepTranslate:
 admin.backToDashboard:
   zhCn: 返回仪表盘
   en: Back to dashboard
+admin.home:
+  zhCn: 工作台
+  en: Workspace
+admin.overview:
+  zhCn: 概览
+  en: Overview
+admin.navigation:
+  zhCn: 管理导航
+  en: Admin navigation
+admin.management:
+  zhCn: 管理
+  en: Management
+admin.preferences:
+  zhCn: 系统
+  en: System
+admin.greeting:
+  zhCn: 你好，{name}
+  en: Hello, {name}
+admin.greetingDescription:
+  zhCn: 在这里查看站点状态并处理管理任务。
+  en: Review site status and manage administrative tasks.
+admin.quickActions:
+  zhCn: 快捷操作
+  en: Quick Actions
+admin.systemStatus:
+  zhCn: 系统状态
+  en: System Status
+admin.searchPlaceholder:
+  zhCn: 搜索管理功能或输入命令…
+  en: Search admin tools or enter a command…
+admin.searchNoResults:
+  zhCn: 未找到匹配的管理功能
+  en: No matching admin tools found.
+admin.notifications:
+  zhCn: 通知
+  en: Notifications
+admin.noNotifications:
+  zhCn: 暂无通知
+  en: No notifications.
+admin.refresh:
+  zhCn: 刷新
+  en: Refresh
+admin.loading:
+  zhCn: 加载中
+  en: Loading
+admin.unavailable:
+  zhCn: 暂不可用
+  en: Unavailable
+admin.total:
+  zhCn: '共 {count} 项'
+  en: '{count} total'
+admin.enabled:
+  zhCn: '已启用 {count} 项'
+  en: '{count} enabled'
+admin.usersSummary:
+  zhCn: 用户
+  en: Users
+admin.teamsSummary:
+  zhCn: 团队
+  en: Teams
+admin.invitesSummary:
+  zhCn: 邀请码
+  en: Invitation Codes
+admin.storageSummary:
+  zhCn: 存储空间
+  en: Storage
+admin.storageUsed:
+  zhCn: '已使用 {used} / {total}'
+  en: '{used} of {total} used'
+admin.storageFree:
+  zhCn: '剩余 {space}'
+  en: '{space} free'
+admin.open:
+  zhCn: 打开
+  en: Open
+admin.mobileMenu:
+  zhCn: 打开管理菜单
+  en: Open admin menu
+admin.closeMenu:
+  zhCn: 关闭管理菜单
+  en: Close admin menu
+admin.pageDescription.siteSettings:
+  zhCn: 配置站点规则与默认行为。
+  en: Configure site policies and defaults.
+admin.pageDescription.users:
+  zhCn: 搜索、创建和维护站点用户。
+  en: Search, create, and maintain site users.
+admin.pageDescription.imageModeration:
+  zhCn: 审核图片安全状态并提交结果。
+  en: Review image safety statuses and submit results.
+admin.pageDescription.captchas:
+  zhCn: 查看当前验证码记录及有效期。
+  en: View current verification codes and expiration times.
+admin.pageDescription.inviteCodes:
+  zhCn: 创建、启停和维护邀请码。
+  en: Create, enable, disable, and maintain invitation codes.
+admin.pageDescription.teamManage:
+  zhCn: 查看全站团队及其资源统计。
+  en: View all teams and their resource statistics.
+admin.title:
+  zhCn: 管理员中心
+  en: Admin Center
+admin.cpuUsage:
+  zhCn: CPU 占用
+  en: CPU Usage
+admin.memoryUsage:
+  zhCn: 内存占用
+  en: Memory Usage
+admin.diskUsage:
+  zhCn: 硬盘占用
+  en: Disk Usage
+admin.systemVersion:
+  zhCn: 系统版本
+  en: System Version
+admin.projectsSummary:
+  zhCn: 项目
+  en: Projects
+admin.imagesSummary:
+  zhCn: 图片
+  en: Images
 admin.siteSettings:
   zhCn: 站点设置
   en: Site Settings
@@ -1369,12 +1492,66 @@ admin.actions:
 admin.resetPassword:
   zhCn: 重置密码
   en: Reset Password
+admin.deactivateUser:
+  zhCn: 注销
+  en: Deactivate
+admin.deactivateUserConfirm:
+  zhCn: 注销后该用户将被脱敏并无法登录，确定注销吗？
+  en: The user will be desensitized and unable to log in. Deactivate?
+admin.deactivateSuccess:
+  zhCn: 注销成功
+  en: Deactivated successfully
 admin.imageModeration:
   zhCn: 图片审核
   en: Image Moderation
 admin.captchas:
   zhCn: 验证码
   en: Captchas
+admin.customMessages:
+  zhCn: 自定义文案
+  en: Custom Messages
+admin.customMsgDefault:
+  zhCn: 默认
+  en: Default
+admin.customMsgZh:
+  zhCn: 简体中文
+  en: Simplified Chinese
+admin.customMsgEn:
+  zhCn: English
+  en: English
+admin.customMsgPlaceholder:
+  zhCn: 请输入自定义文案，留空则恢复默认
+  en: Enter custom text; leave blank to restore default
+admin.customMsgSaved:
+  zhCn: 文案已保存，正在刷新生效
+  en: Messages saved, refreshing to apply
+admin.customMsgGroup.login:
+  zhCn: 登录与注册
+  en: Login & Registration
+admin.customMsgGroup.admin:
+  zhCn: 管理员后台
+  en: Admin Console
+admin.customMsgGroup.move:
+  zhCn: 图片移动
+  en: Image Move
+admin.customMsgGroup.search:
+  zhCn: 跨组搜索
+  en: Cross-Group Search
+admin.customMsgGroup.ai:
+  zhCn: AI 智能翻译
+  en: AI Translation
+admin.customMsgGroup.editor:
+  zhCn: 编辑器
+  en: Editor
+admin.customMsgGroup.appearance:
+  zhCn: 界面外观
+  en: Appearance
+admin.customMsgGroup.other:
+  zhCn: 其他
+  en: Other
+admin.customMsgGroup.brand:
+  zhCn: 品牌
+  en: Brand
 admin.inviteCodes:
   zhCn: 邀请码
   en: Invitation Codes

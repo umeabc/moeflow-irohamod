@@ -194,6 +194,21 @@ const adminEditUserPassword = ({
   });
 };
 
+/** 注销用户（脱敏并使其无法登录，保留数据库记录、不再出现在用户列表） */
+const adminDeactivateUser = ({
+  userID,
+  configs,
+}: {
+  userID: string;
+  configs?: AxiosRequestConfig;
+}) => {
+  return request({
+    method: 'PUT',
+    url: `/v1/admin/users/${userID}/deactivate`,
+    ...configs,
+  });
+};
+
 /** 管理员获取验证码列表 */
 const adminGetVCodeList = ({
   configs,
@@ -216,5 +231,6 @@ export default {
   adminChangeAdminStatus,
   adminCreateUser,
   adminEditUserPassword,
+  adminDeactivateUser,
   adminGetVCodeList,
 };

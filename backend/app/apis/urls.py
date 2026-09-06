@@ -25,10 +25,18 @@ from app.apis.me import (
     MeRelatedApplicationListAPI,
 )
 from app.apis.avatar import AvatarAPI
-from app.apis.site_setting import HomepageAPI, SiteSettingAPI, StorageUsageAPI
+from app.apis.site_setting import (
+    AdminCustomMessagesAPI,
+    CustomMessagesAPI,
+    HomepageAPI,
+    SiteSettingAPI,
+    StorageUsageAPI,
+    SystemStatusAPI,
+)
 from app.apis.user import (
     AdminUserAPI,
     AdminUserAdminStatusAPI,
+    AdminUserDeactivateAPI,
     AdminUserListAPI,
     UserListAPI,
     UserAPI,
@@ -106,6 +114,11 @@ index.add_url_rule(
 site = Blueprint("site", __name__, url_prefix=v1_prefix + "/site")
 site.add_url_rule(
     "/homepage", methods=["GET", "OPTIONS"], view_func=HomepageAPI.as_view("homepage")
+)
+site.add_url_rule(
+    "/custom-messages",
+    methods=["GET", "OPTIONS"],
+    view_func=CustomMessagesAPI.as_view("custom_messages"),
 )
 # type模块
 type = Blueprint("type", __name__, url_prefix=v1_prefix + "/types")
@@ -470,9 +483,24 @@ admin.add_url_rule(
     view_func=StorageUsageAPI.as_view("admin_storage_usage"),
 )
 admin.add_url_rule(
+    "/system-status",
+    methods=["GET", "OPTIONS"],
+    view_func=SystemStatusAPI.as_view("admin_system_status"),
+)
+admin.add_url_rule(
+    "/custom-messages",
+    methods=["GET", "PUT", "OPTIONS"],
+    view_func=AdminCustomMessagesAPI.as_view("admin_custom_messages"),
+)
+admin.add_url_rule(
     "/users/<user_id>",
     methods=["PUT", "OPTIONS"],
     view_func=AdminUserAPI.as_view("admin_edit_user_password"),
+)
+admin.add_url_rule(
+    "/users/<user_id>/deactivate",
+    methods=["PUT", "OPTIONS"],
+    view_func=AdminUserDeactivateAPI.as_view("admin_deactivate_user"),
 )
 admin.add_url_rule(
     "/v-codes",

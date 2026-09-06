@@ -18,3 +18,9 @@ class SiteSettingSchema(DefaultSchema):
     )
     homepage_html = fields.Str()
     homepage_css = fields.Str()
+
+
+class CustomMessagesSchema(DefaultSchema):
+    """自定义文案覆盖：{key: message} 字典"""
+
+    messages = fields.Dict(required=True, error_messages={**required_message})

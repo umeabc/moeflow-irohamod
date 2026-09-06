@@ -1,142 +1,67 @@
-import { css } from '@emotion/core';
-import React, { useEffect, useState } from 'react';
-import {
-  Redirect,
-  Route,
-  Switch,
-  useHistory,
-  useLocation,
-  useRouteMatch,
-} from 'react-router-dom';
+import React from 'react';
+import { Redirect, Route, Switch, useRouteMatch } from 'react-router-dom';
+import { useIntl } from 'react-intl';
 import { useTitle } from '@/hooks';
 import { FC } from '@/interfaces';
-
-import { Layout, Menu } from 'antd';
-import { useIntl } from 'react-intl';
+import { AdminWorkspaceLayout } from '@/components/admin/AdminWorkspaceLayout';
+import { AdminDashboard } from '@/components/admin/AdminDashboard';
+import { AdminPageShell } from '@/components/admin/AdminPageShell';
+import { AdminContentCard } from '@/components/admin/AdminContentCard';
 import { AdminUserList } from '@/components/admin/AdminUserList';
 import { AdminImageSafeCheck } from '@/components/admin/AdminImageSafeCheck';
 import { AdminSiteSetting } from '@/components/admin/AdminSiteSetting';
-import { AdminVCodeList } from '@/components/admin/AdminVCodeList';
 import { AdminInviteCode } from '@/components/admin/AdminInviteCode';
 import { AdminTeam } from '@/components/admin/AdminTeam';
+import { AdminCustomMessages } from '@/components/admin/AdminCustomMessages';
+import { routes } from './routes';
 
-const { Sider } = Layout;
-
-/** 管理员页面的属性接口 */
-interface AdminProps {}
-/**
- * 管理员页面
- */
-const Admin: FC<AdminProps> = () => {
-  const [collapsed, setCollapsed] = useState(false);
-  const history = useHistory(); // 路由
-  const { path, url } = useRouteMatch();
-  const location = useLocation();
-  const defaultSelectedKey =
-    location.pathname.split('/')[location.pathname.split('/').length - 1];
+/** 管理员页面 */
+const Admin: FC = () => {
   const { formatMessage } = useIntl();
+  const { path } = useRouteMatch();
+  useTitle({ prefix: formatMessage({ id: 'admin.title' }) });
 
-  useTitle(); // 设置标题
+  const page = (
+    titleId: string,
+    descriptionId: string,
+    content: React.ReactNode,
+  ) => (
+    <AdminPageShell
+      title={formatMessage({ id: titleId })}
+      description={formatMessage({ id: descriptionId })}
+    >
+      <AdminContentCard>{content}</AdminContentCard>
+    </AdminPageShell>
+  );
 
   return (
-    <div css={css``}>
-      <Layout style={{ minHeight: '100vh' }}>
-        <Sider
-          collapsible
-          collapsed={collapsed}
-          onCollapse={(value) => setCollapsed(value)}
-        >
-          <div className="logo" />
-          <Menu
-            theme="dark"
-            defaultSelectedKeys={[defaultSelectedKey]}
-            mode="inline"
-          >
-            <Menu.Item
-              key="dashboard"
-              onClick={() => {
-                history.push(`/dashboard`);
-              }}
-            >
-              {'<'} {formatMessage({ id: 'admin.backToDashboard' })}
-            </Menu.Item>
-            <Menu.Item
-              key="site-setting"
-              onClick={() => {
-                history.push(`${url}/site-setting`);
-              }}
-            >
-              {formatMessage({ id: 'admin.siteSettings' })}
-            </Menu.Item>
-            <Menu.Item
-              key="users"
-              onClick={() => {
-                history.push(`${url}/users`);
-              }}
-            >
-              {formatMessage({ id: 'admin.users' })}
-            </Menu.Item>
-            <Menu.Item
-              key="image-moderation"
-              onClick={() => {
-                history.push(`${url}/image-moderation`);
-              }}
-            >
-              {formatMessage({ id: 'admin.imageModeration' })}
-            </Menu.Item>
-            <Menu.Item
-              key="site-v-code"
-              onClick={() => {
-                history.push(`${url}/site-v-code`);
-              }}
-            >
-              {formatMessage({ id: 'admin.captchas' })}
-            </Menu.Item>
-            <Menu.Item
-              key="invite-codes"
-              onClick={() => {
-                history.push(`${url}/invite-codes`);
-              }}
-            >
-              {formatMessage({ id: 'admin.inviteCodes' })}
-            </Menu.Item>
-            <Menu.Item
-              key="team-manage"
-              onClick={() => {
-                history.push(`${url}/team-manage`);
-              }}
-            >
-              {formatMessage({ id: 'admin.teamManage' })}
-            </Menu.Item>
-          </Menu>
-        </Sider>
-        <Layout className="site-layout">
-          <Switch>
-            <Route path={`${path}/`} exact>
-              <Redirect to={`${path}/site-setting`} />
-            </Route>
-            <Route path={`${path}/users`}>
-              <AdminUserList />
-            </Route>
-            <Route path={`${path}/image-moderation`}>
-              <AdminImageSafeCheck />
-            </Route>
-            <Route path={`${path}/site-setting`}>
-              <AdminSiteSetting />
-            </Route>
-            <Route path={`${path}/site-v-code`}>
-              <AdminVCodeList />
-            </Route>
-            <Route path={`${path}/invite-codes`}>
-              <AdminInviteCode />
-            </Route>
-            <Route path={`${path}/team-manage`}>
-              <AdminTeam />
-            </Route>
-          </Switch>
-        </Layout>
-      </Layout>
-    </div>
+    <AdminWorkspaceLayout>
+      <Switch>
+        <Route exact path={path}>
+          <AdminDashboard />
+        </Route>
+        <Route path={`${path}/users`}>
+          {page('admin.users', 'admin.pageDescription.users', <AdminUserList />)}
+        </Route>
+        <Route path={`${path}/image-moderation`}>
+          {page('admin.imageModeration', 'admin.pageDescription.imageModeration', <AdminImageSafeCheck />)}
+        </Route>
+        <Route path={`${path}/site-setting`}>
+          {page('admin.siteSettings', 'admin.pageDescription.siteSettings', <AdminSiteSetting />)}
+        </Route>
+        <Route path={`${path}/custom-messages`}>
+          {page('admin.customMessages', 'admin.pageDescription.customMessages', <AdminCustomMessages />)}
+        </Route>
+        <Route path={`${path}/invite-codes`}>
+          {page('admin.inviteCodes', 'admin.pageDescription.inviteCodes', <AdminInviteCode />)}
+        </Route>
+        <Route path={`${path}/team-manage`}>
+          {page('admin.teamManage', 'admin.pageDescription.teamManage', <AdminTeam />)}
+        </Route>
+        <Redirect to={routes.admin} />
+      </Switch>
+    </AdminWorkspaceLayout>
   );
 };
+
 export default Admin;

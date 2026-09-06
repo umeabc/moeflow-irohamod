@@ -68,7 +68,12 @@ export const AdminVCodeList: FC<AdminVCodeListProps> = ({ className }) => {
   ];
 
   return (
-    <div className={classNames('AdminVCodeList', className)} css={css``}>
+    <div className={classNames('AdminVCodeList', className)} css={css`
+      width: 100%;
+      overflow-x: auto;
+      .ant-table-wrapper { min-width: 680px; }
+      .ant-table-thead > tr > th { background: var(--moeflow-surface2); }
+    `}>
       <Table
         dataSource={data}
         rowKey={(record) => record.id}

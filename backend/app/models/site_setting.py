@@ -5,6 +5,7 @@ from mongoengine import (
     BooleanField,
     StringField,
     ObjectIdField,
+    DictField,
 )
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,8 @@ class SiteSetting(Document):
     auto_join_team_ids = ListField(ObjectIdField(), db_field="ajt", default=list)
     homepage_html = StringField(db_field="h", default="")
     homepage_css = StringField(db_field="hc", default="")
+    # 站点自定义文案覆盖（key -> message）：管理员后台可编辑，前端运行时合并覆盖默认 locale
+    custom_messages = DictField(db_field="cm", default=dict)
 
     meta = {
         "indexes": [
@@ -49,4 +52,5 @@ class SiteSetting(Document):
             "auto_join_team_ids": [str(id) for id in self.auto_join_team_ids],
             "homepage_html": self.homepage_html,
             "homepage_css": self.homepage_css,
+            "custom_messages": self.custom_messages or {},
         }
