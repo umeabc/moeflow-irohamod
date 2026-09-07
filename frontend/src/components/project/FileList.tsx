@@ -495,14 +495,16 @@ export const FileList: FC<FileListProps> = ({
         }}
       />
       <div className="FileList__Header">
-        <Button
-          icon="arrows-alt"
-          disabled={selectedFileIds.length === 0}
-          onClick={() => setMoveModalVisible(true)}
-        >
-          {formatMessage({ id: 'file.moveImages' })}
-          {selectedFileIds.length > 0 && ` (${selectedFileIds.length})`}
-        </Button>
+        {can(project, PROJECT_PERMISSION.MOVE_FILE) && (
+          <Button
+            icon="arrows-alt"
+            disabled={selectedFileIds.length === 0}
+            onClick={() => setMoveModalVisible(true)}
+          >
+            {formatMessage({ id: 'file.moveImages' })}
+            {selectedFileIds.length > 0 && ` (${selectedFileIds.length})`}
+          </Button>
+        )}
         <Button
           className="FileList__ChangeTargetButton"
           icon="exchange-alt"

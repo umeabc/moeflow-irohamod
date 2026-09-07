@@ -1,10 +1,38 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha7）
+# MoeFlow 自定义改动 CHANGELOG（iroha8）
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 镜像 tag：`moeflow-frontend:1.1.7-iroha7` / `moeflow-backend:1.1.8-iroha7`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6` 镜像保留各自版本 tag）。
+> 镜像 tag：`moeflow-frontend:1.1.7-iroha8` / `moeflow-backend:1.1.8-iroha8`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6`/`iroha7` 镜像保留各自版本 tag）。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：以 `docker save` 导出镜像 tar → 生产侧 `docker load` 导入（仅替换前端/后端镜像，勿改动 env / compose）。
+
+---
+
+## iroha8 新增特性（基于 iroha7）
+
+### 一、上传文件名强制去 emoji（服务端兜底）
+
+- 此前仅前端 FilePond 上传回调清洗文件名，截图发现部分文件名中 emoji 仍会入库。
+- 新增 `backend/app/utils/filename.py`（`strip_filename_emoji`）：在**后端上传入口**统一清洗 multipart 文件名（覆盖 emoji 主区、组合符、旗帜/符号区），再用于同名检测与 `project.upload()` 入库。
+- 纯 emoji 文件名安全回退为 `image` + 原扩展名；已入库旧文件不自动改写。
+
+### 二、翻译者累积记录（打标号/机翻全能模式）
+
+- 原机制：打标号后把 `file.translator` **覆盖**为当前用户。
+- 新机制：**累积**单张图片上所有出现过（处理过）的用户，写入"翻译：用户名"，多个用户**顿号**分隔、去重；手动在文件卡编辑翻译字段时则**直接覆盖**（带 `replace_translator` 标记）。
+- 后端：`backend/app/apis/file.py` 新增 `merge_role_names`（按顿号/中英文逗号切分去重合并）；`FileAPI.put` 默认累积、`replace_translator=true` 覆盖。
+- 前端：打标号 saga 与机翻全能模式（`BatchTranslateModal`）保存成功都自动累积当前用户名；`FileItem` 手动编辑带替换标记。
+
+### 三、移动图片仅团队管理员可用
+
+- 后端 `MoveTargetProjectsAPI` 权限从 `ACCESS` 收紧为 `admin_can() or MOVE_FILE`（站点管理员/创建人/管理员/监理），普通成员调用返回 403。
+- 前端 `FileList.tsx` 移动按钮加 `can(project, MOVE_FILE)` 门控，非管理员隐藏。
+
+### 四、自动翻译失败输出具体失败详情
+
+- 翻译失败时不再只显示「翻译失败」，而是输出具体到哪一步失败 + 相关参数。
+- 新增 `formatErrorDetail` / `buildFailureMessage`：解析错误对象（message/status/http/response data/cause），附上 `mode`、目标语言、模型、步骤（调用模型/保存翻译）。
+- 接入三处失败点：全能/仅标号/仅翻译的 LLM 调用失败、保存翻译落库失败；i18n 新增 `stepCallModel`/`stepSave`。
 
 ---
 
@@ -279,4 +307,4 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 
 - 本改动为定制版本，与上游 moeflow 官方代码存在差异；如需回退，可用官方 tag `v1.1.7` / `v1.1.8` 重新构建。
 - 涉及权限与交互调整（角色编辑、项目集删除/移动、搜索范围、上传去重、主题切换、符号工具），请按实际团队与权限配置确认。
-- 交付：前端/后端镜像已按 `docker save` 打包为 tar（`moeflow-*-1.1.x-iroha7.tar`），生产侧 `docker load` 后替换对应镜像即可（仅替换镜像，不动 env/compose）。
+- 交付：前端/后端镜像已按 `docker save` 打包为 tar（`moeflow-*-1.1.x-iroha8.tar`），生产侧 `docker load` 后替换对应镜像即可（仅替换镜像，不动 env/compose）。

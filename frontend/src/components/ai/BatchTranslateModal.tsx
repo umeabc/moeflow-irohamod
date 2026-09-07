@@ -2,7 +2,9 @@ import { FC } from 'react';
 import { File as MFile } from '@/interfaces';
 import { Target } from '@/interfaces';
 import { useIntl } from 'react-intl';
+import { useSelector } from 'react-redux';
 import { useState } from 'react';
+import { AppState } from '@/store';
 import { ResourcePool } from '@jokester/ts-commonutil/lib/concurrency/resource-pool-basic';
 import { getCancelToken } from '@/utils/api';
 import { useAsyncEffect } from '@jokester/ts-commonutil/lib/react/hook/use-async-effect';
@@ -31,6 +33,45 @@ interface FileProgress {
 
 function clipTo01(x: number) {
   return Math.max(0, Math.min(1, x));
+}
+
+/** 把任意错误对象解析成可读的失败详情（用于诊断翻译失败具体到哪一步） */
+function formatErrorDetail(e: unknown): string {
+  if (e === undefined || e === null) return '';
+  if (typeof e === 'string') return e;
+  if (e instanceof Error) {
+    return e.message || e.name || String(e);
+  }
+  const obj = e as { message?: unknown; status?: unknown; cause?: unknown; response?: { data?: unknown; status?: unknown } };
+  const parts: string[] = [];
+  if (obj.status !== undefined) parts.push(`status=${obj.status}`);
+  if (obj.response?.status !== undefined) parts.push(`http=${obj.response.status}`);
+  if (obj.message !== undefined && obj.message !== null)
+    parts.push(typeof obj.message === 'string' ? obj.message : JSON.stringify(obj.message));
+  if (obj.response?.data !== undefined && obj.response.data !== null)
+    parts.push('resp=' + JSON.stringify(obj.response.data).slice(0, 400));
+  if (obj.cause !== undefined && obj.cause !== null) {
+    const cause = formatErrorDetail(obj.cause);
+    if (cause) parts.push(`cause=${cause}`);
+  }
+  return parts.join('; ') || String(e);
+}
+
+/** 拼装失败提示：主文案 + 步骤/参数上下文 + 错误详情 */
+function buildFailureMessage(
+  getMsg: (id: string) => string,
+  mainId: string,
+  ctx: { step?: string; mode?: string; targetLang?: string; model?: string } | undefined,
+  err: unknown,
+): string {
+  const bits: string[] = [getMsg(mainId)];
+  if (ctx?.step) bits.push(`[${getMsg(ctx.step)}]`);
+  if (ctx?.mode) bits.push(`mode=${ctx.mode}`);
+  if (ctx?.targetLang) bits.push(`target=${ctx.targetLang}`);
+  if (ctx?.model) bits.push(`model=${ctx.model}`);
+  const detail = formatErrorDetail(err);
+  if (detail) bits.push(detail);
+  return bits.join(' ');
 }
 
 const stateIcons = {
@@ -64,6 +105,9 @@ export const BatchTranslateModalContent: FC<{
 }> = ({ files, target, getHandle, llmConf, mode: modeProp, onFileSaved }) => {
   const mode = modeProp ?? 'all';
   const { formatMessage } = useIntl();
+  const currentUserName = useSelector(
+    (state: AppState) => state.user.name || state.user.id,
+  );
   const [fileStates, setFileStates] = useState<FileProgress[]>(() =>
     files.map(
       (file): FileProgress => ({
@@ -115,6 +159,7 @@ export const BatchTranslateModalContent: FC<{
     }
 
     async function translateFile(f: MFile) {
+      let llmError: unknown = null;
       setFileState(
         f,
         formatMessage({ id: 'fileList.aiTranslate.fileMessage.sendingImage' }),
@@ -200,6 +245,7 @@ export const BatchTranslateModalContent: FC<{
         imgBlob,
         { mode },
       ).catch((e: unknown) => {
+        llmError = e;
         debugLogger('translate failed', e);
         return null;
       });
@@ -211,11 +257,20 @@ export const BatchTranslateModalContent: FC<{
       if (result) {
         await saveTranslations(f, result as FilePreprocessResult);
       } else {
+        // 失败：输出具体到哪一步失败 + 相关参数（mode/target/model + 错误详情）
         setFileState(
           f,
-          formatMessage({
-            id: 'fileList.aiTranslate.fileMessage.translateFailed',
-          }),
+          buildFailureMessage(
+            (id) => formatMessage({ id }),
+            'fileList.aiTranslate.fileMessage.translateFailed',
+            {
+              step: 'fileList.aiTranslate.fileMessage.stepCallModel',
+              mode,
+              targetLang: target.language.enName,
+              model: llmConf.model,
+            },
+            llmError,
+          ),
           stateIcons.fail,
         );
       }
@@ -263,12 +318,14 @@ export const BatchTranslateModalContent: FC<{
       } catch (e) {
         debugLogger('annotate failed, fallback to original image', e);
       }
+      let llmError: unknown = null;
       const result = await llmTranslateImage(
         llmConf,
         target.language.enName,
         annotatedBlob,
         { mode: 'translate-only', labels },
       ).catch((e: unknown) => {
+        llmError = e;
         debugLogger('translate-only failed', e);
         return null;
       });
@@ -279,9 +336,17 @@ export const BatchTranslateModalContent: FC<{
       if (!result) {
         setFileState(
           f,
-          formatMessage({
-            id: 'fileList.aiTranslate.fileMessage.translateFailed',
-          }),
+          buildFailureMessage(
+            (id) => formatMessage({ id }),
+            'fileList.aiTranslate.fileMessage.translateFailed',
+            {
+              step: 'fileList.aiTranslate.fileMessage.stepCallModel',
+              mode,
+              targetLang: target.language.enName,
+              model: llmConf.model,
+            },
+            llmError,
+          ),
           stateIcons.fail,
         );
         return;
@@ -334,9 +399,15 @@ export const BatchTranslateModalContent: FC<{
         debugLogger('save translation failed', e);
         setFileState(
           f,
-          formatMessage({
-            id: 'fileList.aiTranslate.fileMessage.failSaving',
-          }),
+          buildFailureMessage(
+            (id) => formatMessage({ id }),
+            'fileList.aiTranslate.fileMessage.failSaving',
+            {
+              step: 'fileList.aiTranslate.fileMessage.stepSave',
+              mode,
+            },
+            e,
+          ),
           stateIcons.fail,
         );
       }
@@ -395,6 +466,14 @@ export const BatchTranslateModalContent: FC<{
           ),
         );
         if (withTranslation) {
+          // 全能模式：记录当前用户为翻译者（后端累积、顿号分隔去重）
+          if (currentUserName) {
+            api.file
+              .editFile({ id: f.id, data: { translator: currentUserName } })
+              .catch(() => {
+                // 忽略：不阻塞结果展示
+              });
+          }
           setFileState(
             f,
             formatMessage(
@@ -426,7 +505,15 @@ export const BatchTranslateModalContent: FC<{
         debugLogger('save text block failed', e);
         setFileState(
           f,
-          formatMessage({ id: 'fileList.aiTranslate.fileMessage.failSaving' }),
+          buildFailureMessage(
+            (id) => formatMessage({ id }),
+            'fileList.aiTranslate.fileMessage.failSaving',
+            {
+              step: 'fileList.aiTranslate.fileMessage.stepSave',
+              mode,
+            },
+            e,
+          ),
           stateIcons.fail,
         );
       }

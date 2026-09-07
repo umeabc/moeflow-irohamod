@@ -1,7 +1,7 @@
-# MoeFlow 定制版（iroha7）备份仓库
+# MoeFlow 定制版（iroha8）备份仓库
 
 > 本仓库为 MoeFlow（彩翻 / 萌翻）**内部定制版本**的源码备份仓库（私有）。
-> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；镜像 tag：`moeflow-frontend:1.1.7-iroha7`、`moeflow-backend:1.1.8-iroha7`。
+> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；镜像 tag：`moeflow-frontend:1.1.7-iroha8`、`moeflow-backend:1.1.8-iroha8`。
 > 本文档为**脱敏版**，不含具体主机、域名、端口、代理与凭据信息。
 
 ---
@@ -39,8 +39,11 @@ MoeFlow（彩翻）是一款**自托管漫画翻译协作平台**：支持上传
 - **站点管理员管理页**：邀请码管理（创建 / 启停 / 删除，团队覆盖全站）+ 团队管理（全站团队概览 + 级联删除 + 头像）。
 - **图片移动**：同项目集批量移动勾选图片，重复 md5 失败并说明原因；标号随图保留、翻译按语言重映射到新项目，进度条与计数正确。
 - **自定义文案（按语言分组）**：`site.name` / `site.slogan` / `site.englishName` 品牌文案与 mascot / favicon 品牌图片均在站点设置页可配（中英文分别设置，留空恢复默认）。
-- **上传文件名去 emoji**：图片上传时自动清除文件名中的 emoji。
+- **上传文件名去 emoji**：图片上传时自动清除文件名中的 emoji（服务端兜底，前端也清洗）。
 - **全体用户通知系统**：管理员发布公告，登录弹未读，用户菜单「通知一览」查历史；管理后台「通知管理」发布 / 编辑 / 启停 / 删除。
+- **翻译者累积记录**：打标号 / 机翻全能模式自动累积处理过该图的用户到「翻译」字段（顿号分隔去重）；手动编辑直接设置。
+- **移动图片仅团队管理员可用**：移动按钮仅站点管理员 / 创建人 / 管理员 / 监理可见，普通成员 API 也拒绝。
+- **翻译失败详情**：自动翻译失败时输出具体到哪一步（调用模型 / 保存翻译）+ 相关参数（模式 / 模型 / 目标语言 / 错误详情）。
 
 ## 部署
 
@@ -53,8 +56,8 @@ MoeFlow（彩翻）是一款**自托管漫画翻译协作平台**：支持上传
 ### 交付
 - 镜像 `docker save` 导出为 tar → 生产侧 `docker load` → 用 Compose 替换 `backend` / `frontend` 服务（保留 mongodb / rabbitmq 数据）。
 - 涉及镜像：
-  - `moeflow-frontend:1.1.7-iroha7`（`FROM nginx:1.26` + `COPY ./build /build`）
-  - `moeflow-backend:1.1.8-iroha7`（`FROM python:3.11`）
+  - `moeflow-frontend:1.1.7-iroha8`（`FROM nginx:1.26` + `COPY ./build /build`）
+  - `moeflow-backend:1.1.8-iroha8`（`FROM python:3.11`）
 
 ## 相关文档
 

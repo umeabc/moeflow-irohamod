@@ -122,7 +122,7 @@ const editFile = ({
   configs,
 }: {
   id: string;
-  data: EditFileData;
+  data: EditFileData & { replaceTranslator?: boolean };
   configs?: AxiosRequestConfig;
 }) => {
   return request({

@@ -1,4 +1,4 @@
-# MoeFlow 项目交接档案（iroha7 定制版）
+# MoeFlow 项目交接档案（iroha8 定制版）
 
 > 项目已稳定并正式上线。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
 > 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。
@@ -9,7 +9,7 @@
 ## 1. 项目概览
 - 名称：MoeFlow（萌翻 / 彩翻）—— 自托管漫画翻译协作平台。
 - 基线：前端 `v1.1.7`、后端 `v1.1.8`。
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha7`、`moeflow-backend:1.1.8-iroha7`。
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha8`、`moeflow-backend:1.1.8-iroha8`。
 
 ## 2. 部署拓扑（通用）
 - 一组 Docker Compose 服务：mongodb、rabbitmq、backend、celery-default、celery-output、frontend。
@@ -19,7 +19,7 @@
 
 ## 3. 部署迁移方式
 - 镜像 `docker save` 导出 tar → 生产侧 `docker load` → compose（**只替换 backend/frontend，保留 mongodb/rabbitmq 数据**）。
-- 镜像 tar 命名：`moeflow-backend-1.1.8-iroha7.tar`（约 496MB）、`moeflow-frontend-1.1.7-iroha7.tar`（约 74MB）。
+- 镜像 tar 命名：`moeflow-backend-1.1.8-iroha8.tar`（约 496MB）、`moeflow-frontend-1.1.7-iroha8.tar`（约 74MB）。
 
 ## 4. 本次改动摘要
 详见 `CHANGELOG-iroha4.md`。
@@ -39,6 +39,12 @@
 - **上传文件名去 emoji**：图片上传时自动清除文件名中的 emoji。
 - **全体用户通知系统**：管理员发布公告（`/v1/admin/notices`），登录弹未读通知（点已读不再弹），用户菜单「通知一览」查历史；删除通知自动清理用户已读记录。
 
+## 4.3 iroha8 新增（基于 iroha7）
+- **上传文件名强制去 emoji（服务端兜底）**：新增 `backend/app/utils/filename.py`，上传入口统一清洗 multipart 文件名再入库，解决前端清洗兜不住的问题。
+- **翻译者累积记录**：打标号 / 机翻全能模式自动累积处理过该图的用户到「翻译」字段（顿号分隔去重）；手动编辑直接覆盖（`replace_translator`）。
+- **移动图片仅团队管理员可用**：移动按钮与目标列表接口均限站点管理员 / 创建人 / 管理员 / 监理；普通成员 403。
+- **翻译失败详情**：自动翻译失败时输出具体到哪一步（调用模型 / 保存翻译）+ 相关参数（模式 / 模型 / 目标语言 / 错误详情）。
+
 ## 5. 关键环境坑（务必牢记）
 1. **前端 build 在资源充足的开发机上做**，再上传远程 `docker build`；远程内存不足跑不动前端构建（OOM）。
 2. **Docker Hub 不稳定** → 用 daocloud `docker.m.daocloud.io` 拉基础镜像再 retag。
@@ -48,7 +54,7 @@
 
 ## 6. 备份
 - 源码快照：GitHub 私有仓库 `umeabc/moeflow-backup`（`frontend/` + `backend/`）。
-- 改动清单：`CHANGELOG-iroha4.md`（当前镜像版本 iroha7）。
+- 改动清单：`CHANGELOG-iroha4.md`（当前镜像版本 iroha8）。
 
 ## 7. 回退
 - 如要回到官方：用官方 tag `v1.1.7` / `v1.1.8` 重新构建即可（本定制版与上游存在差异）。

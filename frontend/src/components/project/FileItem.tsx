@@ -206,7 +206,14 @@ const RoleEditField: FC<{
       return; // 未变化
     }
     api.file
-      .editFile({ id: fileID, data: { [field]: finalText || undefined } as any })
+      .editFile({
+        id: fileID,
+        // 手动编辑翻译者视为「直接设置」，不走自动累积
+        data: {
+          [field]: finalText || undefined,
+          ...(field === 'translator' ? { replaceTranslator: true } : {}),
+        } as any,
+      })
       .catch(() => {
         // 忽略
       });

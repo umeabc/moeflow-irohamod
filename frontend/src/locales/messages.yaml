@@ -933,6 +933,9 @@ fileList.aiTranslate:
     translating:
       zhCn: 翻译中...
       en: Translating...
+    stepCallModel:
+      zhCn: 调用模型
+      en: Call model
     translateFailed:
       zhCn: 翻译失败
       en: Failed to translate
@@ -945,6 +948,9 @@ fileList.aiTranslate:
     saving:
       zhCn: 保存中...
       en: Saving...
+    stepSave:
+      zhCn: 保存翻译
+      en: Save translation
     failSaving:
       zhCn: 保存失败
       en: Failed to save

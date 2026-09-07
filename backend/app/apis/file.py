@@ -31,6 +31,29 @@ from app.constants.file import FileSafeStatus
 from flask_apikit.exceptions import ValidateError
 from flask_apikit.utils import QueryParser
 
+ROLE_NAME_SEP = "、"  # 翻译/校对/嵌字多人的分隔符
+
+
+def _split_role_names(text: str):
+    """按顿号/中文逗号/半角逗号切分并去除空白与空项。"""
+    for raw in (text or "").split("、"):
+        for chunk in raw.split("，"):
+            for piece in chunk.split(","):
+                piece = piece.strip()
+                if piece:
+                    yield piece
+
+
+def merge_role_names(existing: str, new_names: str) -> str:
+    """将新提交的名字与已有值合并（顿号/逗号分隔，去重）。"""
+    seen = set()
+    items: list[str] = []
+    for p in list(_split_role_names(existing)) + list(_split_role_names(new_names)):
+        if p not in seen:
+            seen.add(p)
+            items.append(p)
+    return ROLE_NAME_SEP.join(items)
+
 
 class ProjectFileListAPI(MoeAPIView):
     @token_required
@@ -247,8 +270,11 @@ class MoveTargetProjectsAPI(MoeAPIView):
     @fetch_model(Project)
     def get(self, project):
         """返回同一项目集下的其它项目（供前端选择移动目标）"""
-        if not self.current_user.can(project, ProjectPermission.ACCESS):
-            raise NoPermissionError
+        # 仅团队管理员（创建人/管理员/监理/站点管理员）可用
+        if not self.current_user.admin_can() and not self.current_user.can(
+            project, ProjectPermission.MOVE_FILE
+        ):
+            raise NoPermissionError(gettext("您没有权限移动文件"))
         projects = Project.objects(
             project_set=project.project_set, id__ne=project.id
         ).only("id", "name")
@@ -362,10 +388,18 @@ class FileAPI(MoeAPIView):
                 if data.get(field) and field not in allowed:
                     raise NoPermissionError(gettext("您没有权限修改该字段"))
             editable = {}
+            # 手动编辑标记：覆盖翻译者（默认 false=自动累积，true=手动设置/清空）
+            replace_translator = bool(data.get("replace_translator"))
             for field in ("translator", "proofreader", "typesetter"):
                 user_str = data.get(field)
                 if user_str:
-                    editable[field] = user_str
+                    if field == "translator" and not replace_translator:
+                        # 自动累积：与已有值按顿号分隔去重合并（支持顿号/逗号输入）
+                        editable[field] = merge_role_names(
+                            getattr(file, field, "") or "", user_str
+                        )
+                    else:
+                        editable[field] = user_str
             if editable:
                 file.update(**editable)
                 return {"message": gettext("保存成功")}
