@@ -12,6 +12,7 @@ from app.exceptions import (
     NoPermissionError,
     UploadFileNotFoundError,
 )
+from app.utils.filename import strip_filename_emoji
 from app.utils.hash import get_file_md5
 from app.models.file import File, FileTargetCache
 from app.models.user import User
@@ -131,10 +132,12 @@ class ProjectFileListAPI(MoeAPIView):
         real_file = request.files.get("file")
         if not real_file:
             raise UploadFileNotFoundError
+        # 服务端兜底：无论客户端上传组件如何处理，都不让 emoji 进入入库文件名。
+        filename = strip_filename_emoji(real_file.filename)
         data = self.verify_data(request.form, FileUploadSchema())
         # 检查是否有同名文件
         old_file: File = project.get_files(
-            name=real_file.filename, parent=data["parent_id"]
+            name=filename, parent=data["parent_id"]
         ).first()
         # 以组（团队）为单位，用 MD5 去重：同内容已存在于同组则拒绝上传
         md5 = get_file_md5(real_file)  # 读取流计算 md5
@@ -165,7 +168,7 @@ class ProjectFileListAPI(MoeAPIView):
                     )
                 )
         file: File = project.upload(
-            real_file.filename, real_file, parent=data["parent_id"]
+            filename, real_file, parent=data["parent_id"]
         )
         data = file.to_api()
         data["upload_overwrite"] = old_file is not None
