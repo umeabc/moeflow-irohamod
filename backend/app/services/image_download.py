@@ -281,15 +281,20 @@ def _download_twitter_pic(
     text: str = "",
     created_at: str = "",
     page: Optional[int] = None,
+    ct0: str = "",
 ) -> Tuple[bytes, str]:
-    # 取最大尺寸（?format=...&name=orig）
+    # 取最大尺寸：只加 name=orig（保持原格式；对 PNG 加 format=jpg 会 404）
     best = img_url
     if "name=" not in best:
-        best = best + "?format=jpg&name=orig" if "?" not in best else best
+        best = best + "?name=orig" if "?" not in best else best + "&name=orig"
+    # 下载 twimg 图片：带 Authorization / X-Csrf-Token 更稳（某些图需要认证否则 404）
+    headers = {"User-Agent": UA}
+    if ct0:
+        headers.update(_twitter_api_headers(ct0))
     resp = requests.get(
         best,
         timeout=timeout,
-        headers={"User-Agent": UA},
+        headers=headers,
         proxies=build_proxies(proxy),
         impersonate=IMPERSONATE,
     )
@@ -642,14 +647,28 @@ def _extract_twitter_username(url: str) -> str:
     return m.group(1)
 
 
-def _twitter_api_headers() -> dict:
-    return {
+# X 前端固定使用的公开 Bearer token（guest token，非敏感凭据；
+# tmd 等第三方工具均用同一常量）。X 的 GraphQL 接口必须携带，否则 403。
+_TWITTER_BEARER = (
+    "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D"
+    "1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
+)
+
+
+def _twitter_api_headers(ct0: str = "") -> dict:
+    """X GraphQL 请求头。注意：X-Csrf-Token 必须等于 ct0 cookie，且必须带
+    Authorization: Bearer <公开token>，否则返回 403。"""
+    headers = {
         "User-Agent": UA,
+        "Authorization": f"Bearer {_TWITTER_BEARER}",
         "X-Twitter-Active-Team": "x",
         "X-Twitter-Client-Language": "en",
         "Referer": "https://x.com/",
         "Accept": "application/json, text/plain, */*",
     }
+    if ct0:
+        headers["X-Csrf-Token"] = ct0
+    return headers
 
 
 def _twitter_get_user_id(
@@ -663,7 +682,7 @@ def _twitter_get_user_id(
         ),
         "features": _TWITTER_USER_BY_SCREENNAME_FEATURES,
     }
-    with _session(build_proxies(proxy), _twitter_api_headers()) as s:
+    with _session(build_proxies(proxy), _twitter_api_headers(ct0)) as s:
         s.cookies.update({"auth_token": auth_token, "ct0": ct0})
         r = s.get(api_url, params=params, timeout=timeout)
         if not r.ok:
@@ -762,7 +781,7 @@ def download_twitter_user_media(
                 ),
                 "features": _TWITTER_USER_MEDIA_FEATURES,
             }
-            with _session(proxies, _twitter_api_headers()) as s:
+            with _session(proxies, _twitter_api_headers(ct0)) as s:
                 s.cookies.update({"auth_token": auth_token, "ct0": ct0})
                 r = s.get(api_url, params=params, timeout=timeout)
                 if not r.ok:
@@ -779,6 +798,7 @@ def download_twitter_user_media(
                             timeout,
                             text=text,
                             created_at=created_at,
+                            ct0=ct0,
                         )
                     )
                 except ImageDownloadError:
