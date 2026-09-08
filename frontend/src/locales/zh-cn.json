@@ -368,7 +368,7 @@
   "file.importFromSocial": "从社交媒体获取图片",
   "file.importFromTwitter": "从 X(Twitter) 获取",
   "file.importFromTwitterTip": "请输入推文地址，例如 https://x.com/Iroha_14K/status/2002542796918698349",
-  "file.importFromTwitterUser": "从 X 获取单用户所有图片",
+  "file.importFromTwitterUser": "从X获取（用户）",
   "file.importFromTwitterUserTip": "请输入用户主页地址，例如 https://x.com/Iroha_14K/media?filter=photo 或 https://x.com/Iroha_14K，将抓取该用户媒体时间线中的全部图片",
   "file.importFromTwitterUserProgress": "正在下载第 {done}/{total} 张图片，有 {importable} 张可入库",
   "file.importFromTwitterUserDone": "已导入 {imported} 张，{dup} 张因重复跳过",

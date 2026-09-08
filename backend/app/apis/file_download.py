@@ -51,19 +51,29 @@ def _import_one(project, content, filename, team_project_ids):
 
 
 def _run_media_import_task(task: MediaImportTask, project, settings):
-    """后台线程：逐张下载并入库，更新任务进度。"""
+    """后台线程：逐张下载并入库，更新任务进度。
+
+    注意：线程内必须使用 Flask 应用上下文（current_app / OSS / mongoengine
+    均依赖），否则 project.upload 会抛 Working outside of application context。
+    """
+    from app import flask_app
     from app.services.image_download import _download_twitter_pic
 
+    with flask_app.app_context():
+        _run_media_import_task_inner(task, project, settings, _download_twitter_pic)
+
+
+def _run_media_import_task_inner(task, project, settings, download_pic):
     proxy = getattr(settings, "download_proxy", "") or ""
     auth = (getattr(settings, "twitter_auth", "") or "").strip()
     ct0 = (getattr(settings, "twitter_ct0", "") or "").strip()
     team_project_ids = [p.id for p in Project.objects(team=project.team).only("id")]
     try:
-        for i, (img_url, text, created_at) in enumerate(
-            zip(task.urls, task.names)
-        ):
+        for i, (img_url, name) in enumerate(zip(task.urls, task.names)):
             try:
-                content, filename = _download_twitter_pic(
+                text = (name or {}).get("text") or ""
+                created_at = (name or {}).get("created_at") or ""
+                content, filename = download_pic(
                     img_url,
                     proxy,
                     60,
