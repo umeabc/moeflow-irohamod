@@ -67,6 +67,10 @@ class SiteSettingAPI(MoeAPIView):
         site_setting.auto_join_team_ids = data["auto_join_team_ids"]
         site_setting.homepage_html = data.get("homepage_html", "")
         site_setting.homepage_css = data.get("homepage_css", "")
+        site_setting.twitter_auth = data.get("twitter_auth", "")
+        site_setting.twitter_ct0 = data.get("twitter_ct0", "")
+        site_setting.download_proxy = data.get("download_proxy", "")
+        site_setting.pixiv_session = data.get("pixiv_session", "")
         site_setting.save()
         site_setting.reload()
         return site_setting.to_api()

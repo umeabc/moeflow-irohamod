@@ -5,6 +5,10 @@ import { toUnderScoreCase } from '@/utils';
 export interface APISiteSetting {
   onlyAllowAdminCreateTeam: boolean;
   autoJoinTeamIDs: string[];
+  twitterAuth?: string;
+  twitterCt0?: string;
+  downloadProxy?: string;
+  pixivSession?: string;
 }
 
 const getSiteSetting = ({ configs }: { configs?: AxiosRequestConfig }) => {

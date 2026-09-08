@@ -41,7 +41,9 @@ interface ButtonProps {
 /**
  * 模板
  */
-export const Button: FC<ButtonProps> = ({
+export const Button: FC<
+  ButtonProps & React.DOMAttributes<HTMLDivElement>
+> = ({
   elem = 'div',
   size = 'default',
   icon,
@@ -56,6 +58,7 @@ export const Button: FC<ButtonProps> = ({
   onClick,
   className,
   children,
+  ...restProps
 }) => {
   let iconName: IconProp | undefined = icon;
   if (loading) {
@@ -90,6 +93,7 @@ export const Button: FC<ButtonProps> = ({
   return jsx(
     elem ?? 'div',
     {
+      ...restProps,
       className: classNames('Button', className, {
         'Button--disabled': disabled || loading,
         'Button--noChildren': !children,

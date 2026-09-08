@@ -181,6 +181,33 @@ const getMoveTargetProjects = ({
   });
 };
 
+/** 从社交媒体/外部链接下载图片到项目 */
+export interface APIFileImportFromUrl {
+  url: string;
+  source: 'twitter' | 'bluesky' | 'pixiv' | 'external';
+}
+/** from-url 返回：导入成功的文件列表 + 因重复跳过的文件名列表 */
+export interface APIFileFromUrlResult {
+  files: File[];
+  duplicated: string[];
+}
+const importFileFromUrl = ({
+  projectID,
+  data,
+  configs,
+}: {
+  projectID: string;
+  data: APIFileImportFromUrl;
+  configs?: AxiosRequestConfig;
+}) => {
+  return request<APIFileFromUrlResult>({
+    method: 'POST',
+    url: `/v1/projects/${projectID}/files/from-url`,
+    data,
+    ...configs,
+  });
+};
+
 export interface APIFileMoveResult {
   file_id: string;
   name: string;
@@ -210,6 +237,7 @@ export default {
   getFile,
   deleteFile,
   editFile,
+  importFileFromUrl,
   adminGetFiles,
   adminSafeCheck,
   searchFiles,

@@ -1,5 +1,5 @@
 import { css } from '@emotion/core';
-import { Button, Form as AntdForm, message, Spin, Switch, Upload } from 'antd';
+import { Button, Form as AntdForm, Input, message, Spin, Switch, Upload } from 'antd';
 import TextArea from 'antd/lib/input/TextArea';
 import classNames from 'classnames';
 import React, { useEffect, useState } from 'react';
@@ -466,6 +466,64 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
           name="homepageCss"
         >
           <TextArea rows={10} />
+        </FormItem>
+
+        <div
+          css={css`
+            margin: 20px 0 12px;
+            padding-top: 16px;
+            border-top: 1px solid ${style.borderColorLight};
+            font-size: 15px;
+            font-weight: 600;
+          `}
+        >
+          {formatMessage({ id: 'admin.downloadSettings' })}
+        </div>
+        <div
+          css={css`
+            margin-bottom: 16px;
+            font-size: 12px;
+            color: ${style.textColorSecondary};
+          `}
+        >
+          {formatMessage({ id: 'admin.downloadSettingsDesc' })}
+        </div>
+        <FormItem
+          label={formatMessage({ id: 'admin.downloadTwitterAuth' })}
+          name="twitterAuth"
+          tooltip={formatMessage({ id: 'admin.downloadTwitterAuthTip' })}
+        >
+          <Input.Password
+            autoComplete="new-password"
+            placeholder={formatMessage({ id: 'admin.downloadTwitterAuth' })}
+          />
+        </FormItem>
+        <FormItem
+          label={formatMessage({ id: 'admin.downloadTwitterCt0' })}
+          name="twitterCt0"
+          tooltip={formatMessage({ id: 'admin.downloadTwitterCt0Tip' })}
+        >
+          <Input.Password
+            autoComplete="new-password"
+            placeholder={formatMessage({ id: 'admin.downloadTwitterCt0' })}
+          />
+        </FormItem>
+        <FormItem
+          label={formatMessage({ id: 'admin.downloadProxy' })}
+          name="downloadProxy"
+          tooltip={formatMessage({ id: 'admin.downloadProxyTip' })}
+        >
+          <Input placeholder={formatMessage({ id: 'admin.downloadProxy' })} />
+        </FormItem>
+        <FormItem
+          label={formatMessage({ id: 'admin.pixivSession' })}
+          name="pixivSession"
+          tooltip={formatMessage({ id: 'admin.pixivSessionTip' })}
+        >
+          <Input.Password
+            autoComplete="new-password"
+            placeholder={formatMessage({ id: 'admin.pixivSession' })}
+          />
         </FormItem>
 
         <FormItem

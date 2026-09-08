@@ -34,6 +34,21 @@
 - 新增 `formatErrorDetail` / `buildFailureMessage`：解析错误对象（message/status/http/response data/cause），附上 `mode`、目标语言、模型、步骤（调用模型/保存翻译）。
 - 接入三处失败点：全能/仅标号/仅翻译的 LLM 调用失败、保存翻译落库失败；i18n 新增 `stepCallModel`/`stepSave`。
 
+### 五、从社交媒体 / 外部链接获取图片（多源、多图）
+
+- 项目文件列表「上传」按钮右侧新增下拉「**从社交媒体获取图片**」，四个来源：**从 X(Twitter) 获取 / 从 Bluesky 获取 / 从 Pixiv 获取 / 从外部链接获取**。均输入地址后由**服务器端下载图片直接导入项目**（不走本地浏览器），并自动刷新列表。
+- **多图支持**：Twitter / Bluesky / Pixiv 会解析并下载贴文 / 作品内**全部图片**；多图时入库文件名在时间戳后追加 `P1/P2/P3...` 页码区分（单图不加）。
+- 文件名规则统一为「内容/标题前 40 字符 + 时间戳」（`YYYYMMDDHHMM`），并做 URL 剥离、非法字符与 **emoji 清洗**（与普通上传一致）；内容取自推文正文 / Bluesky 贴文 / Pixiv 作品标题。
+- **重复处理**：逐张做组级 MD5 去重，重复的跳过并记录；成功提示「成功导入 N 张图片」，部分重复提示「成功导入 N 张，M 张因重复跳过」，全重复提示「图片均已存在」。
+- 各来源实现：
+  - **X(Twitter)**：用站点配置的 `auth_token`/`ct0` cookie 请求 `cdn.syndication.twimg.com/tweet-result?id=<id>`（参考 tmd），解析 `mediaDetails`/`extended_entities` 全部图片 URL，追加 `?name=orig` 取原图。
+  - **Bluesky**：无需登录。`resolveHandle` 拿 DID → `getPostThread` 拿贴文 → 取 AppView `embed.images` 全部 fullsize URL；CDN 默认给 `webp`（系统不支持 webp 入库），URL 加 `@jpeg` 强制输出 JPEG 原图。
+  - **Pixiv**：普通作品无需登录。`pixiv.net/ajax/illust/<id>` 拿标题/时间/原图 URL；`pageCount>1` 时调 `/ajax/illust/<id>/pages` 拿全部页面原图；下载时带 `Referer: https://www.pixiv.net/`（否则 403）。可选配置 `PHPSESSID`（Pixiv 登录 Cookie）以支持 R18 等受限作品。
+  - **外部链接**：直接下载图片直链，校验为图片内容。
+- 后端：`backend/app/services/image_download.py`（下载 service，各来源返回 `List[(bytes, filename)]`）、`backend/app/apis/file_download.py`（`ProjectFileFromURLAPI`，POST `/v1/projects/<project_id>/files/from-url`，循环导入+去重跳过，返回 `{files, duplicated}`）；`SiteSetting` 新增 `twitter_auth`/`twitter_ct0`/`download_proxy`/`pixiv_session`（db_field `ta`/`tc`/`dp`/`ps`）。
+- 前端：`FileList.tsx`（上传右侧下拉按钮，`onSaved` 走列表刷新避免白屏）、`ImportFromURLModal.tsx`（各来源 URL 输入弹窗 + 结果计数提示）、`apis/file.ts`/`siteSetting.ts`、`AdminSiteSetting.tsx`（「下载图片设置」区块：Twitter auth/ct0、HTTP 代理、Pixiv PHPSESSID）、`Button.tsx`（透传 `...restProps` 使 antd Dropdown 事件可绑定，修复下拉点不开）。
+- 测试链接验证：Twitter 3 图（`...P1.jpg/P2.jpg/P3.jpg`）、Bluesky 2 图、Pixiv 2 图（`Aisha-...P1.png/P2.png`）；重复下载返回 `files=0, duplicated=2` 正确跳过。
+
 ---
 
 ## iroha7 新增特性（基于 iroha6）

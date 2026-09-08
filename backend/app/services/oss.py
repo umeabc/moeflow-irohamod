@@ -106,10 +106,14 @@ class OSS:
             elif isinstance(file, str):
                 with open(os.path.join(folder_path, filename), "w") as saved_file:
                     saved_file.write(file)
-            else:
+            elif hasattr(file, "save"):
                 file.save(
                     os.path.join(folder_path, filename)
                 )  # XXX: what's the type of file here?
+            else:
+                # 兼容任意可读流（如 BytesIO），读取写入
+                with open(os.path.join(folder_path, filename), "wb") as saved_file:
+                    saved_file.write(file.read())
         logging.debug("saved file : %s / %s", folder_path, filename)
 
     def download(self, path, filename: str, /, *, local_path=None):

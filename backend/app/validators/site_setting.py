@@ -18,6 +18,11 @@ class SiteSettingSchema(DefaultSchema):
     )
     homepage_html = fields.Str()
     homepage_css = fields.Str()
+    # 从社交媒体/外部链接下载图片设置
+    twitter_auth = fields.Str(missing="")
+    twitter_ct0 = fields.Str(missing="")
+    download_proxy = fields.Str(missing="")
+    pixiv_session = fields.Str(missing="")
 
 
 class CustomMessagesSchema(DefaultSchema):

@@ -30,6 +30,11 @@ class SiteSetting(Document):
     # 站点品牌图片（存 oss 文件名，site-brand/ 前缀下）：可后台上传替换 mascot / favicon
     mascot_name = StringField(db_field="ma", default="")
     favicon_name = StringField(db_field="fi", default="")
+    # 从社交媒体/外部链接下载图片设置（管理员后台配置）
+    twitter_auth = StringField(db_field="ta", default="")  # Twitter auth_token
+    twitter_ct0 = StringField(db_field="tc", default="")  # Twitter ct0
+    download_proxy = StringField(db_field="dp", default="")  # 下载图片专用 HTTP 代理（空=直连）
+    pixiv_session = StringField(db_field="ps", default="")  # Pixiv PHPSESSID（R18 等受限作品可选）
 
     meta = {
         "indexes": [
@@ -58,4 +63,8 @@ class SiteSetting(Document):
             "custom_messages": self.custom_messages or {},
             "mascot_name": self.mascot_name or "",
             "favicon_name": self.favicon_name or "",
+            "twitter_auth": self.twitter_auth or "",
+            "twitter_ct0": self.twitter_ct0 or "",
+            "download_proxy": self.download_proxy or "",
+            "pixiv_session": self.pixiv_session or "",
         }

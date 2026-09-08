@@ -1,5 +1,14 @@
 import { css, Global } from '@emotion/core';
-import { AutoComplete, Button as AntdButton, Drawer, message, Modal, Spin } from 'antd';
+import {
+  AutoComplete,
+  Button as AntdButton,
+  Dropdown,
+  Drawer,
+  message,
+  Modal,
+  Spin,
+} from 'antd';
+import { MenuProps } from 'antd';
 import loadImage from 'blueimp-load-image';
 import classNames from 'classnames';
 import { useRef, useState } from 'react';
@@ -33,6 +42,7 @@ import { FilePondFile } from 'filepond';
 import { createDebugLogger } from '@/utils/debug-logger';
 import { useAiTranslate } from '@/components/ai';
 import { FileMoveModal } from '@/components/file/FileMoveModal';
+import { ImportFromURLModal } from '@/components/file/ImportFromURLModal';
 
 /** 文件列表的属性接口 */
 interface FileListProps {
@@ -68,6 +78,9 @@ export const FileList: FC<FileListProps> = ({
   const isMobile = platform === 'mobile';
   const [outputDrawerVisible, setOutputDrawerVisible] = useState(false);
   const [moveModalVisible, setMoveModalVisible] = useState(false);
+  const [importModalSource, setImportModalSource] = useState<
+    'twitter' | 'bluesky' | 'pixiv' | 'external' | null
+  >(null);
   const coverWidth = IMAGE_COVER.WIDTH;
   const coverHeight = IMAGE_COVER.HEIGHT;
 
@@ -563,6 +576,40 @@ export const FileList: FC<FileListProps> = ({
             {!isMobile && formatMessage({ id: 'site.upload' })}
           </Button>
         )}
+        {can(project, PROJECT_PERMISSION.ADD_FILE) && (
+          <Dropdown
+            menu={
+              {
+                items: [
+                  {
+                    key: 'twitter',
+                    label: formatMessage({ id: 'file.importFromTwitter' }),
+                    onClick: () => setImportModalSource('twitter'),
+                  },
+                  {
+                    key: 'bluesky',
+                    label: formatMessage({ id: 'file.importFromBluesky' }),
+                    onClick: () => setImportModalSource('bluesky'),
+                  },
+                  {
+                    key: 'pixiv',
+                    label: formatMessage({ id: 'file.importFromPixiv' }),
+                    onClick: () => setImportModalSource('pixiv'),
+                  },
+                  {
+                    key: 'external',
+                    label: formatMessage({ id: 'file.importFromExternal' }),
+                    onClick: () => setImportModalSource('external'),
+                  },
+                ],
+              } as MenuProps
+            }
+          >
+            <Button icon="download">
+              {!isMobile && formatMessage({ id: 'file.importFromSocial' })}
+            </Button>
+          </Dropdown>
+        )}
       </div>
       <div className="FileList__Search">
         <AutoComplete
@@ -768,6 +815,18 @@ export const FileList: FC<FileListProps> = ({
         onSaved={(movedIds) => {
           // 移动成功后从当前列表移除已移动的图片（失败的保留）
           setItems((prev) => prev.filter((it) => !movedIds.includes(it.id)));
+        }}
+      />
+      <ImportFromURLModal
+        open={importModalSource !== null}
+        source={importModalSource ?? 'external'}
+        onClose={() => setImportModalSource(null)}
+        projectID={project.id}
+        onSaved={() => {
+          // 下载导入成功后重新拉取列表（跳回第一页）：
+          // 不手动构造 items 插入，避免后端返回字段与列表渲染所需的
+          // 完整结构不一致时崩溃白屏，改为走正常列表接口刷新。
+          loadPage({ ...currentPageSpecRef.current, page: 1 });
         }}
       />
     </div>

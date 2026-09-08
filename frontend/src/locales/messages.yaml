@@ -1124,6 +1124,51 @@ site.feedback:
 file.blockTip:
   zhCn: 非常抱歉，此图片存在敏感内容，无法在萌翻进行翻译。
   en: Sorry, this image contains sensitive content and cannot be translated on Mengfan.
+file.importFromSocial:
+  zhCn: 从社交媒体获取图片
+  en: Get Image from Social Media
+file.importFromTwitter:
+  zhCn: 从 X(Twitter) 获取
+  en: Get from X (Twitter)
+file.importFromTwitterTip:
+  zhCn: 请输入推文地址，例如 https://x.com/Iroha_14K/status/2002542796918698349
+  en: Enter a tweet URL, e.g. https://x.com/Iroha_14K/status/2002542796918698349
+file.importFromBluesky:
+  zhCn: 从 Bluesky 获取
+  en: Get from Bluesky
+file.importFromBlueskyTip:
+  zhCn: 请输入 Bluesky 贴文地址，例如 https://bsky.app/profile/koredasuzuki.bsky.social/post/3muwlhnfkkc2m
+  en: Enter a Bluesky post URL, e.g. https://bsky.app/profile/koredasuzuki.bsky.social/post/3muwlhnfkkc2m
+file.importFromPixiv:
+  zhCn: 从 Pixiv 获取
+  en: Get from Pixiv
+file.importFromPixivTip:
+  zhCn: 请输入 Pixiv 作品地址，例如 https://www.pixiv.net/artworks/118567594
+  en: Enter a Pixiv artwork URL, e.g. https://www.pixiv.net/artworks/118567594
+file.importFromExternal:
+  zhCn: 从外部链接获取
+  en: Get from External Link
+file.importFromExternalTip:
+  zhCn: 请输入图片直链，例如 https://cdn.donmai.us/sample/18/ca/...jpg
+  en: Enter a direct image URL, e.g. https://cdn.donmai.us/sample/18/ca/...jpg
+file.importUrlPlaceholder:
+  zhCn: 粘贴图片 / 推文地址
+  en: Paste image / tweet URL
+file.importUrlRequired:
+  zhCn: 请输入地址
+  en: Please enter a URL
+file.importUrlSuccess:
+  zhCn: 图片已下载并导入项目
+  en: Image downloaded and imported to the project
+file.importUrlSuccessMulti:
+  zhCn: 成功导入 {count} 张图片
+  en: Imported {count} images
+file.importUrlPartial:
+  zhCn: 成功导入 {count} 张，{dup} 张因重复跳过
+  en: Imported {count} images, {dup} skipped (duplicates)
+file.importUrlAllDuplicated:
+  zhCn: 图片均已存在，未导入新图片
+  en: All images already exist in the project
 file.generating:
   zhCn: 缩略图生成中...
   en: Generating thumbnail...
@@ -1549,6 +1594,36 @@ admin.brandAssetUploaded:
 admin.brandAssetUploadFail:
   zhCn: 图片上传失败
   en: Failed to upload image
+admin.downloadSettings:
+  zhCn: 下载图片设置
+  en: Image Download Settings
+admin.downloadSettingsDesc:
+  zhCn: 用于「从社交媒体获取图片」功能（X/Twitter、外部链接）。测试环境访问 X 需填写 HTTP 代理。
+  en: Used by the "Get image from social media" feature (X/Twitter, external links). A proxy is required for X in test environments.
+admin.downloadTwitterAuth:
+  zhCn: Twitter auth_token
+  en: Twitter auth_token
+admin.downloadTwitterAuthTip:
+  zhCn: X(Twitter) 账号的 auth_token（浏览器 Cookie）
+  en: auth_token from your X (Twitter) account cookie
+admin.downloadTwitterCt0:
+  zhCn: Twitter ct0
+  en: Twitter ct0
+admin.downloadTwitterCt0Tip:
+  zhCn: X(Twitter) 的 ct0（浏览器 Cookie，CSRF 令牌）
+  en: ct0 from X (Twitter) cookie (CSRF token)
+admin.downloadProxy:
+  zhCn: HTTP 代理
+  en: HTTP Proxy
+admin.downloadProxyTip:
+  zhCn: 下载图片专用代理（如 http://192.168.10.28:1445），留空则直连
+  en: Proxy for image downloads (e.g. http://192.168.10.28:1445); leave blank to connect directly
+admin.pixivSession:
+  zhCn: Pixiv PHPSESSID
+  en: Pixiv PHPSESSID
+admin.pixivSessionTip:
+  zhCn: Pixiv 登录 Cookie（可选，下载 R18 等受限作品时需要），浏览器登录 pixiv.net 后从 Cookie 中复制
+  en: Pixiv login cookie (optional, needed for restricted works like R18); copy from browser cookie after logging into pixiv.net
 admin.brandText:
   zhCn: 品牌文案
   en: Brand Texts

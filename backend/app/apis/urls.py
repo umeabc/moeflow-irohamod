@@ -11,6 +11,7 @@ from app.apis.file import (
     AdminFileListAPI,
     FileSearchAPI,
 )
+from app.apis.file_download import ProjectFileFromURLAPI
 from app.apis.index import PingAPI, DocsAPI, ErrorAPI, UrlListAPI, WarningAPI
 from app.apis.invitation import InvitationAPI, InvitationListAPI
 from app.apis.group import GroupPublicInfoAPI
@@ -338,6 +339,11 @@ project.add_url_rule(
     "/<project_id>/files/move",
     methods=["PUT", "OPTIONS"],
     view_func=ProjectFileMoveAPI.as_view("project_file_move"),
+)
+project.add_url_rule(
+    "/<project_id>/files/from-url",
+    methods=["POST", "OPTIONS"],
+    view_func=ProjectFileFromURLAPI.as_view("project_file_from_url"),
 )
 project.add_url_rule(
     "/<project_id>/move-target-projects",
