@@ -1,7 +1,7 @@
-# MoeFlow 定制版（iroha8）备份仓库
+# MoeFlow 定制版（iroha9）备份仓库
 
 > 本仓库为 MoeFlow（彩翻 / 萌翻）**内部定制版本**的源码备份仓库（私有）。
-> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；镜像 tag：`moeflow-frontend:1.1.7-iroha8`、`moeflow-backend:1.1.8-iroha8`。
+> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；镜像 tag：`moeflow-frontend:1.1.7-iroha9`、`moeflow-backend:1.1.8-iroha9`。
 > 本文档为**脱敏版**，不含具体主机、域名、端口、代理与凭据信息。
 
 ---
@@ -56,8 +56,8 @@ MoeFlow（彩翻）是一款**自托管漫画翻译协作平台**：支持上传
 ### 交付
 - 镜像 `docker save` 导出为 tar → 生产侧 `docker load` → 用 Compose 替换 `backend` / `frontend` 服务（保留 mongodb / rabbitmq 数据）。
 - 涉及镜像：
-  - `moeflow-frontend:1.1.7-iroha8`（`FROM nginx:1.26` + `COPY ./build /build`）
-  - `moeflow-backend:1.1.8-iroha8`（`FROM python:3.11`）
+  - `moeflow-frontend:1.1.7-iroha9`（`FROM nginx:1.26` + `COPY ./build /build`）
+  - `moeflow-backend:1.1.8-iroha9`（`FROM python:3.11`）
 
 ## 相关文档
 

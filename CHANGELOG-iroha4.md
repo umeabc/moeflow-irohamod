@@ -1,10 +1,25 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha8）
+# MoeFlow 自定义改动 CHANGELOG（iroha9）
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 镜像 tag：`moeflow-frontend:1.1.7-iroha8` / `moeflow-backend:1.1.8-iroha8`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6`/`iroha7` 镜像保留各自版本 tag）。
+> 镜像 tag：`moeflow-frontend:1.1.7-iroha9` / `moeflow-backend:1.1.8-iroha9`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6`/`iroha7`/`iroha8` 镜像保留各自版本 tag）。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：以 `docker save` 导出镜像 tar → 生产侧 `docker load` 导入（仅替换前端/后端镜像，勿改动 env / compose）。
+
+---
+
+## iroha9 新增特性（基于 iroha8）
+
+### 一、外部链接下载规避 Cloudflare 拦截（curl_cffi 模拟浏览器指纹）
+
+- **问题**：从外部链接（`download_external`）下载图片时，部分站点（如 Danbooru 等走 Cloudflare CDN 的图源）会拦截 Python `requests` 的请求——因为其 TLS/HTTP2 指纹是 Python/OpenSSL 的，非浏览器流量特征，Cloudflare 直接拒绝。
+- **方案**：改用 **`curl_cffi`**（`curl-impersonate` 的 Python 绑定）模拟浏览器请求：
+  - `impersonate="chrome"` 伪造 Chrome 的 **TLS 指纹（JA3/JA4）+ HTTP2 指纹 + 完整浏览器请求头**，规避 Cloudflare 基础挑战（无需真实浏览器，无头文件开销）。
+  - API 与 `requests` 几乎完全兼容（`curl_cffi.requests` 是 drop-in 兼容层），改动最小。
+- **依赖版本**：`curl_cffi==0.14.0`（依赖 `cffi>=1.12`，与项目锁定的 `cffi==1.17.1` 兼容；0.15+ 需要 `cffi>=2.0` 会与锁定版本冲突，故不用最新版）。
+- **实现**：`backend/app/services/image_download.py` 全部请求（`download_external` / Twitter / Bluesky / Pixiv 下载）改用 curl_cffi 并注入 `impersonate="chrome"`；移除 `stream=True`（curl_cffi 流式读取 `content` 为空，与 requests 行为不同）；异常类改用 `curl_cffi.requests.exceptions.RequestException`。
+- **验证**：`https://cdn.donmai.us/...`（Danbooru，Cloudflare 保护）原图 2.4MB 直连下载成功；本地与测试机容器内均通过。
+- 前端无改动（后端下载链路）。
 
 ---
 

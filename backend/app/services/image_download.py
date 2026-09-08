@@ -11,7 +11,11 @@ import os
 import re
 from typing import List, Optional, Tuple
 
-import requests
+# 用 curl_cffi 模拟浏览器 TLS / HTTP2 指纹，规避 Cloudflare 等 CDN 的自动拦截。
+# curl_cffi.requests 是 requests 的 drop-in 兼容层；impersonate="chrome" 会
+# 伪造 Chrome 的 TLS 指纹（JA3/JA4）+ HTTP2 指纹 + 完整浏览器请求头。
+from curl_cffi import requests
+from curl_cffi.requests.exceptions import RequestException
 from flask_babel import gettext
 
 from app.exceptions import MoeError  # noqa: F401  (保留类型引用)
@@ -23,6 +27,9 @@ UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 )
+# 统一用 curl_cffi 模拟 Chrome（滚动到最新内置指纹），
+# 单个浏览器轮廓即可规避大部分 Cloudflare 的基础挑战。
+IMPERSONATE = "chrome"
 
 
 class ImageDownloadError(Exception):
@@ -38,7 +45,7 @@ def build_proxies(proxy: str) -> Optional[dict]:
 
 
 def _session(proxy: Optional[dict], headers: Optional[dict] = None):
-    s = requests.Session()
+    s = requests.Session(impersonate=IMPERSONATE)
     s.headers.update(
         {"User-Agent": UA, **({"Accept": "text/html,application/xhtml+xml"} or {})}
     )
@@ -79,10 +86,10 @@ def download_external(
             timeout=timeout,
             headers={"User-Agent": UA},
             proxies=build_proxies(proxy),
-            stream=True,
+            impersonate=IMPERSONATE,
         )
         resp.raise_for_status()
-    except requests.RequestException as e:
+    except RequestException as e:
         logger.error("download external image failed: %s", e)
         raise ImageDownloadError(gettext("下载图片失败，请检查链接是否有效"))
     content = resp.content
@@ -261,7 +268,7 @@ def download_twitter(
                 img = _find_image_url(resp.text)
                 if img:
                     return [_download_twitter_pic(img, proxy, timeout)]
-    except requests.RequestException as e:
+    except RequestException as e:
         logger.error("download twitter image failed: %s", e)
         raise ImageDownloadError(gettext("下载推文图片失败，请检查网络/代理或 auth/ct0 是否有效"))
     raise ImageDownloadError(gettext("该推文中未找到图片"))
@@ -284,7 +291,7 @@ def _download_twitter_pic(
         timeout=timeout,
         headers={"User-Agent": UA},
         proxies=build_proxies(proxy),
-        stream=True,
+        impersonate=IMPERSONATE,
     )
     resp.raise_for_status()
     content = resp.content
@@ -323,7 +330,7 @@ def _download_bluesky_pic(
         timeout=timeout,
         headers={"User-Agent": UA},
         proxies=build_proxies(proxy),
-        stream=True,
+        impersonate=IMPERSONATE,
     )
     resp.raise_for_status()
     content = resp.content
@@ -426,7 +433,7 @@ def download_bluesky(
                     )
                 )
             return results
-    except requests.RequestException as e:
+    except RequestException as e:
         logger.error("download bluesky image failed: %s", e)
         raise ImageDownloadError(gettext("下载 Bluesky 贴文图片失败，请检查网络/代理"))
 
@@ -449,7 +456,7 @@ def _download_pixiv_pic(
         headers=headers,
         cookies=cookies,
         proxies=build_proxies(proxy),
-        stream=True,
+        impersonate=IMPERSONATE,
     )
     resp.raise_for_status()
     content = resp.content
@@ -551,7 +558,7 @@ def download_pixiv(
                     )
                 )
             return results
-    except requests.RequestException as e:
+    except RequestException as e:
         logger.error("download pixiv image failed: %s", e)
         raise ImageDownloadError(gettext("下载 Pixiv 作品图片失败，请检查网络/代理"))
 

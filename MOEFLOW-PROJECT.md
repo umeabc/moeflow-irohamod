@@ -1,4 +1,4 @@
-# MoeFlow 项目交接档案（iroha8 定制版）
+# MoeFlow 项目交接档案（iroha9 定制版）
 
 > 项目已稳定并正式上线。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
 > 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。
@@ -9,7 +9,7 @@
 ## 1. 项目概览
 - 名称：MoeFlow（萌翻 / 彩翻）—— 自托管漫画翻译协作平台。
 - 基线：前端 `v1.1.7`、后端 `v1.1.8`。
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha8`、`moeflow-backend:1.1.8-iroha8`。
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha9`、`moeflow-backend:1.1.8-iroha9`。
 
 ## 2. 部署拓扑（通用）
 - 一组 Docker Compose 服务：mongodb、rabbitmq、backend、celery-default、celery-output、frontend。
@@ -19,7 +19,7 @@
 
 ## 3. 部署迁移方式
 - 镜像 `docker save` 导出 tar → 生产侧 `docker load` → compose（**只替换 backend/frontend，保留 mongodb/rabbitmq 数据**）。
-- 镜像 tar 命名：`moeflow-backend-1.1.8-iroha8.tar`（约 496MB）、`moeflow-frontend-1.1.7-iroha8.tar`（约 74MB）。
+- 镜像 tar 命名：`moeflow-backend-1.1.8-iroha9.tar`（约 537MB）、`moeflow-frontend-1.1.7-iroha9.tar`（约 77MB）。
 
 ## 4. 本次改动摘要
 详见 `CHANGELOG-iroha4.md`。
@@ -45,6 +45,12 @@
 - **移动图片仅团队管理员可用**：移动按钮与目标列表接口均限站点管理员 / 创建人 / 管理员 / 监理；普通成员 403。
 - **翻译失败详情**：自动翻译失败时输出具体到哪一步（调用模型 / 保存翻译）+ 相关参数（模式 / 模型 / 目标语言 / 错误详情）。
 
+## 4.4 iroha9 新增（基于 iroha8）
+- **外部链接下载规避 Cloudflare 拦截**：`download_external` 原用 Python `requests` 下载，TLS/HTTP2 指纹非浏览器特征，被 Cloudflare 等 CDN 拦截；改用 **`curl_cffi`**（`impersonate="chrome"` 伪造 Chrome TLS/HTTP2 指纹）后直连即可下载 Danbooru 等 Cloudflare 保护图源的原图（2.4MB 验证通过）。
+- 依赖：`curl_cffi==0.14.0`（与项目 `cffi==1.17.1` 兼容；0.15+ 需 cffi>=2.0 冲突）。
+- 实现：`backend/app/services/image_download.py` 全部请求注入 `impersonate="chrome"`、移除 `stream=True`、异常类改用 `curl_cffi.requests.exceptions.RequestException`。
+- 镜像 tag：`moeflow-backend:1.1.8-iroha9`。
+
 ## 5. 关键环境坑（务必牢记）
 1. **前端 build 在资源充足的开发机上做**，再上传远程 `docker build`；远程内存不足跑不动前端构建（OOM）。
 2. **Docker Hub 不稳定** → 用 daocloud `docker.m.daocloud.io` 拉基础镜像再 retag。
@@ -54,7 +60,7 @@
 
 ## 6. 备份
 - 源码快照：GitHub 私有仓库 `umeabc/moeflow-backup`（`frontend/` + `backend/`）。
-- 改动清单：`CHANGELOG-iroha4.md`（当前镜像版本 iroha8）。
+- 改动清单：`CHANGELOG-iroha4.md`（当前镜像版本 iroha9）。
 
 ## 7. 回退
 - 如要回到官方：用官方 tag `v1.1.7` / `v1.1.8` 重新构建即可（本定制版与上游存在差异）。
