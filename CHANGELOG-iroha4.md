@@ -23,6 +23,20 @@
 - **修复**：GraphQL 必须带 `Authorization: Bearer <X 公开 guest token>` 与 `X-Csrf-Token=ct0`（否则 403）；下载图片只加 `name=orig` 保持原格式（对 PNG 加 `format=jpg` 会 404）。
 - **进度显示（v2 增强）**：改为**进度式导入**——发起时先枚举图片 URL 存任务（`MediaImportTask` 模型，Mongo 持久化）并立即返回 `{task_id, total}`，后端后台线程逐张下载入库并更新进度；前端轮询 `GET /v1/files/from-url-task/<task_id>` 显示「正在下载第 a/b 张图片，有 X 张可入库」+ 进度条，完成后提示已导入/重复数。新增 `backend/app/models/media_import_task.py`、`MediaImportTaskAPI`、`enumerate_twitter_user_media`。
 
+### 二、从 Bluesky / Pixiv 按用户抓取所有图片（新增导入来源）
+
+- 「从社交媒体获取图片」下拉新增「**从 Bluesky 获取（用户）**」与「**从 Pixiv 获取（用户）**」：输入用户主页地址，抓取该用户**全部媒体图片**并导入项目。
+- **Bluesky 用户**（`enumerate_bluesky_user_media`）：
+  - `resolveHandle` 拿 DID → `getAuthorFeed`（含 `embed.images` 的贴文）分页抓取全部图片 fullsize URL；
+  - 支持站点设置中「Bluesky 匿名模式」开关（默认匿名，无需登录）；可配置账号 handle + app password 提升抓取范围。
+- **Pixiv 用户**（`enumerate_pixiv_user_media`）：
+  - `pixiv.net/ajax/user/<uid>/profile/all` 拿作品列表 → `/ajax/illust/<id>/pages` 拿全部页面原图 URL（多图 P1/P2 页码）；
+  - 下载带 `Referer: https://www.pixiv.net/`；支持站点设置 `PHPSESSID`（R18 等受限作品）。
+- **进度式导入**：与 X 用户一致，走 `MediaImportTask` 后台线程（`_run_media_import_task` 支持 `download_kind` 区分 `twitter`/`pixiv`/`bluesky`），返回 `task_id` 前端轮询进度。
+- 后端：`backend/app/services/image_download.py` 新增 `enumerate_bluesky_user_media` / `enumerate_pixiv_user_media` / `_bluesky_auth_base` / `_download_bluesky_pic` / `_download_pixiv_pic`；`backend/app/apis/file_download.py` source 校验新增 `bluesky_user` / `pixiv_user`。
+- 站点设置：`SiteSetting` 新增 `bluesky_anonymous` / `bluesky_handle` / `bluesky_password`（后端模型 + 校验 + `AdminSiteSetting.tsx` 配置 UI）。
+- 前端：`FileList.tsx` 下拉新增两来源、`ImportFromURLModal.tsx` 支持、`apis/siteSetting.ts` 新配置项、i18n 新增 `file.importFromBlueskyUser*` / `file.importFromPixivUser*` / `admin.bluesky*` 文案。
+
 ---
 
 ## iroha9 新增特性（基于 iroha8）
