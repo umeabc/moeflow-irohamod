@@ -1,4 +1,4 @@
-# MoeFlow 项目交接档案（iroha9 定制版）
+# MoeFlow 项目交接档案（iroha10 定制版）
 
 > 项目已稳定并正式上线。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
 > 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。
@@ -9,7 +9,7 @@
 ## 1. 项目概览
 - 名称：MoeFlow（萌翻 / 彩翻）—— 自托管漫画翻译协作平台。
 - 基线：前端 `v1.1.7`、后端 `v1.1.8`。
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha9`、`moeflow-backend:1.1.8-iroha9`。
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha10`、`moeflow-backend:1.1.8-iroha10`。
 
 ## 2. 部署拓扑（通用）
 - 一组 Docker Compose 服务：mongodb、rabbitmq、backend、celery-default、celery-output、frontend。
@@ -19,7 +19,7 @@
 
 ## 3. 部署迁移方式
 - 镜像 `docker save` 导出 tar → 生产侧 `docker load` → compose（**只替换 backend/frontend，保留 mongodb/rabbitmq 数据**）。
-- 镜像 tar 命名：`moeflow-backend-1.1.8-iroha9.tar`（约 537MB）、`moeflow-frontend-1.1.7-iroha9.tar`（约 77MB）。
+- 镜像 tar 命名：`moeflow-backend-1.1.8-iroha10.tar`（约 537MB）、`moeflow-frontend-1.1.7-iroha10.tar`（约 77MB）。
 
 ## 4. 本次改动摘要
 详见 `CHANGELOG-iroha4.md`。
@@ -51,6 +51,20 @@
 - 实现：`backend/app/services/image_download.py` 全部请求注入 `impersonate="chrome"`、移除 `stream=True`、异常类改用 `curl_cffi.requests.exceptions.RequestException`。
 - 镜像 tag：`moeflow-backend:1.1.8-iroha9`。
 
+## 4.5 iroha10 新增（基于 iroha9）
+- **从社交媒体 / 外部链接获取图片（多源多图）**：项目文件列表「上传」按钮旁新增「从社交媒体获取图片」下拉，四个来源——**从 X(Twitter) / Bluesky / Pixiv / 外部链接** 获取；服务器端下载图片直接导入项目（不走本地浏览器），逐张组级 MD5 去重并提示导入/重复数；多图时文件名追加 P1/P2 页码。
+  - X：站点配置 `auth_token`/`ct0`，请求 `cdn.syndication.twimg.com/tweet-result` 解析全部图片，`?name=orig` 取原图。
+  - Bluesky：`resolveHandle` → `getPostThread`，AppView `embed.images` 全部 fullsize URL，加 `@jpeg` 强制 JPEG 输出。
+  - Pixiv：`/ajax/illust/<id>` 拿标题/原图 URL，多页调 `/ajax/illust/<id>/pages`，带 `Referer` 下载；可选 `PHPSESSID` 支持 R18。
+  - 外部链接：直接下载图片直链，校验图片内容。
+- **按用户抓取全部图片（X / Bluesky / Pixiv 用户）**：新增「从 X 获取（用户）」「从 Bluesky 获取（用户）」「从 Pixiv 获取（用户）」三个来源，输入用户主页地址抓取该用户**媒体时间线 / 贴文 / 作品的全部图片**。
+  - X 用户：GraphQL（`UserByScreenName` + `UserMedia` 分页，max 40 页）拿媒体时间线全部 `media_url_https`；必须带 `Authorization: Bearer guest token` + `X-Csrf-Token=ct0`。
+  - Bluesky 用户：`resolveHandle` → `getAuthorFeed` 分页抓取带 `embed.images` 的贴文图片；支持匿名或账号模式（站点设置）。
+  - Pixiv 用户：`/ajax/user/<uid>/profile/all` 作品列表 → `/ajax/illust/<id>/pages` 全部页面原图。
+- **进度式导入**：发起时先枚举图片 URL 存任务（`MediaImportTask` 模型，Mongo 持久化）并返回 `{task_id, total}`，后台线程逐张下载入库更新进度；前端轮询 `GET /v1/files/from-url-task/<task_id>` 显示「正在下载第 a/b 张，有 X 张可入库」+ 进度条，完成后提示已导入/重复数。`_run_media_import_task` 按 `download_kind` 区分 `twitter`/`pixiv`/`bluesky`。
+- 关键文件：后端 `services/image_download.py`（`enumerate_twitter_user_media` / `enumerate_bluesky_user_media` / `enumerate_pixiv_user_media` 等）、`apis/file_download.py`（`ProjectFileFromURLAPI`，source 校验含 `twitter_user`/`bluesky_user`/`pixiv_user`）、`models/media_import_task.py`；前端 `FileList.tsx`（下拉）、`ImportFromURLModal.tsx`（来源弹窗 + 进度）、`AdminSiteSetting.tsx`（Twitter auth/ct0、HTTP 代理、Pixiv PHPSESSID、Bluesky 匿名/账号）、`apis/file.ts`/`siteSetting.ts`、i18n。
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha10` / `moeflow-backend:1.1.8-iroha10`。
+
 ## 5. 关键环境坑（务必牢记）
 1. **前端 build 在资源充足的开发机上做**，再上传远程 `docker build`；远程内存不足跑不动前端构建（OOM）。
 2. **Docker Hub 不稳定** → 用 daocloud `docker.m.daocloud.io` 拉基础镜像再 retag。
@@ -60,7 +74,7 @@
 
 ## 6. 备份
 - 源码快照：GitHub 私有仓库 `umeabc/moeflow-backup`（`frontend/` + `backend/`）。
-- 改动清单：`CHANGELOG-iroha4.md`（当前镜像版本 iroha9）。
+- 改动清单：`CHANGELOG-iroha4.md`（当前镜像版本 iroha10）。
 
 ## 7. 回退
 - 如要回到官方：用官方 tag `v1.1.7` / `v1.1.8` 重新构建即可（本定制版与上游存在差异）。

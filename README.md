@@ -1,7 +1,7 @@
-# MoeFlow 定制版（iroha9）备份仓库
+# MoeFlow 定制版（iroha10）备份仓库
 
 > 本仓库为 MoeFlow（彩翻 / 萌翻）**内部定制版本**的源码备份仓库（私有）。
-> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；镜像 tag：`moeflow-frontend:1.1.7-iroha9`、`moeflow-backend:1.1.8-iroha9`。
+> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；镜像 tag：`moeflow-frontend:1.1.7-iroha10`、`moeflow-backend:1.1.8-iroha10`。
 > 本文档为**脱敏版**，不含具体主机、域名、端口、代理与凭据信息。
 
 ---
@@ -44,6 +44,9 @@ MoeFlow（彩翻）是一款**自托管漫画翻译协作平台**：支持上传
 - **翻译者累积记录**：打标号 / 机翻全能模式自动累积处理过该图的用户到「翻译」字段（顿号分隔去重）；手动编辑直接设置。
 - **移动图片仅团队管理员可用**：移动按钮仅站点管理员 / 创建人 / 管理员 / 监理可见，普通成员 API 也拒绝。
 - **翻译失败详情**：自动翻译失败时输出具体到哪一步（调用模型 / 保存翻译）+ 相关参数（模式 / 模型 / 目标语言 / 错误详情）。
+- **从社交媒体 / 外部链接获取图片**：项目文件页上传按钮旁新增「从社交媒体获取图片」下拉，支持 **从 X(Twitter) / Bluesky / Pixiv / 外部链接** 获取图片；X / Bluesky / Pixiv 解析贴文 / 作品内全部图片（多图 P1/P2 页码），服务器端下载直连导入，逐张组级 MD5 去重并提示导入/重复数。
+- **外部链接下载绕过 Cloudflare**：改用 `curl_cffi`（`impersonate="chrome"` 伪造浏览器 TLS/HTTP2 指纹），规避 Cloudflare 对 Python `requests` 的拦截（如 Danbooru 等图源）。
+- **按用户抓取全部图片（X / Bluesky / Pixiv）**：社交媒体下拉新增「从 X 获取（用户）」「从 Bluesky 获取（用户）」「从 Pixiv 获取（用户）」，输入用户主页地址抓取该用户**媒体时间线 / 贴文 / 作品的全部图片**；**进度式导入**（`MediaImportTask` 后台线程逐张下载入库，前端轮询显示「正在下载第 a/b 张」+ 完成/重复提示）。Bluesky 支持匿名或账号模式，Pixiv 支持 `PHPSESSID` 取 R18 受限作品。
 
 ## 部署
 
@@ -56,8 +59,8 @@ MoeFlow（彩翻）是一款**自托管漫画翻译协作平台**：支持上传
 ### 交付
 - 镜像 `docker save` 导出为 tar → 生产侧 `docker load` → 用 Compose 替换 `backend` / `frontend` 服务（保留 mongodb / rabbitmq 数据）。
 - 涉及镜像：
-  - `moeflow-frontend:1.1.7-iroha9`（`FROM nginx:1.26` + `COPY ./build /build`）
-  - `moeflow-backend:1.1.8-iroha9`（`FROM python:3.11`）
+  - `moeflow-frontend:1.1.7-iroha10`（`FROM nginx:1.26` + `COPY ./build /build`）
+  - `moeflow-backend:1.1.8-iroha10`（`FROM python:3.11`）
 
 ## 相关文档
 
