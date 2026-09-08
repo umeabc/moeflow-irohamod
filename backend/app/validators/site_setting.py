@@ -23,6 +23,10 @@ class SiteSettingSchema(DefaultSchema):
     twitter_ct0 = fields.Str(missing="")
     download_proxy = fields.Str(missing="")
     pixiv_session = fields.Str(missing="")
+    # Bluesky 下载设置
+    bluesky_anonymous = fields.Boolean(missing=True)
+    bluesky_handle = fields.Str(missing="")
+    bluesky_app_password = fields.Str(missing="")
 
 
 class CustomMessagesSchema(DefaultSchema):

@@ -525,6 +525,31 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
             placeholder={formatMessage({ id: 'admin.pixivSession' })}
           />
         </FormItem>
+        <FormItem
+          label={formatMessage({ id: 'admin.blueskyAnonymous' })}
+          name="blueskyAnonymous"
+          tooltip={formatMessage({ id: 'admin.blueskyAnonymousTip' })}
+          valuePropName="checked"
+        >
+          <Switch />
+        </FormItem>
+        <FormItem
+          label={formatMessage({ id: 'admin.blueskyHandle' })}
+          name="blueskyHandle"
+          tooltip={formatMessage({ id: 'admin.blueskyHandleTip' })}
+        >
+          <Input placeholder={formatMessage({ id: 'admin.blueskyHandle' })} />
+        </FormItem>
+        <FormItem
+          label={formatMessage({ id: 'admin.blueskyAppPassword' })}
+          name="blueskyAppPassword"
+          tooltip={formatMessage({ id: 'admin.blueskyAppPasswordTip' })}
+        >
+          <Input.Password
+            autoComplete="new-password"
+            placeholder={formatMessage({ id: 'admin.blueskyAppPassword' })}
+          />
+        </FormItem>
 
         <FormItem
           css={css`

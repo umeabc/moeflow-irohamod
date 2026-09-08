@@ -9,6 +9,9 @@ export interface APISiteSetting {
   twitterCt0?: string;
   downloadProxy?: string;
   pixivSession?: string;
+  blueskyAnonymous?: boolean;
+  blueskyHandle?: string;
+  blueskyAppPassword?: string;
 }
 
 const getSiteSetting = ({ configs }: { configs?: AxiosRequestConfig }) => {

@@ -11,7 +11,7 @@ interface ImportFromURLModalProps {
   open: boolean;
   onClose: () => void;
   projectID: string;
-  source: 'twitter' | 'twitter_user' | 'bluesky' | 'pixiv' | 'external';
+  source: 'twitter' | 'twitter_user' | 'bluesky' | 'bluesky_user' | 'pixiv' | 'pixiv_user' | 'external';
   onSaved?: () => void;
 }
 
@@ -99,7 +99,11 @@ export const ImportFromURLModal: FC<ImportFromURLModalProps> = ({
     }
     setSubmitting(true);
     try {
-      if (source === 'twitter_user') {
+      if (
+        source === 'twitter_user' ||
+        source === 'pixiv_user' ||
+        source === 'bluesky_user'
+      ) {
         // 进度式：发起任务
         const res = await api.file.importFileFromUrl({
           projectID,
@@ -156,7 +160,12 @@ export const ImportFromURLModal: FC<ImportFromURLModalProps> = ({
     } catch (e) {
       // 错误提示由 api 默认行为处理
     } finally {
-      if (source !== 'twitter_user' || !progress) {
+      if (
+        (source !== 'twitter_user' &&
+          source !== 'pixiv_user' &&
+          source !== 'bluesky_user') ||
+        !progress
+      ) {
         setSubmitting(false);
       }
     }
@@ -169,9 +178,13 @@ export const ImportFromURLModal: FC<ImportFromURLModalProps> = ({
         ? 'file.importFromTwitterUser'
         : source === 'bluesky'
           ? 'file.importFromBluesky'
-          : source === 'pixiv'
-            ? 'file.importFromPixiv'
-            : 'file.importFromExternal';
+          : source === 'bluesky_user'
+            ? 'file.importFromBlueskyUser'
+            : source === 'pixiv'
+              ? 'file.importFromPixiv'
+              : source === 'pixiv_user'
+                ? 'file.importFromPixivUser'
+                : 'file.importFromExternal';
 
   const tipId =
     source === 'twitter'
@@ -180,12 +193,21 @@ export const ImportFromURLModal: FC<ImportFromURLModalProps> = ({
         ? 'file.importFromTwitterUserTip'
         : source === 'bluesky'
           ? 'file.importFromBlueskyTip'
-          : source === 'pixiv'
-            ? 'file.importFromPixivTip'
-            : 'file.importFromExternalTip';
+          : source === 'bluesky_user'
+            ? 'file.importFromBlueskyUserTip'
+            : source === 'pixiv'
+              ? 'file.importFromPixivTip'
+              : source === 'pixiv_user'
+                ? 'file.importFromPixivUserTip'
+                : 'file.importFromExternalTip';
 
   // 进度模式：正在下载第 a/b 张，有 X 张可入库
-  const isProgressMode = source === 'twitter_user' && progress !== null && !progress.finished;
+  const isProgressMode =
+    (source === 'twitter_user' ||
+      source === 'pixiv_user' ||
+      source === 'bluesky_user') &&
+    progress !== null &&
+    !progress.finished;
 
   return (
     <Modal

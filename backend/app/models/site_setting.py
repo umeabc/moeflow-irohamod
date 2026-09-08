@@ -35,6 +35,10 @@ class SiteSetting(Document):
     twitter_ct0 = StringField(db_field="tc", default="")  # Twitter ct0
     download_proxy = StringField(db_field="dp", default="")  # 下载图片专用 HTTP 代理（空=直连）
     pixiv_session = StringField(db_field="ps", default="")  # Pixiv PHPSESSID（R18 等受限作品可选）
+    # Bluesky 下载设置：匿名接口开关（默认开）；关闭时用 Handle + App Password 登录后访问
+    bluesky_anonymous = BooleanField(db_field="bla", default=True)
+    bluesky_handle = StringField(db_field="blh", default="")  # Bluesky Handle
+    bluesky_app_password = StringField(db_field="blp", default="")  # Bluesky App Password
 
     meta = {
         "indexes": [
@@ -67,4 +71,7 @@ class SiteSetting(Document):
             "twitter_ct0": self.twitter_ct0 or "",
             "download_proxy": self.download_proxy or "",
             "pixiv_session": self.pixiv_session or "",
+            "bluesky_anonymous": bool(self.bluesky_anonymous),
+            "bluesky_handle": self.bluesky_handle or "",
+            "bluesky_app_password": self.bluesky_app_password or "",
         }

@@ -1134,7 +1134,7 @@ file.importFromTwitterTip:
   zhCn: 请输入推文地址，例如 https://x.com/Iroha_14K/status/2002542796918698349
   en: Enter a tweet URL, e.g. https://x.com/Iroha_14K/status/2002542796918698349
 file.importFromTwitterUser:
-  zhCn: 从X获取（用户）
+  zhCn: 从 X 获取（用户）
   en: Get from X (user)
 file.importFromTwitterUserTip:
   zhCn: 请输入用户主页地址，例如 https://x.com/Iroha_14K/media?filter=photo 或 https://x.com/Iroha_14K，将抓取该用户媒体时间线中的全部图片
@@ -1151,12 +1151,24 @@ file.importFromBluesky:
 file.importFromBlueskyTip:
   zhCn: 请输入 Bluesky 贴文地址，例如 https://bsky.app/profile/koredasuzuki.bsky.social/post/3muwlhnfkkc2m
   en: Enter a Bluesky post URL, e.g. https://bsky.app/profile/koredasuzuki.bsky.social/post/3muwlhnfkkc2m
+file.importFromBlueskyUser:
+  zhCn: 从 Bluesky 获取（用户）
+  en: Get from Bluesky (user)
+file.importFromBlueskyUserTip:
+  zhCn: 请输入 Bluesky 用户主页地址，例如 https://bsky.app/profile/koredasuzuki.bsky.social，将抓取该用户媒体时间线中的全部图片
+  en: Enter a Bluesky user profile URL, e.g. https://bsky.app/profile/koredasuzuki.bsky.social; all images in this user's media timeline will be fetched
 file.importFromPixiv:
   zhCn: 从 Pixiv 获取
   en: Get from Pixiv
 file.importFromPixivTip:
   zhCn: 请输入 Pixiv 作品地址，例如 https://www.pixiv.net/artworks/118567594
   en: Enter a Pixiv artwork URL, e.g. https://www.pixiv.net/artworks/118567594
+file.importFromPixivUser:
+  zhCn: 从 Pixiv 获取（用户）
+  en: Get from Pixiv (user)
+file.importFromPixivUserTip:
+  zhCn: 请输入 Pixiv 用户主页地址，例如 https://www.pixiv.net/users/1046487，将抓取该用户全部作品图片
+  en: Enter a Pixiv user profile URL, e.g. https://www.pixiv.net/users/1046487; all images by this user will be fetched
 file.importFromExternal:
   zhCn: 从外部链接获取
   en: Get from External Link
@@ -1636,6 +1648,24 @@ admin.pixivSession:
 admin.pixivSessionTip:
   zhCn: Pixiv 登录 Cookie（可选，下载 R18 等受限作品时需要），浏览器登录 pixiv.net 后从 Cookie 中复制
   en: Pixiv login cookie (optional, needed for restricted works like R18); copy from browser cookie after logging into pixiv.net
+admin.blueskyAnonymous:
+  zhCn: Bluesky 使用匿名接口
+  en: Use Bluesky anonymous API
+admin.blueskyAnonymousTip:
+  zhCn: 开启时走公开匿名接口（无需凭据）；关闭时用下方 Handle + App Password 登录后访问（匿名接口易被限流时可关闭）
+  en: When on, uses the public anonymous API (no credentials). When off, logs in with the Handle + App Password below (turn off if the anonymous API is rate-limited).
+admin.blueskyHandle:
+  zhCn: Bluesky Handle
+  en: Bluesky Handle
+admin.blueskyHandleTip:
+  zhCn: Bluesky 账号名，例如 ume14k.bsky.social（仅在关闭匿名接口时使用）
+  en: Bluesky handle, e.g. ume14k.bsky.social (only used when anonymous API is off)
+admin.blueskyAppPassword:
+  zhCn: Bluesky App Password
+  en: Bluesky App Password
+admin.blueskyAppPasswordTip:
+  zhCn: Bluesky 应用专用密码（设置 → 隐私与安全 → App Passwords 生成），仅在关闭匿名接口时使用
+  en: Bluesky app password (Settings → Privacy and Security → App Passwords); only used when anonymous API is off
 admin.brandText:
   zhCn: 品牌文案
   en: Brand Texts

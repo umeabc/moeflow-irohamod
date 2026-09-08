@@ -111,6 +111,9 @@ BSKY_POST_URL_RE = re.compile(r"bsky\.app/profile/([^/?#]+)/post/([^/?#]+)")
 # Pixiv 作品地址形如 https://www.pixiv.net/artworks/<id>（也兼容 /i/<id>）
 PIXIV_ARTWORK_RE = re.compile(r"pixiv\.net/(?:artworks|i)/?(\d+)")
 
+# Pixiv 用户主页地址形如 https://www.pixiv.net/users/<uid>（可选 /artworks 等后缀）
+PIXIV_USER_URL_RE = re.compile(r"pixiv\.net/users/(\d+)")
+
 # 图片 URL 常见域名
 _TWITTER_PIC_RE = re.compile(
     r"https?://(?:pbs\.twimg\.com|ton\.x\.com|pbs\.twimg\.com)[^\s\"'<>()\\]+"
@@ -360,15 +363,63 @@ def _download_bluesky_pic(
     return content, stem + ct_ext
 
 
+BSKY_PUBLIC_API = "https://public.api.bsky.app"  # 匿名 AppView
+BSKY_PDS = "https://bsky.social"  # 登录（createSession）用 PDS 端点
+
+
+def _bluesky_auth_base(
+    anonymous: bool,
+    identifier: str,
+    app_password: str,
+    proxy: str,
+    timeout: int,
+) -> Tuple[str, dict]:
+    """返回 (api_base, auth_headers)。
+
+    匿名模式用 public.api.bsky.app（无需凭据）；非匿名模式用
+    com.atproto.server.createSession 登录拿 accessJwt，再走 PDS 端点。
+    """
+    if anonymous:
+        return BSKY_PUBLIC_API, {}
+    if not (identifier and app_password):
+        raise ImageDownloadError(
+            gettext("未配置 Bluesky Handle / App Password（或开启 Bluesky 匿名接口）")
+        )
+    try:
+        resp = requests.post(
+            f"{BSKY_PDS}/xrpc/com.atproto.server.createSession",
+            json={"identifier": identifier, "password": app_password},
+            proxies=build_proxies(proxy),
+            impersonate=IMPERSONATE,
+            timeout=timeout,
+        )
+        resp.raise_for_status()
+        jwt = (resp.json() or {}).get("accessJwt")
+        if not jwt:
+            raise ImageDownloadError(
+                gettext("Bluesky 登录失败，请检查 Handle / App Password")
+            )
+        return BSKY_PDS, {"Authorization": f"Bearer {jwt}"}
+    except RequestException as e:
+        logger.error("bluesky login failed: %s", e)
+        raise ImageDownloadError(
+            gettext("Bluesky 登录失败，请检查 Handle / App Password 或网络/代理")
+        )
+
+
 def download_bluesky(
     post_url: str,
     proxy: str = "",
     timeout: int = 60,
+    anonymous: bool = True,
+    handle_id: str = "",
+    app_password: str = "",
 ) -> List[Tuple[bytes, str]]:
-    """从 Bluesky 贴文下载图片（无需登录），返回所有图片的 (bytes, filename) 列表。
+    """从 Bluesky 贴文下载图片，返回所有图片的 (bytes, filename) 列表。
 
     流程：解析贴文地址 → resolveHandle 拿 DID → getPostThread 拿贴文
     → 取 view 的 fullsize 图片 URL 下载全部图片。
+    anonymous=True 走公开匿名接口；False 则用 Handle + App Password 登录后访问。
     """
     post_url = (post_url or "").strip()
     m = BSKY_POST_URL_RE.search(post_url)
@@ -379,10 +430,13 @@ def download_bluesky(
     handle, rkey = m.group(1), m.group(2)
     proxies = build_proxies(proxy)
     try:
-        with _session(proxies) as s:
+        api_base, auth_headers = _bluesky_auth_base(
+            anonymous, handle_id, app_password, proxy, timeout
+        )
+        with _session(proxies, auth_headers) as s:
             # 1. handle → DID
             hr = s.get(
-                "https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle",
+                f"{api_base}/xrpc/com.atproto.identity.resolveHandle",
                 params={"handle": handle},
                 timeout=timeout,
             )
@@ -393,7 +447,7 @@ def download_bluesky(
             # 2. 拿贴文详情
             uri = f"at://{did}/app.bsky.feed.post/{rkey}"
             tr = s.get(
-                "https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread",
+                f"{api_base}/xrpc/app.bsky.feed.getPostThread",
                 params={"uri": uri},
                 timeout=timeout,
             )
@@ -441,6 +495,98 @@ def download_bluesky(
     except RequestException as e:
         logger.error("download bluesky image failed: %s", e)
         raise ImageDownloadError(gettext("下载 Bluesky 贴文图片失败，请检查网络/代理"))
+
+
+# Bluesky 用户主页地址形如 https://bsky.app/profile/<handle>（可带 /post/... 等后缀）
+BSKY_PROFILE_URL_RE = re.compile(r"bsky\.app/profile/([^/?#]+)")
+
+
+def enumerate_bluesky_user_media(
+    user_url: str,
+    proxy: str = "",
+    timeout: int = 60,
+    anonymous: bool = True,
+    handle_id: str = "",
+    app_password: str = "",
+    max_pages: int = 40,
+    page_size: int = 100,
+) -> List[Tuple[str, str, str, Optional[int]]]:
+    """枚举 Bluesky 用户媒体时间线中的全部图片 URL（不下载）。
+
+    返回 [(img_url, text, created_at, page)]，供进度式导入使用。
+    流程：解析用户 handle → app.bsky.feed.getAuthorFeed（filter=posts_with_media）
+    → cursor 分页 → 取 embed.images[].fullsize 并补 @jpeg（系统不支持 webp）。
+    anonymous=False 时用 Handle + App Password 登录后访问。
+    """
+    user_url = (user_url or "").strip()
+    m = BSKY_PROFILE_URL_RE.search(user_url)
+    if not m:
+        raise ImageDownloadError(
+            gettext("无法解析 Bluesky 用户地址，请确认是 https://bsky.app/profile/<用户名> 格式")
+        )
+    actor = m.group(1)
+    proxies = build_proxies(proxy)
+    try:
+        api_base, auth_headers = _bluesky_auth_base(
+            anonymous, handle_id, app_password, proxy, timeout
+        )
+        with _session(proxies, auth_headers) as s:
+            results: List[Tuple[str, str, str, Optional[int]]] = []
+            cursor = ""
+            for _page in range(max_pages):
+                params = {
+                    "actor": actor,
+                    "filter": "posts_with_media",
+                    "limit": page_size,
+                }
+                if cursor:
+                    params["cursor"] = cursor
+                r = s.get(
+                    f"{api_base}/xrpc/app.bsky.feed.getAuthorFeed",
+                    params=params,
+                    timeout=timeout,
+                )
+                if not r.ok:
+                    break  # 中途失败停止翻页（可能被限流）
+                data = r.json() or {}
+                feed = data.get("feed") or []
+                if not feed:
+                    break
+                for item in feed:
+                    post = item.get("post") or {}
+                    record = post.get("record") or {}
+                    text = record.get("text") or ""
+                    created_at = record.get("createdAt") or ""
+                    urls: List[str] = [
+                        iv.get("fullsize")
+                        for iv in ((post.get("embed") or {}).get("images") or [])
+                        if iv.get("fullsize")
+                    ]
+                    if not urls:
+                        # 回退：record 里的 blob ref 拼 CDN
+                        did = (post.get("author") or {}).get("did") or ""
+                        for im in (record.get("embed") or {}).get("images") or []:
+                            cid = ((im.get("image") or {}).get("ref") or {}).get(
+                                "$link"
+                            )
+                            if cid and did:
+                                urls.append(
+                                    f"https://cdn.bsky.app/img/feed_fullsize/plain/{did}/{cid}"
+                                )
+                    multi = len(urls) > 1
+                    for i, u in enumerate(urls, 1):
+                        if "@" not in u:
+                            u = u + "@jpeg"
+                        results.append((u, text, created_at, i if multi else None))
+                cursor = data.get("cursor") or ""
+                if not cursor:
+                    break
+            if not results:
+                raise ImageDownloadError(gettext("该用户的媒体时间线中未找到图片"))
+            return results
+    except RequestException as e:
+        logger.error("enumerate bluesky user media failed: %s", e)
+        raise ImageDownloadError(gettext("获取 Bluesky 用户媒体失败，请检查网络/代理"))
 
 
 def _download_pixiv_pic(
@@ -566,6 +712,101 @@ def download_pixiv(
     except RequestException as e:
         logger.error("download pixiv image failed: %s", e)
         raise ImageDownloadError(gettext("下载 Pixiv 作品图片失败，请检查网络/代理"))
+
+
+def enumerate_pixiv_user_media(
+    user_url: str,
+    session: str = "",
+    proxy: str = "",
+    timeout: int = 60,
+    max_illusts: int = 500,
+) -> List[Tuple[str, str, str]]:
+    """枚举 Pixiv 用户全部作品图片 URL（不下载）。
+
+    返回 [(original_url, title, created_at)]，供进度式导入使用。
+    流程：解析用户 URL 拿 uid → ajax/user/<uid> 拿用户名 →
+    ajax/user/<uid>/profile/all 拿全部作品 ID → 对每个作品 ID 复用
+    ajax/illust/<id> 逻辑拿原图 URL（多页调 pages 接口展开）。
+    session 为可选 PHPSESSID（R18 等受限作品需要）。
+    """
+    user_url = (user_url or "").strip()
+    m = PIXIV_USER_URL_RE.search(user_url)
+    if not m:
+        raise ImageDownloadError(
+            gettext("无法解析 Pixiv 用户地址，请确认是 https://www.pixiv.net/users/<用户ID> 格式")
+        )
+    user_id = m.group(1)
+    proxies = build_proxies(proxy)
+    headers = {
+        "User-Agent": UA,
+        "Referer": "https://www.pixiv.net/",
+        "Accept": "application/json",
+    }
+    cookies = {"PHPSESSID": session} if (session or "").strip() else {}
+    try:
+        with _session(proxies, headers) as s:
+            if cookies:
+                s.cookies.update(cookies)
+            # 1. 用户信息（拿名字，用于校验用户存在）
+            ur = s.get(f"https://www.pixiv.net/ajax/user/{user_id}", timeout=timeout)
+            ur.raise_for_status()
+            ubody = (ur.json() or {}).get("body") or {}
+            if not ubody.get("userId"):
+                raise ImageDownloadError(gettext("获取 Pixiv 用户信息失败（可能已注销或被限制）"))
+            # 2. 全部作品 ID（profile/all 一次性返回该用户全部公开作品）
+            pr = s.get(
+                f"https://www.pixiv.net/ajax/user/{user_id}/profile/all",
+                timeout=timeout,
+            )
+            pr.raise_for_status()
+            pbody = (pr.json() or {}).get("body") or {}
+            illust_ids = list((pbody.get("illusts") or {}).keys())
+            if not illust_ids:
+                raise ImageDownloadError(gettext("该用户没有公开作品"))
+            if len(illust_ids) > max_illusts:
+                illust_ids = illust_ids[:max_illusts]
+            # 3. 逐作品拿原图 URL（复用单作品逻辑：ajax/illust/<id>，多页调 pages）
+            results: List[Tuple[str, str, str]] = []
+            for illust_id in illust_ids:
+                try:
+                    ir = s.get(
+                        f"https://www.pixiv.net/ajax/illust/{illust_id}",
+                        timeout=timeout,
+                    )
+                    if not ir.ok:
+                        continue
+                    ibody = (ir.json() or {}).get("body") or {}
+                    title = ibody.get("illustTitle") or ""
+                    created_at = ibody.get("createDate") or ""
+                    urls: List[str] = []
+                    first = (ibody.get("urls") or {}).get("original")
+                    if first:
+                        urls.append(first)
+                    page_count = int(ibody.get("pageCount") or 1)
+                    if page_count > 1:
+                        pgr = s.get(
+                            f"https://www.pixiv.net/ajax/illust/{illust_id}/pages",
+                            timeout=timeout,
+                        )
+                        if pgr.ok:
+                            pdata = (pgr.json() or {}).get("body") or []
+                            pages = [
+                                pg
+                                for pg in pdata
+                                if pg.get("urls", {}).get("original")
+                            ]
+                            if pages:
+                                urls = [pg["urls"]["original"] for pg in pages]
+                    for u in urls:
+                        results.append((u, title, created_at))
+                except (RequestException, ValueError):
+                    continue  # 单个作品失败跳过
+            if not results:
+                raise ImageDownloadError(gettext("该用户的作品中未找到可下载的图片"))
+            return results
+    except RequestException as e:
+        logger.error("enumerate pixiv user media failed: %s", e)
+        raise ImageDownloadError(gettext("获取 Pixiv 用户作品失败，请检查网络/代理"))
 
 
 # ---------- 从 X 获取单用户所有图片 ----------
@@ -881,9 +1122,21 @@ def download_image(source: str, url: str, settings) -> List[Tuple[bytes, str]]:
             proxy,
         )
     if source == "bluesky":
-        return download_bluesky(url, proxy)
+        return download_bluesky(
+            url,
+            proxy,
+            anonymous=bool(getattr(settings, "bluesky_anonymous", True)),
+            handle_id=(getattr(settings, "bluesky_handle", "") or "").strip(),
+            app_password=(getattr(settings, "bluesky_app_password", "") or "").strip(),
+        )
     if source == "pixiv":
         return download_pixiv(
+            url,
+            (getattr(settings, "pixiv_session", "") or "").strip(),
+            proxy,
+        )
+    if source == "pixiv_user":
+        return enumerate_pixiv_user_media(
             url,
             (getattr(settings, "pixiv_session", "") or "").strip(),
             proxy,

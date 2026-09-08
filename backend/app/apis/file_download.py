@@ -23,6 +23,8 @@ from app.models.media_import_task import MediaImportTask
 from app.services.image_download import (
     ImageDownloadError,
     download_image,
+    enumerate_bluesky_user_media,
+    enumerate_pixiv_user_media,
     enumerate_twitter_user_media,
 )
 from app.utils.hash import get_file_md5
@@ -50,37 +52,66 @@ def _import_one(project, content, filename, team_project_ids):
     return filename
 
 
-def _run_media_import_task(task: MediaImportTask, project, settings):
+def _run_media_import_task(task: MediaImportTask, project, settings, download_kind="twitter"):
     """后台线程：逐张下载并入库，更新任务进度。
 
     注意：线程内必须使用 Flask 应用上下文（current_app / OSS / mongoengine
     均依赖），否则 project.upload 会抛 Working outside of application context。
+    download_kind: 'twitter' 用 _download_twitter_pic；'pixiv' 用 _download_pixiv_pic。
     """
     from app import flask_app
-    from app.services.image_download import _download_twitter_pic
 
     with flask_app.app_context():
-        _run_media_import_task_inner(task, project, settings, _download_twitter_pic)
+        _run_media_import_task_inner(task, project, settings, download_kind)
 
 
-def _run_media_import_task_inner(task, project, settings, download_pic):
+def _run_media_import_task_inner(task, project, settings, download_kind="twitter"):
+    from app.services.image_download import (
+        _download_bluesky_pic,
+        _download_pixiv_pic,
+        _download_twitter_pic,
+    )
+
     proxy = getattr(settings, "download_proxy", "") or ""
     auth = (getattr(settings, "twitter_auth", "") or "").strip()
     ct0 = (getattr(settings, "twitter_ct0", "") or "").strip()
+    session = (getattr(settings, "pixiv_session", "") or "").strip()
     team_project_ids = [p.id for p in Project.objects(team=project.team).only("id")]
     try:
         for i, (img_url, name) in enumerate(zip(task.urls, task.names)):
             try:
                 text = (name or {}).get("text") or ""
                 created_at = (name or {}).get("created_at") or ""
-                content, filename = download_pic(
-                    img_url,
-                    proxy,
-                    60,
-                    text=text,
-                    created_at=created_at,
-                    ct0=ct0,
-                )
+                page = (name or {}).get("page")
+                if download_kind == "pixiv":
+                    content, filename = _download_pixiv_pic(
+                        img_url,
+                        proxy,
+                        60,
+                        session,
+                        text=text,
+                        created_at=created_at,
+                        page=page,
+                    )
+                elif download_kind == "bluesky":
+                    content, filename = _download_bluesky_pic(
+                        img_url,
+                        proxy,
+                        60,
+                        text=text,
+                        created_at=created_at,
+                        page=page,
+                    )
+                else:
+                    content, filename = _download_twitter_pic(
+                        img_url,
+                        proxy,
+                        60,
+                        text=text,
+                        created_at=created_at,
+                        page=page,
+                        ct0=ct0,
+                    )
             except ImageDownloadError:
                 task.failed += 1
                 task.done = i + 1
@@ -111,7 +142,15 @@ class ProjectFileFromURLAPI(MoeAPIView):
         data = self.get_json()
         source = (data.get("source") or "external").strip()
         url = (data.get("url") or "").strip()
-        if source not in ("twitter", "twitter_user", "bluesky", "pixiv", "external"):
+        if source not in (
+            "twitter",
+            "twitter_user",
+            "bluesky",
+            "bluesky_user",
+            "pixiv",
+            "pixiv_user",
+            "external",
+        ):
             return {"message": gettext("不支持的来源")}, 400
         if not url:
             return {"message": gettext("缺少图片链接")}, 400
@@ -146,7 +185,67 @@ class ProjectFileFromURLAPI(MoeAPIView):
             # 后台线程下载（进程内线程，任务状态存 Mongo 供轮询）
             t = threading.Thread(
                 target=_run_media_import_task,
-                args=(task, project, settings),
+                args=(task, project, settings, "twitter"),
+                daemon=True,
+            )
+            t.start()
+            return {"task_id": task.task_id, "total": task.total}
+
+        # pixiv_user：进度式导入（枚举 -> 后台线程下载 -> 返回 task_id）
+        if source == "pixiv_user":
+            try:
+                items = enumerate_pixiv_user_media(
+                    url,
+                    (getattr(settings, "pixiv_session", "") or "").strip(),
+                    (getattr(settings, "download_proxy", "") or ""),
+                )
+            except ImageDownloadError as e:
+                return {"message": str(e)}, 400
+            if not items:
+                return {"message": gettext("该用户的作品中未找到可下载的图片")}, 400
+            task = MediaImportTask(
+                project=project,
+                task_id=str(project.id) + "_" + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f"),
+                urls=[u for u, _, _ in items],
+                names=[{"text": t, "created_at": c} for _, t, c in items],
+                total=len(items),
+            ).save()
+            t = threading.Thread(
+                target=_run_media_import_task,
+                args=(task, project, settings, "pixiv"),
+                daemon=True,
+            )
+            t.start()
+            return {"task_id": task.task_id, "total": task.total}
+
+        # bluesky_user：进度式导入（枚举 -> 后台线程下载 -> 返回 task_id）
+        if source == "bluesky_user":
+            try:
+                items = enumerate_bluesky_user_media(
+                    url,
+                    (getattr(settings, "download_proxy", "") or ""),
+                    anonymous=bool(getattr(settings, "bluesky_anonymous", True)),
+                    handle_id=(getattr(settings, "bluesky_handle", "") or "").strip(),
+                    app_password=(
+                        getattr(settings, "bluesky_app_password", "") or ""
+                    ).strip(),
+                )
+            except ImageDownloadError as e:
+                return {"message": str(e)}, 400
+            if not items:
+                return {"message": gettext("该用户的媒体时间线中未找到图片")}, 400
+            task = MediaImportTask(
+                project=project,
+                task_id=str(project.id) + "_" + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f"),
+                urls=[u for u, _, _, _ in items],
+                names=[
+                    {"text": t, "created_at": c, "page": p} for _, t, c, p in items
+                ],
+                total=len(items),
+            ).save()
+            t = threading.Thread(
+                target=_run_media_import_task,
+                args=(task, project, settings, "bluesky"),
                 daemon=True,
             )
             t.start()
