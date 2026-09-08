@@ -368,6 +368,8 @@
   "file.importFromSocial": "从社交媒体获取图片",
   "file.importFromTwitter": "从 X(Twitter) 获取",
   "file.importFromTwitterTip": "请输入推文地址，例如 https://x.com/Iroha_14K/status/2002542796918698349",
+  "file.importFromTwitterUser": "从 X 获取单用户所有图片",
+  "file.importFromTwitterUserTip": "请输入用户主页地址，例如 https://x.com/Iroha_14K/media?filter=photo 或 https://x.com/Iroha_14K，将抓取该用户媒体时间线中的全部图片",
   "file.importFromBluesky": "从 Bluesky 获取",
   "file.importFromBlueskyTip": "请输入 Bluesky 贴文地址，例如 https://bsky.app/profile/koredasuzuki.bsky.social/post/3muwlhnfkkc2m",
   "file.importFromPixiv": "从 Pixiv 获取",

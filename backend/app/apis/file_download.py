@@ -28,7 +28,7 @@ class ProjectFileFromURLAPI(MoeAPIView):
         data = self.get_json()
         source = (data.get("source") or "external").strip()
         url = (data.get("url") or "").strip()
-        if source not in ("twitter", "bluesky", "pixiv", "external"):
+        if source not in ("twitter", "twitter_user", "bluesky", "pixiv", "external"):
             return {"message": gettext("不支持的来源")}, 400
         if not url:
             return {"message": gettext("缺少图片链接")}, 400

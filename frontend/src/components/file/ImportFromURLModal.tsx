@@ -11,7 +11,7 @@ interface ImportFromURLModalProps {
   open: boolean;
   onClose: () => void;
   projectID: string;
-  source: 'twitter' | 'bluesky' | 'pixiv' | 'external';
+  source: 'twitter' | 'twitter_user' | 'bluesky' | 'pixiv' | 'external';
   onSaved?: () => void;
 }
 
@@ -85,11 +85,13 @@ export const ImportFromURLModal: FC<ImportFromURLModalProps> = ({
         id:
           source === 'twitter'
             ? 'file.importFromTwitter'
-            : source === 'bluesky'
-              ? 'file.importFromBluesky'
-              : source === 'pixiv'
-                ? 'file.importFromPixiv'
-                : 'file.importFromExternal',
+            : source === 'twitter_user'
+              ? 'file.importFromTwitterUser'
+              : source === 'bluesky'
+                ? 'file.importFromBluesky'
+                : source === 'pixiv'
+                  ? 'file.importFromPixiv'
+                  : 'file.importFromExternal',
       })}
       open={open}
       onCancel={onClose}
@@ -124,11 +126,13 @@ export const ImportFromURLModal: FC<ImportFromURLModalProps> = ({
             id:
               source === 'twitter'
                 ? 'file.importFromTwitterTip'
-                : source === 'bluesky'
-                  ? 'file.importFromBlueskyTip'
-                  : source === 'pixiv'
-                    ? 'file.importFromPixivTip'
-                    : 'file.importFromExternalTip',
+                : source === 'twitter_user'
+                  ? 'file.importFromTwitterUserTip'
+                  : source === 'bluesky'
+                    ? 'file.importFromBlueskyTip'
+                    : source === 'pixiv'
+                      ? 'file.importFromPixivTip'
+                      : 'file.importFromExternalTip',
           })}
         </div>
         <Input

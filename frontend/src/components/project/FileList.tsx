@@ -79,7 +79,7 @@ export const FileList: FC<FileListProps> = ({
   const [outputDrawerVisible, setOutputDrawerVisible] = useState(false);
   const [moveModalVisible, setMoveModalVisible] = useState(false);
   const [importModalSource, setImportModalSource] = useState<
-    'twitter' | 'bluesky' | 'pixiv' | 'external' | null
+    'twitter' | 'twitter_user' | 'bluesky' | 'pixiv' | 'external' | null
   >(null);
   const coverWidth = IMAGE_COVER.WIDTH;
   const coverHeight = IMAGE_COVER.HEIGHT;
@@ -585,6 +585,11 @@ export const FileList: FC<FileListProps> = ({
                     key: 'twitter',
                     label: formatMessage({ id: 'file.importFromTwitter' }),
                     onClick: () => setImportModalSource('twitter'),
+                  },
+                  {
+                    key: 'twitter_user',
+                    label: formatMessage({ id: 'file.importFromTwitterUser' }),
+                    onClick: () => setImportModalSource('twitter_user'),
                   },
                   {
                     key: 'bluesky',

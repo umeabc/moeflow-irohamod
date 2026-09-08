@@ -563,11 +563,249 @@ def download_pixiv(
         raise ImageDownloadError(gettext("下载 Pixiv 作品图片失败，请检查网络/代理"))
 
 
+# ---------- 从 X 获取单用户所有图片 ----------
+# 参考 https://github.com/unkmonster/tmd 的实现：
+# - UserByScreenName: 拿用户 ID（rest_id）
+# - UserMedia: 分页抓取该用户的媒体时间线（media tab），每页带 cursor 翻页
+# - 推文里的图片在 legacy.extended_entities.media[]（type=photo 用 media_url_https）
+
+# 用户主页地址形如 https://x.com/<username>/media?filter=photo 或 https://x.com/<username>
+USER_PROFILE_URL_RE = re.compile(
+    r"(?:https?://)?(?:www\.)?(?:x|twitter)\.com/([A-Za-z0-9_]{1,15})(?:/media)?(?:[/?#].*)?$"
+)
+
+# UserByScreenName GraphQL（tmd 2024 版本，可能随时间失效，失败时有回退逻辑）
+TWITTER_USER_BY_SCREENNAME_PATH = (
+    "/i/api/graphql/xmU6X_CKVnQ5lSrCbAmJsg/UserByScreenName"
+)
+# UserMedia GraphQL
+TWITTER_USER_MEDIA_PATH = "/i/api/graphql/MOLbHrtk8Ovu7DUNOLcXiA/UserMedia"
+
+_TWITTER_USER_MEDIA_FEATURES = (
+    '{"rweb_tipjar_consumption_enabled":true,'
+    '"responsive_web_graphql_exclude_directive_enabled":true,'
+    '"verified_phone_label_enabled":false,'
+    '"creator_subscriptions_tweet_preview_api_enabled":true,'
+    '"responsive_web_graphql_timeline_navigation_enabled":true,'
+    '"responsive_web_graphql_skip_user_profile_image_extensions_enabled":false,'
+    '"communities_web_enable_tweet_community_results_fetch":true,'
+    '"c9s_tweet_anatomy_moderator_badge_enabled":true,'
+    '"articles_preview_enabled":true,'
+    '"tweetypie_unmention_optimization_enabled":true,'
+    '"responsive_web_edit_tweet_api_enabled":true,'
+    '"graphql_is_translatable_rweb_tweet_is_translatable_enabled":true,'
+    '"view_counts_everywhere_api_enabled":true,'
+    '"longform_notetweets_consumption_enabled":true,'
+    '"responsive_web_twitter_article_tweet_consumption_enabled":true,'
+    '"tweet_awards_web_tipping_enabled":false,'
+    '"creator_subscriptions_quote_tweet_preview_enabled":false,'
+    '"freedom_of_speech_not_reach_fetch_enabled":true,'
+    '"standardized_nudges_misinfo":true,'
+    '"tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled":true,'
+    '"rweb_video_timestamps_enabled":true,'
+    '"longform_notetweets_rich_text_read_enabled":true,'
+    '"longform_notetweets_inline_media_enabled":true,'
+    '"responsive_web_enhance_cards_enabled":false}'
+)
+_TWITTER_USER_MEDIA_VARIABLES = (
+    '{{"userId":"{user_id}","count":100,"cursor":"{cursor}",'
+    '"includePromotedContent":false,"withClientEventToken":false,'
+    '"withBirdwatchNotes":false,"withVoice":true,"withV2Timeline":true}}'
+)
+_TWITTER_USER_BY_SCREENNAME_VARIABLES = (
+    '{{"screen_name":"{screen_name}","withSafetyModeUserFields":true}}'
+)
+_TWITTER_USER_BY_SCREENNAME_FEATURES = (
+    '{"hidden_profile_subscriptions_enabled":true,'
+    '"rweb_tipjar_consumption_enabled":true,'
+    '"responsive_web_graphql_exclude_directive_enabled":true,'
+    '"verified_phone_label_enabled":false,'
+    '"subscriptions_verification_info_is_identity_verified_enabled":true,'
+    '"subscriptions_verification_info_verified_since_enabled":true,'
+    '"highlights_tweets_tab_ui_enabled":true,'
+    '"responsive_web_twitter_article_notes_tab_enabled":true,'
+    '"subscriptions_feature_can_gift_premium":false,'
+    '"creator_subscriptions_tweet_preview_api_enabled":true,'
+    '"responsive_web_graphql_skip_user_profile_image_extensions_enabled":false,'
+    '"responsive_web_graphql_timeline_navigation_enabled":true}'
+)
+
+
+def _extract_twitter_username(url: str) -> str:
+    """从用户主页 URL 提取用户名。"""
+    url = (url or "").strip()
+    m = USER_PROFILE_URL_RE.match(url)
+    if not m:
+        raise ImageDownloadError(
+            gettext("无法解析用户主页地址，请确认是 https://x.com/<用户名> 或 https://x.com/<用户名>/media 格式")
+        )
+    return m.group(1)
+
+
+def _twitter_api_headers() -> dict:
+    return {
+        "User-Agent": UA,
+        "X-Twitter-Active-Team": "x",
+        "X-Twitter-Client-Language": "en",
+        "Referer": "https://x.com/",
+        "Accept": "application/json, text/plain, */*",
+    }
+
+
+def _twitter_get_user_id(
+    screen_name: str, auth_token: str, ct0: str, proxy: str, timeout: int
+) -> str:
+    """用 UserByScreenName GraphQL 拿用户 rest_id。"""
+    api_url = f"https://x.com{TWITTER_USER_BY_SCREENNAME_PATH}"
+    params = {
+        "variables": _TWITTER_USER_BY_SCREENNAME_VARIABLES.format(
+            screen_name=screen_name
+        ),
+        "features": _TWITTER_USER_BY_SCREENNAME_FEATURES,
+    }
+    with _session(build_proxies(proxy), _twitter_api_headers()) as s:
+        s.cookies.update({"auth_token": auth_token, "ct0": ct0})
+        r = s.get(api_url, params=params, timeout=timeout)
+        if not r.ok:
+            raise ImageDownloadError(gettext("获取用户信息失败（可能已注销或被限制）"))
+        data = r.json()
+        result = (data.get("data") or {}).get("user") or {}
+        result = result.get("result") or {}
+        if result.get("__typename") == "UserUnavailable":
+            raise ImageDownloadError(gettext("该用户不可用（已注销/封禁/私密）"))
+        rest_id = result.get("rest_id")
+        if not rest_id:
+            raise ImageDownloadError(gettext("无法解析用户 ID"))
+        return str(rest_id)
+
+
+def _twitter_parse_user_media_page(data: dict) -> Tuple[List[Tuple[str, str, str]], str]:
+    """解析 UserMedia 一页：返回 [(media_url_https, tweet_text, created_at)] 和下一页 cursor。"""
+    out: List[Tuple[str, str, str]] = []
+    next_cursor = ""
+    timeline = (data.get("data") or {}).get("user") or {}
+    timeline = (timeline.get("result") or {}).get("timeline_v2") or {}
+    timeline = (timeline.get("timeline") or {}).get("instructions") or []
+    for inst in timeline:
+        if (inst.get("type") or "") != "TimelineAddEntries":
+            continue
+        for entry in inst.get("entries") or []:
+            content = entry.get("content") or {}
+            entry_type = content.get("entryType") or ""
+            if entry_type == "TimelineTimelineCursor":
+                if content.get("cursorType") == "Bottom":
+                    next_cursor = content.get("value") or ""
+                continue
+            if entry_type == "TimelineTimelineItem":
+                item = content.get("itemContent") or {}
+            elif entry_type == "TimelineTimelineModule":
+                # 多图/合集的 module：items[].item.itemContent
+                items = content.get("items") or []
+                for it in items:
+                    sub = (it.get("item") or {}).get("itemContent") or {}
+                    tweet = (sub.get("tweet_results") or {}).get("result") or {}
+                    legacy = tweet.get("legacy") or {}
+                    for m in (legacy.get("extended_entities") or {}).get("media") or []:
+                        if m.get("type") == "photo" and m.get("media_url_https"):
+                            out.append(
+                                (
+                                    m["media_url_https"],
+                                    legacy.get("full_text") or "",
+                                    legacy.get("created_at") or "",
+                                )
+                            )
+                continue
+            else:
+                continue
+            tweet = (item.get("tweet_results") or {}).get("result") or {}
+            legacy = tweet.get("legacy") or {}
+            for m in (legacy.get("extended_entities") or {}).get("media") or []:
+                if m.get("type") == "photo" and m.get("media_url_https"):
+                    out.append(
+                        (
+                            m["media_url_https"],
+                            legacy.get("full_text") or "",
+                            legacy.get("created_at") or "",
+                        )
+                    )
+    return out, next_cursor
+
+
+def download_twitter_user_media(
+    user_url: str,
+    auth_token: str,
+    ct0: str,
+    proxy: str = "",
+    timeout: int = 60,
+    max_pages: int = 40,
+) -> List[Tuple[bytes, str]]:
+    """抓取 X 用户媒体时间线里的全部图片并下载。
+
+    参考 tmd：用 UserByScreenName 拿用户 ID → UserMedia 分页翻页
+    （每页 100 条，Bottom cursor 续页）→ 解析每条推文的
+    extended_entities.media（photo）→ 下载全部原图。
+    """
+    user_url = (user_url or "").strip()
+    screen_name = _extract_twitter_username(user_url)
+    if not (auth_token and ct0):
+        raise ImageDownloadError(gettext("未配置 Twitter 的 auth/ct0，请在站点设置-下载图片设置中填写"))
+    proxies = build_proxies(proxy)
+    try:
+        user_id = _twitter_get_user_id(screen_name, auth_token, ct0, proxy, timeout)
+        results: List[Tuple[bytes, str]] = []
+        cursor = ""
+        for page in range(max_pages):
+            api_url = f"https://x.com{TWITTER_USER_MEDIA_PATH}"
+            params = {
+                "variables": _TWITTER_USER_MEDIA_VARIABLES.format(
+                    user_id=user_id, cursor=cursor
+                ),
+                "features": _TWITTER_USER_MEDIA_FEATURES,
+            }
+            with _session(proxies, _twitter_api_headers()) as s:
+                s.cookies.update({"auth_token": auth_token, "ct0": ct0})
+                r = s.get(api_url, params=params, timeout=timeout)
+                if not r.ok:
+                    break  # 中途失败停止翻页（可能被限流）
+                page_items, next_cursor = _twitter_parse_user_media_page(r.json())
+            if not page_items and not next_cursor:
+                break
+            for img_url, text, created_at in page_items:
+                try:
+                    results.append(
+                        _download_twitter_pic(
+                            img_url,
+                            proxy,
+                            timeout,
+                            text=text,
+                            created_at=created_at,
+                        )
+                    )
+                except ImageDownloadError:
+                    continue  # 单张失败跳过，不中断整体
+            cursor = next_cursor
+            if not cursor:
+                break
+        if not results:
+            raise ImageDownloadError(gettext("该用户的媒体时间线中未找到图片"))
+        return results
+    except RequestException as e:
+        logger.error("download twitter user media failed: %s", e)
+        raise ImageDownloadError(gettext("获取用户媒体失败，请检查网络/代理或 auth/ct0 是否有效"))
+
+
 def download_image(source: str, url: str, settings) -> List[Tuple[bytes, str]]:
     """统一入口：按 source 分发，settings 提供各来源凭据/代理。返回图片列表。"""
     proxy = getattr(settings, "download_proxy", "") or ""
     if source == "twitter":
         return download_twitter(
+            url,
+            (getattr(settings, "twitter_auth", "") or "").strip(),
+            (getattr(settings, "twitter_ct0", "") or "").strip(),
+            proxy,
+        )
+    if source == "twitter_user":
+        return download_twitter_user_media(
             url,
             (getattr(settings, "twitter_auth", "") or "").strip(),
             (getattr(settings, "twitter_ct0", "") or "").strip(),

@@ -1,10 +1,25 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha9）
+# MoeFlow 自定义改动 CHANGELOG（iroha10）
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 镜像 tag：`moeflow-frontend:1.1.7-iroha9` / `moeflow-backend:1.1.8-iroha9`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6`/`iroha7`/`iroha8` 镜像保留各自版本 tag）。
+> 镜像 tag：`moeflow-frontend:1.1.7-iroha10` / `moeflow-backend:1.1.8-iroha10`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6`/`iroha7`/`iroha8`/`iroha9` 镜像保留各自版本 tag）。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：以 `docker save` 导出镜像 tar → 生产侧 `docker load` 导入（仅替换前端/后端镜像，勿改动 env / compose）。
+
+---
+
+## iroha10 新增特性（基于 iroha9）
+
+### 一、从 X 获取单用户所有图片（新增导入来源）
+
+- 「从社交媒体获取图片」下拉新增选项「**从 X 获取单用户所有图片**」：输入用户主页地址（如 `https://x.com/Iroha_14K/media?filter=photo` 或 `https://x.com/Iroha_14K`），抓取该用户**媒体时间线（media tab）中的全部图片**并导入项目。
+- **实现**（参考 https://github.com/unkmonster/tmd ）：
+  - `UserByScreenName` GraphQL 拿用户 `rest_id`；
+  - `UserMedia` GraphQL 分页抓取媒体时间线（每页 100 条，Bottom cursor 翻页，`max_pages=40` 上限约 4000 条）；
+  - 解析每条推文 `legacy.extended_entities.media[]`（`type=photo` 取 `media_url_https`）下载全部原图；单张失败跳过不中断。
+- 后端：`backend/app/services/image_download.py` 新增 `download_twitter_user_media` / `_twitter_get_user_id` / `_twitter_parse_user_media_page`；`download_image` 分发新增 `twitter_user` 来源；`backend/app/apis/file_download.py` source 校验新增 `twitter_user`。
+- 前端：`FileList.tsx` 下拉新增选项、`ImportFromURLModal.tsx` 支持新来源、`apis/file.ts` source 类型扩展、i18n（zh-cn/en/messages.yaml）新增 `file.importFromTwitterUser*` 文案。
+- 依赖站点设置中已有的 Twitter `auth_token` / `ct0`（与「从 X 获取」单推文一致）；GraphQL query id 参考 tmd 2024 版本，若 X 前端升级导致失效需同步更新。
 
 ---
 

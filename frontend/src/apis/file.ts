@@ -184,7 +184,7 @@ const getMoveTargetProjects = ({
 /** 从社交媒体/外部链接下载图片到项目 */
 export interface APIFileImportFromUrl {
   url: string;
-  source: 'twitter' | 'bluesky' | 'pixiv' | 'external';
+  source: 'twitter' | 'twitter_user' | 'bluesky' | 'pixiv' | 'external';
 }
 /** from-url 返回：导入成功的文件列表 + 因重复跳过的文件名列表 */
 export interface APIFileFromUrlResult {
