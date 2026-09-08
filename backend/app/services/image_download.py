@@ -750,6 +750,55 @@ def _twitter_parse_user_media_page(data: dict) -> Tuple[List[Tuple[str, str, str
     return out, next_cursor
 
 
+def enumerate_twitter_user_media(
+    user_url: str,
+    auth_token: str,
+    ct0: str,
+    proxy: str = "",
+    timeout: int = 30,
+    max_pages: int = 40,
+) -> List[Tuple[str, str, str]]:
+    """枚举 X 用户媒体时间线中的全部图片 URL（不下载）。
+
+    返回 [(media_url_https, tweet_text, created_at)]，供进度式导入使用。
+    """
+    user_url = (user_url or "").strip()
+    screen_name = _extract_twitter_username(user_url)
+    if not (auth_token and ct0):
+        raise ImageDownloadError(gettext("未配置 Twitter 的 auth/ct0，请在站点设置-下载图片设置中填写"))
+    proxies = build_proxies(proxy)
+    try:
+        user_id = _twitter_get_user_id(screen_name, auth_token, ct0, proxy, timeout)
+        results: List[Tuple[str, str, str]] = []
+        cursor = ""
+        for _page in range(max_pages):
+            api_url = f"https://x.com{TWITTER_USER_MEDIA_PATH}"
+            params = {
+                "variables": _TWITTER_USER_MEDIA_VARIABLES.format(
+                    user_id=user_id, cursor=cursor
+                ),
+                "features": _TWITTER_USER_MEDIA_FEATURES,
+            }
+            with _session(proxies, _twitter_api_headers(ct0)) as s:
+                s.cookies.update({"auth_token": auth_token, "ct0": ct0})
+                r = s.get(api_url, params=params, timeout=timeout)
+                if not r.ok:
+                    break  # 中途失败停止翻页（可能被限流）
+                page_items, next_cursor = _twitter_parse_user_media_page(r.json())
+            if not page_items and not next_cursor:
+                break
+            results.extend(page_items)
+            cursor = next_cursor
+            if not cursor:
+                break
+        if not results:
+            raise ImageDownloadError(gettext("该用户的媒体时间线中未找到图片"))
+        return results
+    except RequestException as e:
+        logger.error("enumerate twitter user media failed: %s", e)
+        raise ImageDownloadError(gettext("获取用户媒体失败，请检查网络/代理或 auth/ct0 是否有效"))
+
+
 def download_twitter_user_media(
     user_url: str,
     auth_token: str,

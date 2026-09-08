@@ -208,6 +208,37 @@ const importFileFromUrl = ({
   });
 };
 
+/** 「从 X 获取单用户所有图片」：发起任务返回 task_id + total */
+export interface APIFileImportTaskStart {
+  task_id: string;
+  total: number;
+}
+/** 任务进度轮询返回 */
+export interface APIFileImportTaskProgress {
+  task_id: string;
+  total: number;
+  done: number;
+  imported: number;
+  duplicated: number;
+  failed: number;
+  finished: boolean;
+  error: string;
+}
+/** 查询媒体导入任务进度 */
+const getImportTaskProgress = ({
+  taskID,
+  configs,
+}: {
+  taskID: string;
+  configs?: AxiosRequestConfig;
+}) => {
+  return request<APIFileImportTaskProgress>({
+    method: 'GET',
+    url: `/v1/files/from-url-task/${taskID}`,
+    ...configs,
+  });
+};
+
 export interface APIFileMoveResult {
   file_id: string;
   name: string;
@@ -238,6 +269,7 @@ export default {
   deleteFile,
   editFile,
   importFileFromUrl,
+  getImportTaskProgress,
   adminGetFiles,
   adminSafeCheck,
   searchFiles,

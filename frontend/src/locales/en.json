@@ -370,6 +370,8 @@
   "file.importFromTwitterTip": "Enter a tweet URL, e.g. https://x.com/Iroha_14K/status/2002542796918698349",
   "file.importFromTwitterUser": "Get all images from an X user",
   "file.importFromTwitterUserTip": "Enter a user profile URL, e.g. https://x.com/Iroha_14K/media?filter=photo or https://x.com/Iroha_14K; all images in this user's media timeline will be fetched",
+  "file.importFromTwitterUserProgress": "Downloading image {done}/{total}, {importable} importable",
+  "file.importFromTwitterUserDone": "Imported {imported}, {dup} skipped as duplicates",
   "file.importFromBluesky": "Get from Bluesky",
   "file.importFromBlueskyTip": "Enter a Bluesky post URL, e.g. https://bsky.app/profile/koredasuzuki.bsky.social/post/3muwlhnfkkc2m",
   "file.importFromPixiv": "Get from Pixiv",

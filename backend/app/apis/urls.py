@@ -11,7 +11,10 @@ from app.apis.file import (
     AdminFileListAPI,
     FileSearchAPI,
 )
-from app.apis.file_download import ProjectFileFromURLAPI
+from app.apis.file_download import (
+    MediaImportTaskAPI,
+    ProjectFileFromURLAPI,
+)
 from app.apis.index import PingAPI, DocsAPI, ErrorAPI, UrlListAPI, WarningAPI
 from app.apis.invitation import InvitationAPI, InvitationListAPI
 from app.apis.group import GroupPublicInfoAPI
@@ -376,6 +379,12 @@ file.add_url_rule(
     "/search",
     methods=["GET", "OPTIONS"],
     view_func=FileSearchAPI.as_view("file_search"),
+)
+# 媒体导入任务进度（必须注册在 /<file_id> 之前，避免被吞）
+file.add_url_rule(
+    "/from-url-task/<task_id>",
+    methods=["GET", "OPTIONS"],
+    view_func=MediaImportTaskAPI.as_view("media_import_task"),
 )
 file.add_url_rule(
     "/<file_id>",

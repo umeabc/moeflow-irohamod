@@ -1139,6 +1139,12 @@ file.importFromTwitterUser:
 file.importFromTwitterUserTip:
   zhCn: 请输入用户主页地址，例如 https://x.com/Iroha_14K/media?filter=photo 或 https://x.com/Iroha_14K，将抓取该用户媒体时间线中的全部图片
   en: Enter a user profile URL, e.g. https://x.com/Iroha_14K/media?filter=photo or https://x.com/Iroha_14K; all images in this user's media timeline will be fetched
+file.importFromTwitterUserProgress:
+  zhCn: 正在下载第 {done}/{total} 张图片，有 {importable} 张可入库
+  en: Downloading image {done}/{total}, {importable} importable
+file.importFromTwitterUserDone:
+  zhCn: 已导入 {imported} 张，{dup} 张因重复跳过
+  en: Imported {imported}, {dup} skipped as duplicates
 file.importFromBluesky:
   zhCn: 从 Bluesky 获取
   en: Get from Bluesky

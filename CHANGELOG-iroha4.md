@@ -20,6 +20,8 @@
 - 后端：`backend/app/services/image_download.py` 新增 `download_twitter_user_media` / `_twitter_get_user_id` / `_twitter_parse_user_media_page`；`download_image` 分发新增 `twitter_user` 来源；`backend/app/apis/file_download.py` source 校验新增 `twitter_user`。
 - 前端：`FileList.tsx` 下拉新增选项、`ImportFromURLModal.tsx` 支持新来源、`apis/file.ts` source 类型扩展、i18n（zh-cn/en/messages.yaml）新增 `file.importFromTwitterUser*` 文案。
 - 依赖站点设置中已有的 Twitter `auth_token` / `ct0`（与「从 X 获取」单推文一致）；GraphQL query id 参考 tmd 2024 版本，若 X 前端升级导致失效需同步更新。
+- **修复**：GraphQL 必须带 `Authorization: Bearer <X 公开 guest token>` 与 `X-Csrf-Token=ct0`（否则 403）；下载图片只加 `name=orig` 保持原格式（对 PNG 加 `format=jpg` 会 404）。
+- **进度显示（v2 增强）**：改为**进度式导入**——发起时先枚举图片 URL 存任务（`MediaImportTask` 模型，Mongo 持久化）并立即返回 `{task_id, total}`，后端后台线程逐张下载入库并更新进度；前端轮询 `GET /v1/files/from-url-task/<task_id>` 显示「正在下载第 a/b 张图片，有 X 张可入库」+ 进度条，完成后提示已导入/重复数。新增 `backend/app/models/media_import_task.py`、`MediaImportTaskAPI`、`enumerate_twitter_user_media`。
 
 ---
 
