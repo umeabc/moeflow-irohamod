@@ -36,6 +36,12 @@ class MediaImportTask(Document):
     imported = IntField(db_field="im", default=0)  # 实际入库张数
     duplicated = IntField(db_field="dup", default=0)  # 因重复跳过张数
     failed = IntField(db_field="f", default=0)  # 下载失败张数
+    # 失败明细：每项 {index, filename, step, reason}
+    #   index: 在 urls 中的序号（从 1 开始）
+    #   filename: 期望入库的文件名（可推断时）
+    #   step: "download"（下载/取图失败）| "import"（入库失败）
+    #   reason: 失败原因（后端 ImageDownloadError 消息或异常信息）
+    failures = ListField(dict(), db_field="fl", default=list)
     finished = BooleanField(db_field="fin", default=False)
     error = StringField(db_field="e", default="")  # 整体失败原因（可选）
     created_at = DateTimeField(db_field="ct", default=datetime.datetime.utcnow)
@@ -56,6 +62,7 @@ class MediaImportTask(Document):
             "imported": self.imported,
             "duplicated": self.duplicated,
             "failed": self.failed,
+            "failures": self.failures,
             "finished": self.finished,
             "error": self.error,
         }

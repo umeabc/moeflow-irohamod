@@ -324,6 +324,53 @@ def _download_twitter_pic(
     return content, stem + ct_ext
 
 
+def _bluesky_get_blob(
+    img_url: str, proxy: str, timeout: int, auth_headers: dict
+) -> Optional[bytes]:
+    """从 CDN URL 解析 did+cid，用 PDS com.atproto.sync.getBlob（带 JWT）获取原图。
+
+    用于敏感图片 CDN 拒绝的场景；失败返回 None（由调用方继续抛错）。
+    """
+    m = re.search(r"plain/([^/]+)/([^/?]+)", img_url)
+    if not m:
+        return None
+    did, cid = m.group(1), m.group(2)
+    try:
+        resp = requests.get(
+            f"{BSKY_PDS}/xrpc/com.atproto.sync.getBlob",
+            params={"did": did, "cid": cid},
+            timeout=timeout,
+            headers={"User-Agent": UA, **auth_headers},
+            proxies=build_proxies(proxy),
+            impersonate=IMPERSONATE,
+        )
+        if resp.status_code != 200:
+            return None
+        content = resp.content
+        return content or None
+    except RequestException as e:
+        logger.error("bluesky getBlob failed: %s", e)
+        return None
+
+
+def _bluesky_filename(
+    img_url: str,
+    text: str,
+    created_at: str,
+    page: Optional[int],
+    ct_ext: str,
+) -> str:
+    """从 CDN URL 末段/命名信息推断文件名（与旧逻辑一致）。"""
+    if text:
+        return _build_twitter_filename(text, created_at, ct_ext, page=page)
+    m = re.search(r"plain/([^/?]+)", img_url)
+    stem = m.group(1) if m else f"bluesky_{os.path.basename(img_url).split('?')[0]}"
+    stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", stem) or "bluesky"
+    if os.path.splitext(stem)[1].lower() in IMAGE_EXTENSIONS:
+        return stem
+    return stem + ct_ext
+
+
 def _download_bluesky_pic(
     img_url: str,
     proxy: str,
@@ -331,36 +378,51 @@ def _download_bluesky_pic(
     text: str = "",
     created_at: str = "",
     page: Optional[int] = None,
+    auth_headers: Optional[dict] = None,
 ) -> Tuple[bytes, str]:
-    # Bluesky CDN 的 fullsize 已是原图，无需像 Twitter 那样追加尺寸参数
-    resp = requests.get(
-        img_url,
-        timeout=timeout,
-        headers={"User-Agent": UA},
-        proxies=build_proxies(proxy),
-        impersonate=IMPERSONATE,
-    )
-    resp.raise_for_status()
-    content = resp.content
-    if not content:
-        raise ImageDownloadError(gettext("下载内容为空"))
-    ctype = resp.headers.get("Content-Type", "")
-    ct_ext = {
-        "image/jpeg": ".jpg",
-        "image/png": ".png",
-        "image/webp": ".webp",
-        "image/gif": ".gif",
-    }.get(ctype.split(";")[0].strip().lower(), ".jpg")
-    # 与 Twitter 一致：贴文内容前 40 字符 + 时间戳命名
-    if text:
-        return content, _build_twitter_filename(text, created_at, ct_ext, page=page)
-    # 回退：取 CDN 路径末段图片 id
-    m = re.search(r"plain/([^/?]+)", img_url)
-    stem = m.group(1) if m else f"bluesky_{os.path.basename(img_url).split('?')[0]}"
-    stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", stem) or "bluesky"
-    if os.path.splitext(stem)[1].lower() in IMAGE_EXTENSIONS:
-        return content, stem
-    return content, stem + ct_ext
+    """下载 Bluesky 图片。auth_headers 非空时（登录模式）携带 Authorization 请求。
+
+    对标记为敏感（content-filter / content-warning）的图片，CDN 在匿名或未带
+    认证时返回 4xx 或占位图；带登录 JWT 才能取到原图。若 CDN 请求 4xx，且
+    auth_headers 可用，则回退 PDS 的 com.atproto.sync.getBlob（带 JWT）获取。
+    """
+    headers = {"User-Agent": UA}
+    if auth_headers:
+        headers.update(auth_headers)
+    try:
+        resp = requests.get(
+            img_url,
+            timeout=timeout,
+            headers=headers,
+            proxies=build_proxies(proxy),
+            impersonate=IMPERSONATE,
+        )
+        # 敏感图片 CDN 可能 403/404；带 JWT 时回退 PDS getBlob
+        if resp.status_code in (401, 403, 404) and auth_headers and "Bearer" in str(
+            auth_headers.get("Authorization", "")
+        ):
+            blob = _bluesky_get_blob(img_url, proxy, timeout, auth_headers)
+            if blob is not None:
+                return blob, _bluesky_filename(img_url, text, created_at, page, ".jpg")
+        resp.raise_for_status()
+        content = resp.content
+        if not content:
+            raise ImageDownloadError(gettext("下载内容为空"))
+        ctype = resp.headers.get("Content-Type", "")
+        ct_ext = {
+            "image/jpeg": ".jpg",
+            "image/png": ".png",
+            "image/webp": ".webp",
+            "image/gif": ".gif",
+        }.get(ctype.split(";")[0].strip().lower(), ".jpg")
+        # 与 Twitter 一致：贴文内容前 40 字符 + 时间戳命名
+        if text:
+            return content, _build_twitter_filename(text, created_at, ct_ext, page=page)
+        return content, _bluesky_filename(img_url, text, created_at, page, ct_ext)
+    except RequestException as e:
+        logger.error("download bluesky pic failed: %s", e)
+        raise ImageDownloadError(gettext("下载 Bluesky 图片失败，请检查网络/代理"))
+
 
 
 BSKY_PUBLIC_API = "https://public.api.bsky.app"  # 匿名 AppView
@@ -457,17 +519,34 @@ def download_bluesky(
             record = post.get("record") or {}
             text = record.get("text") or ""
             created_at = record.get("createdAt") or ""
-            # 3. 图片 URL：优先 AppView 的 embed view（fullsize），其次 record 的 blob ref 拼 CDN
+            # 3. 图片 URL：兼容两种 embed 类型
+            #    - app.bsky.embed.images（老类型）：embed.images[].fullsize
+            #    - app.bsky.embed.gallery（画廊新类型）：embed.items[].fullsize
+            #    优先取 AppView 的 fullsize，其次 record 的 blob ref 拼 CDN。
             img_urls: List[str] = []
-            images_view = (post.get("embed") or {}).get("images") or []
-            img_urls = [
-                iv.get("fullsize")
-                for iv in images_view
-                if iv.get("fullsize")
-            ]
+            embed = post.get("embed") or {}
+            images_view = embed.get("images") or []
+            for iv in images_view:
+                if iv.get("fullsize"):
+                    img_urls.append(iv.get("fullsize"))
+            if not img_urls:
+                # gallery：items[] 里的图片
+                items_view = embed.get("items") or []
+                for iv in items_view:
+                    if iv.get("fullsize"):
+                        img_urls.append(iv.get("fullsize"))
             if not img_urls:
                 images_rec = (record.get("embed") or {}).get("images") or []
                 for im in images_rec:
+                    cid = ((im.get("image") or {}).get("ref") or {}).get("$link")
+                    if cid:
+                        img_urls.append(
+                            f"https://cdn.bsky.app/img/feed_fullsize/plain/{did}/{cid}"
+                        )
+            if not img_urls:
+                # gallery 的 record 结构：items[] 里的 image.ref.$link
+                items_rec = (record.get("embed") or {}).get("items") or []
+                for im in items_rec:
                     cid = ((im.get("image") or {}).get("ref") or {}).get("$link")
                     if cid:
                         img_urls.append(
@@ -489,6 +568,7 @@ def download_bluesky(
                         text=text,
                         created_at=created_at,
                         page=i if multi else None,
+                        auth_headers=auth_headers or None,
                     )
                 )
             return results
@@ -557,11 +637,16 @@ def enumerate_bluesky_user_media(
                     record = post.get("record") or {}
                     text = record.get("text") or ""
                     created_at = record.get("createdAt") or ""
-                    urls: List[str] = [
-                        iv.get("fullsize")
-                        for iv in ((post.get("embed") or {}).get("images") or [])
-                        if iv.get("fullsize")
-                    ]
+                    # 兼容 embed.images（老）与 embed.items（gallery 新类型）
+                    urls: List[str] = []
+                    embed = post.get("embed") or {}
+                    for iv in embed.get("images") or []:
+                        if iv.get("fullsize"):
+                            urls.append(iv.get("fullsize"))
+                    if not urls:
+                        for iv in embed.get("items") or []:
+                            if iv.get("fullsize"):
+                                urls.append(iv.get("fullsize"))
                     if not urls:
                         # 回退：record 里的 blob ref 拼 CDN
                         did = (post.get("author") or {}).get("did") or ""
@@ -573,6 +658,15 @@ def enumerate_bluesky_user_media(
                                 urls.append(
                                     f"https://cdn.bsky.app/img/feed_fullsize/plain/{did}/{cid}"
                                 )
+                        if not urls:
+                            for im in (record.get("embed") or {}).get("items") or []:
+                                cid = ((im.get("image") or {}).get("ref") or {}).get(
+                                    "$link"
+                                )
+                                if cid and did:
+                                    urls.append(
+                                        f"https://cdn.bsky.app/img/feed_fullsize/plain/{did}/{cid}"
+                                    )
                     multi = len(urls) > 1
                     for i, u in enumerate(urls, 1):
                         if "@" not in u:

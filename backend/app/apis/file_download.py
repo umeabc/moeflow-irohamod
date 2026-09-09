@@ -34,6 +34,17 @@ from app.exceptions.project import ProjectFinishedError
 import datetime
 
 
+def _failure_filename(name) -> str:
+    """从命名信息推断失败图片的文件名（尽力而为，缺省返回空串）。"""
+    if not isinstance(name, dict):
+        return ""
+    text = (name.get("text") or "").strip()
+    if text:
+        # 与下载函数生成的文件名规则尽量一致：取 text 前若干字符
+        return text[:40]
+    return ""
+
+
 def _import_one(project, content, filename, team_project_ids):
     """单张入库：组级 MD5 去重，重复返回 None。"""
     stream = io.BytesIO(content)
@@ -76,6 +87,25 @@ def _run_media_import_task_inner(task, project, settings, download_kind="twitter
     auth = (getattr(settings, "twitter_auth", "") or "").strip()
     ct0 = (getattr(settings, "twitter_ct0", "") or "").strip()
     session = (getattr(settings, "pixiv_session", "") or "").strip()
+    bluesky_auth_headers = None
+    if download_kind == "bluesky":
+        # 非匿名模式：登录一次拿 JWT，下载敏感图时携带（CDN 拒绝时回退 PDS getBlob）
+        from app.services.image_download import _bluesky_auth_base
+
+        try:
+            _, bluesky_auth_headers = _bluesky_auth_base(
+                anonymous=bool(getattr(settings, "bluesky_anonymous", True)),
+                identifier=(getattr(settings, "bluesky_handle", "") or "").strip(),
+                app_password=(
+                    getattr(settings, "bluesky_app_password", "") or ""
+                ).strip(),
+                proxy=proxy,
+                timeout=60,
+            )
+            if not bluesky_auth_headers:
+                bluesky_auth_headers = None
+        except Exception:  # noqa: BLE001 登录失败不影响匿名下载，仅失去敏感图能力
+            bluesky_auth_headers = None
     team_project_ids = [p.id for p in Project.objects(team=project.team).only("id")]
     try:
         for i, (img_url, name) in enumerate(zip(task.urls, task.names)):
@@ -101,6 +131,7 @@ def _run_media_import_task_inner(task, project, settings, download_kind="twitter
                         text=text,
                         created_at=created_at,
                         page=page,
+                        auth_headers=bluesky_auth_headers,
                     )
                 else:
                     content, filename = _download_twitter_pic(
@@ -112,16 +143,49 @@ def _run_media_import_task_inner(task, project, settings, download_kind="twitter
                         page=page,
                         ct0=ct0,
                     )
-            except ImageDownloadError:
+            except ImageDownloadError as e:
                 task.failed += 1
                 task.done = i + 1
+                task.failures.append(
+                    {
+                        "index": i + 1,
+                        "filename": _failure_filename(name),
+                        "step": "download",
+                        "reason": str(e)[:500],
+                    }
+                )
                 task.updated_at = datetime.datetime.utcnow()
                 task.save()
                 continue
-            if _import_one(project, content, filename, team_project_ids) is None:
-                task.duplicated += 1
-            else:
-                task.imported += 1
+            except Exception as e:  # noqa: BLE001 下载阶段兜底（非 ImageDownloadError 的意外异常）
+                task.failed += 1
+                task.done = i + 1
+                task.failures.append(
+                    {
+                        "index": i + 1,
+                        "filename": _failure_filename(name),
+                        "step": "download",
+                        "reason": "下载异常: %s" % str(e)[:500],
+                    }
+                )
+                task.updated_at = datetime.datetime.utcnow()
+                task.save()
+                continue
+            try:
+                if _import_one(project, content, filename, team_project_ids) is None:
+                    task.duplicated += 1
+                else:
+                    task.imported += 1
+            except Exception as e:  # noqa: BLE001 入库失败记录明细
+                task.failed += 1
+                task.failures.append(
+                    {
+                        "index": i + 1,
+                        "filename": filename or _failure_filename(name),
+                        "step": "import",
+                        "reason": "入库失败: %s" % str(e)[:500],
+                    }
+                )
             task.done = i + 1
             task.updated_at = datetime.datetime.utcnow()
             task.save()

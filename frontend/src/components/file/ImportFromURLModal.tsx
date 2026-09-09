@@ -38,6 +38,12 @@ export const ImportFromURLModal: FC<ImportFromURLModalProps> = ({
     imported: number;
     duplicated: number;
     failed: number;
+    failures: Array<{
+      index: number;
+      filename?: string;
+      step?: string;
+      reason?: string;
+    }>;
     finished: boolean;
     error: string;
   } | null>(null);
@@ -76,14 +82,31 @@ export const ImportFromURLModal: FC<ImportFromURLModalProps> = ({
         setProgress(data);
         if (data.finished) {
           stopPolling();
-          message.success(
-            formatMessage(
-              { id: 'file.importFromTwitterUserDone' },
-              { imported: data.imported, dup: data.duplicated },
-            ),
-          );
-          onSaved?.();
-          onClose();
+          if (data.failed > 0 || data.error) {
+            // 有失败：保持 Modal 打开展示失败明细，不自动关闭
+            message.error(
+              formatMessage(
+                { id: 'file.importFromUserFailedDetail' },
+                {
+                  imported: data.imported,
+                  dup: data.duplicated,
+                  failed: data.failed,
+                },
+              ),
+              6,
+            );
+            setSubmitting(false);
+            onSaved?.();
+          } else {
+            message.success(
+              formatMessage(
+                { id: 'file.importFromTwitterUserDone' },
+                { imported: data.imported, dup: data.duplicated },
+              ),
+            );
+            onSaved?.();
+            onClose();
+          }
         }
       } catch {
         // 轮询失败静默，下次再试
@@ -117,6 +140,7 @@ export const ImportFromURLModal: FC<ImportFromURLModalProps> = ({
             imported: 0,
             duplicated: 0,
             failed: 0,
+            failures: [],
             finished: false,
             error: '',
           });
@@ -158,7 +182,10 @@ export const ImportFromURLModal: FC<ImportFromURLModalProps> = ({
         onClose();
       }
     } catch (e) {
-      // 错误提示由 api 默认行为处理
+      // 显示后端返回的具体错误信息（如「获取失败：...」）
+      if (e && typeof (e as { default?: () => void }).default === 'function') {
+        (e as { default: () => void }).default();
+      }
     } finally {
       if (
         (source !== 'twitter_user' &&
@@ -295,6 +322,62 @@ export const ImportFromURLModal: FC<ImportFromURLModalProps> = ({
             </div>
           </div>
         )}
+        {progress &&
+          progress.finished &&
+          (progress.failed > 0 || progress.error) && (
+            <div
+              css={css`
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                padding: 10px;
+                border: 1px solid #ffccc7;
+                background: #fff2f0;
+                border-radius: 4px;
+                max-height: 200px;
+                overflow-y: auto;
+                .ImportFromURLModal__FailTitle {
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #cf1322;
+                }
+                .ImportFromURLModal__FailItem {
+                  font-size: 12px;
+                  color: #555;
+                }
+              `}
+            >
+              <div className="ImportFromURLModal__FailTitle">
+                {formatMessage(
+                  { id: 'file.importFromUserFailedTitle' },
+                  { failed: progress.failed },
+                )}
+              </div>
+              {progress.error && (
+                <div className="ImportFromURLModal__FailItem">
+                  {formatMessage({ id: 'file.importFromUserFailedOverall' })}：
+                  {progress.error}
+                </div>
+              )}
+              {(progress.failures || []).map((f) => (
+                <div key={f.index} className="ImportFromURLModal__FailItem">
+                  <span>
+                    {formatMessage({ id: 'file.importFromUserFailedNo' })}
+                    {f.index}
+                  </span>
+                  {f.filename ? `（${f.filename}）` : ''}
+                  {'：'}
+                  {f.step === 'download'
+                    ? formatMessage({ id: 'file.importFromUserFailedStepDownload' })
+                    : f.step === 'import'
+                      ? formatMessage({ id: 'file.importFromUserFailedStepImport' })
+                      : ''}
+                  {' - '}
+                  {f.reason || ''}
+                </div>
+              ))}
+            </div>
+          )}
         {submitting && !isProgressMode && (
           <div
             css={css`

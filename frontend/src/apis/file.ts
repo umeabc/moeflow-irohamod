@@ -221,6 +221,12 @@ export interface APIFileImportTaskProgress {
   imported: number;
   duplicated: number;
   failed: number;
+  failures: Array<{
+    index: number;
+    filename?: string;
+    step?: string;
+    reason?: string;
+  }>;
   finished: boolean;
   error: string;
 }

@@ -1145,6 +1145,24 @@ file.importFromTwitterUserProgress:
 file.importFromTwitterUserDone:
   zhCn: 已导入 {imported} 张，{dup} 张因重复跳过
   en: Imported {imported}, {dup} skipped as duplicates
+file.importFromUserFailedDetail:
+  zhCn: 获取完成，但 {failed} 张图片获取失败
+  en: Fetch finished, but {failed} image(s) failed
+file.importFromUserFailedTitle:
+  zhCn: 以下 {failed} 张图片获取失败：
+  en: The following {failed} image(s) failed:
+file.importFromUserFailedOverall:
+  zhCn: 整体失败
+  en: Overall failure
+file.importFromUserFailedNo:
+  zhCn: 第
+  en: '#'
+file.importFromUserFailedStepDownload:
+  zhCn: 下载/取图失败
+  en: download/fetch failed
+file.importFromUserFailedStepImport:
+  zhCn: 入库失败
+  en: import failed
 file.importFromBluesky:
   zhCn: 从 Bluesky 获取
   en: Get from Bluesky
