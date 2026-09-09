@@ -132,7 +132,7 @@ CELERY_BROKER_URL = env.get("CELERY_BROKER_URL")
 
 CELERY_BROKER_URL = (
     CELERY_BROKER_URL
-    or f"amqp://{env['RABBITMQ_USER']}:{env['RABBITMQ_PASS']}@moeflow-rabbitmq:5672/{env['RABBITMQ_VHOST_NAME']}"
+    or f"redis://{env.get('REDIS_HOST', 'moeflow-redis')}:{env.get('REDIS_PORT', '6379')}/0"
 )
 CELERY_BACKEND_URL = env.get("CELERY_BACKEND_URL", DB_URI)
 

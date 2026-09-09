@@ -75,7 +75,6 @@ def create_celery(app: Flask) -> celery.Celery:
     created.conf.update({"app_config": app.config})
     created.autodiscover_tasks(
         packages=[
-            "app.tasks.email",
             "app.tasks.file_parse",
             "app.tasks.output_team_projects",
             "app.tasks.output_project",

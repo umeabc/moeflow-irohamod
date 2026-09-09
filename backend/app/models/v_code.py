@@ -17,7 +17,6 @@ from app.exceptions import (
     VCodeNotExistError,
     VCodeWrongError,
 )
-from app.tasks.email import send_email
 from app.constants.v_code import (
     VCodeType,
     VCodeTypes,
@@ -294,37 +293,10 @@ class VCode(Document):
 
     def to_email(self, address: str) -> None:
         """
-        发送验证码到邮箱
-
-        :param address: 邮箱地址
-        :param wait: 等待重发秒数
-        :return:
+        邮箱验证码已停用（注册重构后不再发送真实邮件）。
+        保留方法结构以免调用方报错；仅记录日志，不产生任何 SMTP 副作用。
         """
-        email_subject_dict = {
-            VCodeType.RESET_EMAIL: gettext("重置您的安全邮箱"),
-            VCodeType.CONFIRM_EMAIL: gettext("确认您的安全邮箱"),
-            VCodeType.RESET_PASSWORD: gettext("重置您的密码"),
-        }
-        email_template_dict = {
-            VCodeType.RESET_EMAIL: "email/reset_email",
-            VCodeType.CONFIRM_EMAIL: "email/confirm_email",
-            VCodeType.RESET_PASSWORD: "email/reset_password",
-        }
-        if self.type not in email_subject_dict or self.type not in email_template_dict:
-            raise RuntimeError("VCode({}) don't have email template".format(self.type))
-        if current_app.config["DEBUG"] or current_app.config["TESTING"]:
-            self.to_log("email", address)
-        else:
-            send_email(
-                to_address=address,
-                subject=email_subject_dict[self.type],
-                template=email_template_dict[self.type],
-                template_data={
-                    "code": self.content,
-                    "site_name": current_app.config.get("SITE_NAME"),
-                    "site_url": current_app.config.get("SITE_ORIGIN"),
-                },
-            )
+        self.to_log("email", address)
         self.send_time = datetime.datetime.utcnow()
         self.save()
 
