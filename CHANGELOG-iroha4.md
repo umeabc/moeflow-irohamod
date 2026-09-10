@@ -76,6 +76,23 @@
 - **图片审核列表**：`AdminFileListAPI` 仅返回进行中项目下的图片，已完结项目的图片不参与审核（`file.py`）。
 - 文件：`backend/app/apis/admin_team.py`、`backend/app/apis/file.py`。
 
+### 八、缩略图生成与 R2 性能修复
+
+- **缩略图未生成时显示「缩略图生成中」**：`cover_url`/`safe_check_url` 的存在性检查从「仅 LOCAL_STORAGE」扩展为 `LOCAL_STORAGE`/`R2`；`oss.is_exist` 的 R2 分支支持 `process_name`（此前忽略，导致永远命中原图）。
+- **修复 PNG（RGBA）缩略图生成失败**：R2 分支把缩略图存为 JPEG，RGBA 模式无法写入 JPEG（`OSError: cannot write mode RGBA as JPEG`）——存盘前将 RGBA/P 转 RGB（透明区填白底）。
+- **项目打开慢修复**：修正后 R2 下每个文件的缩略图检查若逐次 `head_object`（单次约 860ms，40 图×2 达 35.7s）会严重拖慢列表。改为 `list_objects_v2` 前缀列举 + 进程内 60s 缓存，实测降至 2.89s。
+- 文件：`backend/app/models/file.py`、`backend/app/services/oss.py`、`backend/app/tasks/thumbnail.py`。
+
+### 九、社交媒体获取的文件名格式
+
+- 统一格式（平台前缀 + 内容/ID + 信息 + P 数）：
+  - X(Twitter)：`Twitter-<推文前40字>-<YYYYMMDDHHMM>-P<n>.ext`
+  - Bluesky：`Bluesky-<推文前40字>-<YYYYMMDDHHMM>-P<n>.ext`
+  - Pixiv：`Pixiv-<PID>-<插画标题>-P<n>.ext`
+- 推文/标题均**去除 # 号与 emoji**；多图按 P1、P2… 编号（单图亦带 P1）。
+- 用户主页抓取（进度式导入）同样传入 P 数与 Pixiv PID。
+- 文件：`backend/app/services/image_download.py`、`backend/app/apis/file_download.py`。
+
 ---
 
 ## iroha9 新增特性（基于 iroha8）

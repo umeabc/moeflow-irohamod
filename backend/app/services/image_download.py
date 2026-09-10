@@ -148,8 +148,8 @@ def _find_image_url(html: str) -> Optional[str]:
     return None
 
 
-# 推文文本中不允许出现在文件名的字符（Windows 非法 + 控制/emoji 等）
-_FILENAME_BAD_RE = re.compile(r'[\\/:*?"<>|\r\n\t：；（）“”‘’「」『』]+')
+# 推文文本中不允许出现在文件名的字符（Windows 非法 + 控制/emoji + # 号等）
+_FILENAME_BAD_RE = re.compile(r'[\\/:*?"<>|\r\n\t：；（）“”‘’「」『』#＃]+')
 
 
 def _clean_tweet_text(text: str) -> str:
@@ -183,13 +183,17 @@ def _parse_tweet_time(created_at: str) -> str:
 
 
 def _build_twitter_filename(
-    text: str, created_at: str, ext: str, page: Optional[int] = None
+    text: str,
+    created_at: str,
+    ext: str,
+    page: Optional[int] = None,
+    prefix: str = "",
 ) -> str:
-    """构造入库文件名：内容前 40 字符 + '-' + 时间 + 扩展名。
+    """构造入库文件名：<平台前缀>-<内容前 40 字符>-<时间戳 YYYYMMDDHHMM>-P<页码>.ext
 
-    例：推文 'Just as Eve was created to be with Adam'（2026-08-24 09:32）
-        -> 'Just as Eve was created to be with Adam-202608240932.jpg'
-    多张图时页码追加在时间戳后：-202608240932P1.jpg、-202608240932P2.jpg ...
+    例：Twitter 推文 'Just as Eve was created to be with Adam'（2026-08-24 09:32）
+        -> 'Twitter-Just as Eve was created to be with Adam-202608240932-P1.jpg'
+    多张图时页码依次为 P1、P2 ...
     """
     clean = _clean_tweet_text(text)
     if not clean:
@@ -198,9 +202,29 @@ def _build_twitter_filename(
     clean = EMOJI_RE.sub("", clean).strip(" .-_") or "twitter"
     stem = clean[:40].rstrip(" .-_") or "twitter"
     ts = _parse_tweet_time(created_at)
-    if ts and page:
-        return f"{stem}-{ts}P{page}{ext}"
-    return f"{stem}-{ts}{ext}" if ts else f"{stem}{ext}"
+    parts = [p for p in (prefix, stem, ts) if p]
+    if page:
+        parts.append(f"P{page}")
+    return "-".join(parts) + ext
+
+
+def _build_pixiv_filename(
+    illust_id: str,
+    title: str,
+    ext: str,
+    page: Optional[int] = None,
+) -> str:
+    """构造 Pixiv 入库文件名：Pixiv-<PID>-<插画标题>-P<页码>.ext
+
+    例：'Pixiv-118567594-夏の思い出-P1.jpg'
+    """
+    clean = _clean_tweet_text(title)
+    clean = EMOJI_RE.sub("", clean).strip(" .-_")
+    stem = clean[:40].rstrip(" .-_") or "untitled"
+    parts = ["Pixiv", str(illust_id), stem]
+    if page:
+        parts.append(f"P{page}")
+    return "-".join(parts) + ext
 
 
 def download_twitter(
@@ -251,7 +275,6 @@ def download_twitter(
                             if m.get("media_url_https")
                         ]
                     if img_urls:
-                        multi = len(img_urls) > 1
                         results = []
                         for i, img in enumerate(img_urls, 1):
                             results.append(
@@ -261,7 +284,7 @@ def download_twitter(
                                     timeout,
                                     text=text,
                                     created_at=created_at,
-                                    page=i if multi else None,
+                                    page=i,
                                 )
                             )
                         return results
@@ -312,9 +335,11 @@ def _download_twitter_pic(
         "image/webp": ".webp",
         "image/gif": ".gif",
     }.get(ctype.split(";")[0].strip().lower(), ".jpg")
-    # 优先用「推文内容前 40 字符 + 时间」命名
+    # 优先用「Twitter-推文内容前 40 字符 + 时间 + P数」命名
     if text:
-        return content, _build_twitter_filename(text, created_at, ct_ext, page=page)
+        return content, _build_twitter_filename(
+            text, created_at, ct_ext, page=page, prefix="Twitter"
+        )
     # 回退：取 twimg 图片 id（形如 .../<id>?format=...），避免重复扩展名
     m = re.search(r"pbs\.twimg\.com/media/([^?/]+)", img_url)
     stem = m.group(1) if m else f"twitter_{os.path.basename(img_url).split('?')[0]}"
@@ -362,7 +387,9 @@ def _bluesky_filename(
 ) -> str:
     """从 CDN URL 末段/命名信息推断文件名（与旧逻辑一致）。"""
     if text:
-        return _build_twitter_filename(text, created_at, ct_ext, page=page)
+        return _build_twitter_filename(
+            text, created_at, ct_ext, page=page, prefix="Bluesky"
+        )
     m = re.search(r"plain/([^/?]+)", img_url)
     stem = m.group(1) if m else f"bluesky_{os.path.basename(img_url).split('?')[0]}"
     stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", stem) or "bluesky"
@@ -415,9 +442,11 @@ def _download_bluesky_pic(
             "image/webp": ".webp",
             "image/gif": ".gif",
         }.get(ctype.split(";")[0].strip().lower(), ".jpg")
-        # 与 Twitter 一致：贴文内容前 40 字符 + 时间戳命名
+        # 与 Twitter 一致：Bluesky-贴文内容前 40 字符 + 时间戳 + P数 命名
         if text:
-            return content, _build_twitter_filename(text, created_at, ct_ext, page=page)
+            return content, _build_twitter_filename(
+                text, created_at, ct_ext, page=page, prefix="Bluesky"
+            )
         return content, _bluesky_filename(img_url, text, created_at, page, ct_ext)
     except RequestException as e:
         logger.error("download bluesky pic failed: %s", e)
@@ -555,7 +584,6 @@ def download_bluesky(
             if not img_urls:
                 raise ImageDownloadError(gettext("该贴文中未找到图片"))
             # CDN 默认可能返回 webp（系统不支持 webp 入库），用 @jpeg 强制输出 JPEG 原图
-            multi = len(img_urls) > 1
             results = []
             for i, img_url in enumerate(img_urls, 1):
                 if "@" not in img_url:
@@ -567,7 +595,7 @@ def download_bluesky(
                         timeout,
                         text=text,
                         created_at=created_at,
-                        page=i if multi else None,
+                        page=i,
                         auth_headers=auth_headers or None,
                     )
                 )
@@ -667,11 +695,10 @@ def enumerate_bluesky_user_media(
                                     urls.append(
                                         f"https://cdn.bsky.app/img/feed_fullsize/plain/{did}/{cid}"
                                     )
-                    multi = len(urls) > 1
                     for i, u in enumerate(urls, 1):
                         if "@" not in u:
                             u = u + "@jpeg"
-                        results.append((u, text, created_at, i if multi else None))
+                        results.append((u, text, created_at, i))
                 cursor = data.get("cursor") or ""
                 if not cursor:
                     break
@@ -691,6 +718,7 @@ def _download_pixiv_pic(
     text: str = "",
     created_at: str = "",
     page: Optional[int] = None,
+    illust_id: str = "",
 ) -> Tuple[bytes, str]:
     # i.pximg.net 必须带 Referer，否则 403
     headers = {"User-Agent": UA, "Referer": "https://www.pixiv.net/"}
@@ -714,9 +742,11 @@ def _download_pixiv_pic(
         "image/webp": ".webp",
         "image/gif": ".gif",
     }.get(ctype.split(";")[0].strip().lower(), ".jpg")
-    # 与 Twitter/Bluesky 一致：作品标题前 40 字符 + 时间戳命名
+    # Pixiv：PID-标题-P数 命名
     if text:
-        return content, _build_twitter_filename(text, created_at, ct_ext, page=page)
+        return content, _build_pixiv_filename(illust_id, text, ct_ext, page=page)
+    if illust_id:
+        return content, _build_pixiv_filename(illust_id, "", ct_ext, page=page)
     # 回退：取 URL 末段原始文件名（如 118567594_p0.jpg）
     stem = os.path.basename(img_url.split("?")[0])
     stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", stem) or "pixiv"
@@ -788,7 +818,6 @@ def download_pixiv(
                             urls = [pg["urls"]["original"] for pg in pages]
             if not urls:
                 raise ImageDownloadError(gettext("该作品未找到原图"))
-            multi = len(urls) > 1
             results = []
             for i, img_url in enumerate(urls, 1):
                 results.append(
@@ -799,7 +828,8 @@ def download_pixiv(
                         session,
                         text=title,
                         created_at=created_at,
-                        page=i if multi else None,
+                        page=i,
+                        illust_id=str(illust_id),
                     )
                 )
             return results
@@ -814,10 +844,11 @@ def enumerate_pixiv_user_media(
     proxy: str = "",
     timeout: int = 60,
     max_illusts: int = 500,
-) -> List[Tuple[str, str, str]]:
+) -> List[Tuple[str, str, str, str, int]]:
     """枚举 Pixiv 用户全部作品图片 URL（不下载）。
 
-    返回 [(original_url, title, created_at)]，供进度式导入使用。
+    返回 [(original_url, title, created_at, illust_id, page)]，page 为作品内页码
+    （1 起），供进度式导入使用。
     流程：解析用户 URL 拿 uid → ajax/user/<uid> 拿用户名 →
     ajax/user/<uid>/profile/all 拿全部作品 ID → 对每个作品 ID 复用
     ajax/illust/<id> 逻辑拿原图 URL（多页调 pages 接口展开）。
@@ -860,7 +891,7 @@ def enumerate_pixiv_user_media(
             if len(illust_ids) > max_illusts:
                 illust_ids = illust_ids[:max_illusts]
             # 3. 逐作品拿原图 URL（复用单作品逻辑：ajax/illust/<id>，多页调 pages）
-            results: List[Tuple[str, str, str]] = []
+            results: List[Tuple[str, str, str, str, int]] = []
             for illust_id in illust_ids:
                 try:
                     ir = s.get(
@@ -891,8 +922,8 @@ def enumerate_pixiv_user_media(
                             ]
                             if pages:
                                 urls = [pg["urls"]["original"] for pg in pages]
-                    for u in urls:
-                        results.append((u, title, created_at))
+                    for pi, u in enumerate(urls, 1):
+                        results.append((u, title, created_at, str(illust_id), pi))
                 except (RequestException, ValueError):
                     continue  # 单个作品失败跳过
             if not results:
@@ -1092,10 +1123,11 @@ def enumerate_twitter_user_media(
     proxy: str = "",
     timeout: int = 30,
     max_pages: int = 40,
-) -> List[Tuple[str, str, str]]:
+) -> List[Tuple[str, str, str, int]]:
     """枚举 X 用户媒体时间线中的全部图片 URL（不下载）。
 
-    返回 [(media_url_https, tweet_text, created_at)]，供进度式导入使用。
+    返回 [(media_url_https, tweet_text, created_at, page)]，page 为同推文多图的
+    P 编号（1 起），供进度式导入使用。
     """
     user_url = (user_url or "").strip()
     screen_name = _extract_twitter_username(user_url)
@@ -1128,7 +1160,14 @@ def enumerate_twitter_user_media(
                 break
         if not results:
             raise ImageDownloadError(gettext("该用户的媒体时间线中未找到图片"))
-        return results
+        # 同推文（text+created_at 相同）的多图按 1、2... 编号作为 P 数
+        page_counter: dict = {}
+        out: List[Tuple[str, str, str, int]] = []
+        for u, t, c in results:
+            key = (t, c)
+            page_counter[key] = page_counter.get(key, 0) + 1
+            out.append((u, t, c, page_counter[key]))
+        return out
     except RequestException as e:
         logger.error("enumerate twitter user media failed: %s", e)
         raise ImageDownloadError(gettext("获取用户媒体失败，请检查网络/代理或 auth/ct0 是否有效"))
@@ -1173,7 +1212,10 @@ def download_twitter_user_media(
                 page_items, next_cursor = _twitter_parse_user_media_page(r.json())
             if not page_items and not next_cursor:
                 break
+            page_counter: dict = {}
             for img_url, text, created_at in page_items:
+                key = (text, created_at)
+                page_counter[key] = page_counter.get(key, 0) + 1
                 try:
                     results.append(
                         _download_twitter_pic(
@@ -1182,6 +1224,7 @@ def download_twitter_user_media(
                             timeout,
                             text=text,
                             created_at=created_at,
+                            page=page_counter[key],
                             ct0=ct0,
                         )
                     )

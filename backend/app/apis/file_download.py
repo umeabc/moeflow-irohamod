@@ -113,6 +113,7 @@ def _run_media_import_task_inner(task, project, settings, download_kind="twitter
                 text = (name or {}).get("text") or ""
                 created_at = (name or {}).get("created_at") or ""
                 page = (name or {}).get("page")
+                illust_id = (name or {}).get("illust_id") or ""
                 if download_kind == "pixiv":
                     content, filename = _download_pixiv_pic(
                         img_url,
@@ -122,6 +123,7 @@ def _run_media_import_task_inner(task, project, settings, download_kind="twitter
                         text=text,
                         created_at=created_at,
                         page=page,
+                        illust_id=illust_id,
                     )
                 elif download_kind == "bluesky":
                     content, filename = _download_bluesky_pic(
@@ -242,8 +244,10 @@ class ProjectFileFromURLAPI(MoeAPIView):
             task = MediaImportTask(
                 project=project,
                 task_id=str(project.id) + "_" + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f"),
-                urls=[u for u, _, _ in items],
-                names=[{"text": t, "created_at": c} for _, t, c in items],
+                urls=[u for u, _, _, _ in items],
+                names=[
+                    {"text": t, "created_at": c, "page": p} for _, t, c, p in items
+                ],
                 total=len(items),
             ).save()
             # 后台线程下载（进程内线程，任务状态存 Mongo 供轮询）
@@ -270,8 +274,11 @@ class ProjectFileFromURLAPI(MoeAPIView):
             task = MediaImportTask(
                 project=project,
                 task_id=str(project.id) + "_" + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f"),
-                urls=[u for u, _, _ in items],
-                names=[{"text": t, "created_at": c} for _, t, c in items],
+                urls=[u for u, _, _, _, _ in items],
+                names=[
+                    {"text": t, "created_at": c, "illust_id": iid, "page": p}
+                    for _, t, c, iid, p in items
+                ],
                 total=len(items),
             ).save()
             t = threading.Thread(
