@@ -777,7 +777,8 @@ class File(Document):
             self.parse()
         if (
             self.type == FileType.IMAGE
-            and current_app.config["STORAGE_TYPE"] == StorageType.LOCAL_STORAGE
+            and current_app.config["STORAGE_TYPE"]
+            in (StorageType.LOCAL_STORAGE, StorageType.R2)
         ):
             create_thumbnail(str(self.id))
         self.reload()

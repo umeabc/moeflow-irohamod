@@ -76,6 +76,14 @@ OSS_VIA_CDN = True if env.get("OSS_VIA_CDN", "") == "True" else False
 CDN_URL_KEY_A = env.get("CDN_URL_KEY_A", "")
 CDN_URL_KEY_B = env.get("CDN_URL_KEY_B", "")  # 备 KEY 暂未用到
 # -----------
+# Cloudflare R2 配置（STORAGE_TYPE=R2 时使用）
+# R2 提供 S3 兼容 API；公开桶可直接拼 URL 访问（STORAGE_DOMAIN 填 r2.dev 外链或自定义域名）
+# -----------
+R2_ACCOUNT_ID = env.get("R2_ACCOUNT_ID", "")  # 形如 <account_id>，用于拼 endpoint
+R2_ACCESS_KEY_ID = env.get("R2_ACCESS_KEY_ID", "")
+R2_SECRET_ACCESS_KEY = env.get("R2_SECRET_ACCESS_KEY", "")
+R2_BUCKET_NAME = env.get("R2_BUCKET_NAME", "")
+# -----------
 # 内容安全
 # -----------
 SAFE_ACCESS_KEY_ID = "-"

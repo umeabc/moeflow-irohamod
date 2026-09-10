@@ -75,6 +75,21 @@ class OSS:
             self.oss_domain = config["STORAGE_DOMAIN"]
             self.oss_via_cdn = config["OSS_VIA_CDN"]
             self.cdn_url_key = config["CDN_URL_KEY_A"]
+        elif self.storage_type == StorageType.R2:
+            # Cloudflare R2：S3 兼容 API（AWS SigV4），用 boto3 访问
+            import boto3
+
+            self.s3 = boto3.client(
+                "s3",
+                endpoint_url=f"https://{config['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
+                aws_access_key_id=config["R2_ACCESS_KEY_ID"],
+                aws_secret_access_key=config["R2_SECRET_ACCESS_KEY"],
+                region_name="auto",
+            )
+            self.bucket_name = config["R2_BUCKET_NAME"]
+            self.oss_domain = config["STORAGE_DOMAIN"]
+            self.oss_via_cdn = False
+            self.cdn_url_key = ""
         else:
             from app import STORAGE_PATH
 
@@ -96,6 +111,22 @@ class OSS:
                 file,
                 headers=headers,
                 progress_callback=progress_callback,
+            )
+        elif self.storage_type == StorageType.R2:
+            if isinstance(file, str):
+                # 字符串内容按 utf-8 写入
+                return self.s3.put_object(
+                    Bucket=self.bucket_name,
+                    Key=path + filename,
+                    Body=file.encode("utf-8"),
+                )
+            if hasattr(file, "read") and not isinstance(file, (BufferedReader, FileIO)):
+                # 任意可读流（BytesIO 等）读入内存
+                file = file.read()
+            return self.s3.put_object(
+                Bucket=self.bucket_name,
+                Key=path + filename,
+                Body=file,
             )
         else:
             folder_path = os.path.join(self.STORAGE_PATH, path)
@@ -124,6 +155,12 @@ class OSS:
                 self.bucket.get_object_to_file(path + filename, local_path)
             else:
                 return self.bucket.get_object(path + filename)
+        elif self.storage_type == StorageType.R2:
+            if local_path:
+                self.s3.download_file(self.bucket_name, path + filename, local_path)
+            else:
+                obj = self.s3.get_object(Bucket=self.bucket_name, Key=path + filename)
+                return BytesIO(obj["Body"].read())
         else:
             folder_path = os.path.join(self.STORAGE_PATH, path)
             file_path = os.path.join(folder_path, filename)
@@ -140,6 +177,12 @@ class OSS:
         """检查文件是否存在"""
         if self.storage_type == StorageType.OSS:
             return self.bucket.object_exists(path + filename)
+        elif self.storage_type == StorageType.R2:
+            try:
+                self.s3.head_object(Bucket=self.bucket_name, Key=path + filename)
+                return True
+            except Exception:  # noqa: BLE001 404 / 403 等均视为不存在
+                return False
         else:
             if os.path.isabs(path):
                 return os.path.isfile(
@@ -172,6 +215,15 @@ class OSS:
             else:
                 result = self.bucket.delete_object(path + filename)
             return result
+        elif self.storage_type == StorageType.R2:
+            if isinstance(filename, list):
+                if len(filename) == 0:
+                    return
+                return self.s3.delete_objects(
+                    Bucket=self.bucket_name,
+                    Delete={"Objects": [{"Key": path + name} for name in filename]},
+                )
+            return self.s3.delete_object(Bucket=self.bucket_name, Key=path + filename)
         else:
             folder_path = os.path.join(self.STORAGE_PATH, path)
             # 如果给予列表，则批量删除
@@ -185,7 +237,21 @@ class OSS:
 
     def rmdir(self, path):
         """（批量）删除文件夹，仅本地储存"""
-        if self.storage_type == StorageType.LOCAL_STORAGE:
+        if self.storage_type == StorageType.R2:
+            # R2 无目录概念：按前缀列出并批量删除
+            try:
+                paginator = self.s3.get_paginator("list_objects_v2")
+                keys = []
+                for page in paginator.paginate(Bucket=self.bucket_name, Prefix=path):
+                    for obj in page.get("Contents", []):
+                        keys.append({"Key": obj["Key"]})
+                if keys:
+                    self.s3.delete_objects(
+                        Bucket=self.bucket_name, Delete={"Objects": keys}
+                    )
+            except Exception:  # noqa: BLE001 删除失败不阻断
+                pass
+        elif self.storage_type == StorageType.LOCAL_STORAGE:
             # 如果给予列表，则批量删除
             if isinstance(path, list):
                 for p in path:
@@ -203,6 +269,9 @@ class OSS:
                 return self._sign_cdn_url(*args, **kwargs)
             else:
                 return self._sign_oss_url(*args, **kwargs)
+        elif self.storage_type == StorageType.R2:
+            # R2 公开桶：无需签名，直接拼 URL（与 LOCAL_STORAGE 一致）
+            return self._sign_local_url(*args, **kwargs)
         else:
             return self._sign_local_url(*args, **kwargs)
 
