@@ -9,7 +9,7 @@ import shutil
 import time
 import hashlib
 import logging
-from typing import Union
+from typing import Union, Optional
 from urllib import parse
 
 import oss2
@@ -78,23 +78,158 @@ class OSS:
         elif self.storage_type == StorageType.R2:
             # Cloudflare R2：S3 兼容 API（AWS SigV4），用 boto3 访问
             import boto3
+            import json as _json
 
-            self.s3 = boto3.client(
-                "s3",
-                endpoint_url=f"https://{config['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
-                aws_access_key_id=config["R2_ACCESS_KEY_ID"],
-                aws_secret_access_key=config["R2_SECRET_ACCESS_KEY"],
-                region_name="auto",
-            )
-            self.bucket_name = config["R2_BUCKET_NAME"]
-            self.oss_domain = config["STORAGE_DOMAIN"]
+            self.r2_cf_api_token = config.get("R2_CF_API_TOKEN", "")
+            self.r2_buckets: list[dict] = []
+            buckets_json = config.get("R2_BUCKETS", "") or ""
+            if buckets_json.strip():
+                try:
+                    items = _json.loads(buckets_json)
+                except Exception:  # noqa: BLE001 JSON 解析失败则回退单桶
+                    items = []
+                for item in items or []:
+                    conf = self._make_r2_conf(
+                        account_id=item.get("account_id") or "",
+                        access_key_id=item.get("access_key_id") or "",
+                        secret_access_key=item.get("secret_access_key") or "",
+                        bucket=item.get("bucket") or "",
+                        domain=item.get("domain") or "",
+                        quota_gb=float(item.get("quota_gb") or 10),
+                        cf_api_token=item.get("cf_api_token") or self.r2_cf_api_token,
+                    )
+                    if conf:
+                        self.r2_buckets.append(conf)
+            # 回退：单桶配置
+            if not self.r2_buckets:
+                conf = self._make_r2_conf(
+                    account_id=config.get("R2_ACCOUNT_ID", ""),
+                    access_key_id=config.get("R2_ACCESS_KEY_ID", ""),
+                    secret_access_key=config.get("R2_SECRET_ACCESS_KEY", ""),
+                    bucket=config.get("R2_BUCKET_NAME", ""),
+                    domain=config.get("STORAGE_DOMAIN", ""),
+                    quota_gb=10,
+                    cf_api_token=self.r2_cf_api_token,
+                )
+                if conf:
+                    self.r2_buckets.append(conf)
             self.oss_via_cdn = False
             self.cdn_url_key = ""
+            if self.r2_buckets:
+                self.oss_domain = self.r2_buckets[0]["domain"]
         else:
             from app import STORAGE_PATH
 
             self.oss_domain = config["STORAGE_DOMAIN"]
             self.STORAGE_PATH = STORAGE_PATH
+
+    @staticmethod
+    def _make_r2_conf(
+        *,
+        account_id: str,
+        access_key_id: str,
+        secret_access_key: str,
+        bucket: str,
+        domain: str,
+        quota_gb: float,
+        cf_api_token: str,
+    ) -> Optional[dict]:
+        """构造单个 R2 桶配置（含 boto3 client）。缺必要字段返回 None。"""
+        import boto3
+
+        if not (account_id and access_key_id and secret_access_key and bucket):
+            return None
+        client = boto3.client(
+            "s3",
+            endpoint_url=f"https://{account_id}.r2.cloudflarestorage.com",
+            aws_access_key_id=access_key_id,
+            aws_secret_access_key=secret_access_key,
+            region_name="auto",
+        )
+        return {
+            "name": bucket,
+            "account_id": account_id,
+            "access_key_id": access_key_id,
+            "secret_access_key": secret_access_key,
+            "bucket": bucket,
+            "domain": domain or f"https://{bucket}.r2.dev/",
+            "quota_gb": quota_gb,
+            "quota_bytes": quota_gb * 1024 * 1024 * 1024,
+            "client": client,
+            "cf_api_token": cf_api_token,
+        }
+
+    def _r2_conf_by_bucket(self, bucket_name: Optional[str] = None) -> Optional[dict]:
+        """按桶名取配置；None 或空返回第一个（默认桶）。"""
+        if not self.r2_buckets:
+            return None
+        if bucket_name:
+            for b in self.r2_buckets:
+                if b["bucket"] == bucket_name:
+                    return b
+        return self.r2_buckets[0]
+
+    def default_bucket_name(self) -> str:
+        """返回默认（第一个）桶名；非 R2 或无配置返回空串。"""
+        if self.r2_buckets:
+            return self.r2_buckets[0]["bucket"]
+        return ""
+
+    def select_r2_bucket(self) -> str:
+        """按剩余容量选择桶（剩余最大）。单桶直接返回。"""
+        if not self.r2_buckets:
+            return ""
+        if len(self.r2_buckets) == 1:
+            return self.r2_buckets[0]["bucket"]
+        best = None
+        best_free = -1
+        for b in self.r2_buckets:
+            used = self._get_bucket_used_bytes(b)
+            free = b["quota_bytes"] - used
+            if free > best_free:
+                best_free = free
+                best = b
+        return best["bucket"] if best else self.r2_buckets[0]["bucket"]
+
+    def _get_bucket_used_bytes(self, conf: dict) -> int:
+        """查询单桶已用字节数：优先 CF API，失败回退 0（无法获取时视为配额未用）。"""
+        token = conf.get("cf_api_token") or ""
+        if token:
+            try:
+                import requests as _req
+
+                url = (
+                    f"https://api.cloudflare.com/client/v4/accounts/"
+                    f"{conf['account_id']}/r2/buckets/{conf['bucket']}/usage"
+                )
+                r = _req.get(
+                    url,
+                    headers={"Authorization": f"Bearer {token}"},
+                    timeout=15,
+                )
+                if r.status_code == 200:
+                    data = (r.json() or {}).get("result") or {}
+                    return int(data.get("payloadSize") or 0)
+            except Exception as e:  # noqa: BLE001
+                logging.warning("R2 usage query failed for %s: %s", conf["bucket"], e)
+        return 0
+
+    def list_buckets_usage(self) -> list[dict]:
+        """返回所有桶用量概览（admin 用）。"""
+        result = []
+        for b in self.r2_buckets or []:
+            used = self._get_bucket_used_bytes(b)
+            result.append(
+                {
+                    "name": b["bucket"],
+                    "account_id": b["account_id"],
+                    "quota_bytes": b["quota_bytes"],
+                    "used_bytes": used,
+                    "free_bytes": max(b["quota_bytes"] - used, 0),
+                    "domain": b["domain"],
+                }
+            )
+        return result
 
     def upload(
         self,
@@ -103,31 +238,43 @@ class OSS:
         file: Union[str, BufferedReader, FileIO],
         headers=None,
         progress_callback=None,
+        bucket_name: Optional[str] = None,
     ):
-        """上传文件"""
+        """上传文件。
+
+        R2 多桶模式下 bucket_name=None 时按剩余容量自动选桶；
+        返回 (result, bucket)——bucket 为实际写入的桶名（供调用方记录到 File.storage_bucket）。
+        OSS / LOCAL_STORAGE 返回 (result, None)。
+        """
         if self.storage_type == StorageType.OSS:
-            return self.bucket.put_object(
-                path + filename,
-                file,
-                headers=headers,
-                progress_callback=progress_callback,
+            return (
+                self.bucket.put_object(
+                    path + filename,
+                    file,
+                    headers=headers,
+                    progress_callback=progress_callback,
+                ),
+                None,
             )
         elif self.storage_type == StorageType.R2:
-            if isinstance(file, str):
-                # 字符串内容按 utf-8 写入
-                return self.s3.put_object(
-                    Bucket=self.bucket_name,
-                    Key=path + filename,
-                    Body=file.encode("utf-8"),
-                )
-            if hasattr(file, "read") and not isinstance(file, (BufferedReader, FileIO)):
-                # 任意可读流（BytesIO 等）读入内存
-                file = file.read()
-            return self.s3.put_object(
-                Bucket=self.bucket_name,
+            conf = self._r2_conf_by_bucket(bucket_name)
+            if conf is None:
+                raise ValueError("R2 bucket 未配置")
+            if bucket_name is None:
+                # 多桶负载均衡：按剩余容量选桶
+                bucket = self.select_r2_bucket()
+                conf = self._r2_conf_by_bucket(bucket)
+            body = file
+            if isinstance(body, str):
+                body = body.encode("utf-8")
+            elif hasattr(body, "read") and not isinstance(body, (BufferedReader, FileIO)):
+                body = body.read()
+            result = conf["client"].put_object(
+                Bucket=conf["bucket"],
                 Key=path + filename,
-                Body=file,
+                Body=body,
             )
+            return result, conf["bucket"]
         else:
             folder_path = os.path.join(self.STORAGE_PATH, path)
             os.makedirs(folder_path, exist_ok=True)
@@ -146,8 +293,9 @@ class OSS:
                 with open(os.path.join(folder_path, filename), "wb") as saved_file:
                     saved_file.write(file.read())
         logging.debug("saved file : %s / %s", folder_path, filename)
+        return None, None
 
-    def download(self, path, filename: str, /, *, local_path=None):
+    def download(self, path, filename: str, /, *, local_path=None, bucket_name: Optional[str] = None):
         """下载文件"""
         # 如果提供local_path，则下载到本地
         if self.storage_type == StorageType.OSS:
@@ -156,10 +304,15 @@ class OSS:
             else:
                 return self.bucket.get_object(path + filename)
         elif self.storage_type == StorageType.R2:
+            conf = self._r2_conf_by_bucket(bucket_name)
+            if conf is None:
+                raise ValueError("R2 bucket 未配置")
             if local_path:
-                self.s3.download_file(self.bucket_name, path + filename, local_path)
+                conf["client"].download_file(conf["bucket"], path + filename, local_path)
             else:
-                obj = self.s3.get_object(Bucket=self.bucket_name, Key=path + filename)
+                obj = conf["client"].get_object(
+                    Bucket=conf["bucket"], Key=path + filename
+                )
                 return BytesIO(obj["Body"].read())
         else:
             folder_path = os.path.join(self.STORAGE_PATH, path)
@@ -173,13 +326,18 @@ class OSS:
                 with open(file_path, "rb") as file:
                     return BytesIO(file.read())
 
-    def is_exist(self, path, filename, process_name=None):
+    def is_exist(self, path, filename, process_name=None, bucket_name: Optional[str] = None):
         """检查文件是否存在"""
         if self.storage_type == StorageType.OSS:
             return self.bucket.object_exists(path + filename)
         elif self.storage_type == StorageType.R2:
+            conf = self._r2_conf_by_bucket(bucket_name)
+            if conf is None:
+                return False
             try:
-                self.s3.head_object(Bucket=self.bucket_name, Key=path + filename)
+                conf["client"].head_object(
+                    Bucket=conf["bucket"], Key=path + filename
+                )
                 return True
             except Exception:  # noqa: BLE001 404 / 403 等均视为不存在
                 return False
@@ -202,7 +360,7 @@ class OSS:
                     )
                 )
 
-    def delete(self, path, filename: Union[str, list[str]]):
+    def delete(self, path, filename: Union[str, list[str]], bucket_name: Optional[str] = None):
         """（批量）删除文件"""
         if self.storage_type == StorageType.OSS:
             # 如果给予列表，则批量删除
@@ -216,14 +374,19 @@ class OSS:
                 result = self.bucket.delete_object(path + filename)
             return result
         elif self.storage_type == StorageType.R2:
+            conf = self._r2_conf_by_bucket(bucket_name)
+            if conf is None:
+                return None
             if isinstance(filename, list):
                 if len(filename) == 0:
                     return
-                return self.s3.delete_objects(
-                    Bucket=self.bucket_name,
+                return conf["client"].delete_objects(
+                    Bucket=conf["bucket"],
                     Delete={"Objects": [{"Key": path + name} for name in filename]},
                 )
-            return self.s3.delete_object(Bucket=self.bucket_name, Key=path + filename)
+            return conf["client"].delete_object(
+                Bucket=conf["bucket"], Key=path + filename
+            )
         else:
             folder_path = os.path.join(self.STORAGE_PATH, path)
             # 如果给予列表，则批量删除
@@ -235,19 +398,24 @@ class OSS:
                 if self.is_exist(folder_path, filename):
                     os.remove(os.path.join(folder_path, filename))
 
-    def rmdir(self, path):
+    def rmdir(self, path, bucket_name: Optional[str] = None):
         """（批量）删除文件夹，仅本地储存"""
         if self.storage_type == StorageType.R2:
             # R2 无目录概念：按前缀列出并批量删除
+            conf = self._r2_conf_by_bucket(bucket_name)
+            if conf is None:
+                return
             try:
-                paginator = self.s3.get_paginator("list_objects_v2")
+                paginator = conf["client"].get_paginator("list_objects_v2")
                 keys = []
-                for page in paginator.paginate(Bucket=self.bucket_name, Prefix=path):
+                for page in paginator.paginate(
+                    Bucket=conf["bucket"], Prefix=path
+                ):
                     for obj in page.get("Contents", []):
                         keys.append({"Key": obj["Key"]})
                 if keys:
-                    self.s3.delete_objects(
-                        Bucket=self.bucket_name, Delete={"Objects": keys}
+                    conf["client"].delete_objects(
+                        Bucket=conf["bucket"], Delete={"Objects": keys}
                     )
             except Exception:  # noqa: BLE001 删除失败不阻断
                 pass
@@ -271,6 +439,12 @@ class OSS:
                 return self._sign_oss_url(*args, **kwargs)
         elif self.storage_type == StorageType.R2:
             # R2 公开桶：无需签名，直接拼 URL（与 LOCAL_STORAGE 一致）
+            # 多桶时按 bucket_name 使用对应桶的公网域名
+            bucket_name = kwargs.get("bucket_name")
+            if bucket_name:
+                conf = self._r2_conf_by_bucket(bucket_name)
+                if conf:
+                    kwargs["oss_domain"] = conf["domain"]
             return self._sign_local_url(*args, **kwargs)
         else:
             return self._sign_local_url(*args, **kwargs)
@@ -284,8 +458,10 @@ class OSS:
         process_name=None,
         **kwargs,
     ):
+        if oss_domain is None:
+            oss_domain = self.oss_domain
         return (
-            self.oss_domain
+            oss_domain
             + path
             + (process_name + "-" if process_name is not None else "")
             + filename

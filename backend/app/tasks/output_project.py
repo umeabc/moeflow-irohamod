@@ -126,6 +126,7 @@ def output_project_task(output_id):
                     txt_download_name,
                     txt,
                     headers={"Content-Disposition": 'attachment;"'.encode("utf8")},
+                    bucket_name=oss.default_bucket_name() or None,
                 )
         elif type == OutputTypes.ALL:
             output.update(status=OutputStatus.DOWNLOADING)
@@ -150,6 +151,7 @@ def output_project_task(output_id):
                         oss_file_prefix,
                         file.save_name,
                         local_path=file_path,
+                        bucket_name=file.storage_bucket or None,
                     )
                 except oss2.exceptions.NoSuchKey:
                     errors += (
@@ -201,6 +203,7 @@ def output_project_task(output_id):
                     zip_download_name,
                     zip_file,
                     headers={"Content-Disposition": 'attachment;"'.encode("utf8")},
+                    bucket_name=oss.default_bucket_name() or None,
                 )
     except Exception:
         output.update(status=OutputStatus.ERROR)

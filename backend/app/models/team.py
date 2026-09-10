@@ -318,7 +318,9 @@ class Team(GroupMixin, Document):
         # 没有设置头像时返回默认团队头像
         if self._avatar:
             return oss.sign_url(
-                current_app.config["OSS_TEAM_AVATAR_PREFIX"], self._avatar
+                current_app.config["OSS_TEAM_AVATAR_PREFIX"],
+                self._avatar,
+                bucket_name=oss.default_bucket_name() or None,
             )
         return current_app.config.get("DEFAULT_TEAM_AVATAR", None)
 

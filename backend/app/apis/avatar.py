@@ -57,13 +57,19 @@ class AvatarAPI(MoeAPIView):
         if owner_type != "user" and owner_id is None:
             raise RequestDataWrongError(lazy_gettext("缺少id"))
         filename = str(ObjectId()) + ".jpg"
-        oss.upload(avatar_prefix, filename, file)
+        oss.upload(
+            avatar_prefix,
+            filename,
+            file,
+            bucket_name=oss.default_bucket_name() or None,
+        )
         # 删除旧的头像
         if avatar_owner.has_avatar():
             try:
                 oss.delete(
                     avatar_prefix,
                     avatar_owner._avatar,
+                    bucket_name=oss.default_bucket_name() or None,
                 )
             except oss2.exceptions.NoSuchKey as e:
                 logger.error(e)

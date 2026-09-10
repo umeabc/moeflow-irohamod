@@ -1513,6 +1513,36 @@ admin.storageUsed:
 admin.storageFree:
   zhCn: '剩余 {space}'
   en: '{space} free'
+admin.r2StorageUsed:
+  zhCn: R2 总存储占用
+  en: R2 Total Storage Used
+admin.r2StorageDetail:
+  zhCn: 已用 {used} / 总计 {total}
+  en: '{used} used / {total} total'
+admin.r2Storage:
+  zhCn: R2存储概览
+  en: R2 Storage Overview
+admin.r2BucketName:
+  zhCn: 桶名称
+  en: Bucket
+admin.r2BucketUrl:
+  zhCn: 公共开发URL
+  en: Public URL
+admin.r2BucketQuota:
+  zhCn: 容量
+  en: Capacity
+admin.r2BucketUsed:
+  zhCn: 已用
+  en: Used
+admin.r2BucketFree:
+  zhCn: 剩余（免费额度）
+  en: 'Free (quota)'
+admin.r2BucketUsagePercent:
+  zhCn: 使用率
+  en: Usage
+admin.r2NoBuckets:
+  zhCn: 无 R2 桶配置
+  en: No R2 bucket configured
 admin.open:
   zhCn: 打开
   en: Open
@@ -1540,6 +1570,9 @@ admin.pageDescription.inviteCodes:
 admin.pageDescription.teamManage:
   zhCn: 查看全站团队及其资源统计。
   en: View all teams and their resource statistics.
+admin.pageDescription.r2Storage:
+  zhCn: 查看所有 R2 桶的容量与剩余（免费额度）。
+  en: View capacity and free quota of all R2 buckets.
 admin.title:
   zhCn: 管理员中心
   en: Admin Center

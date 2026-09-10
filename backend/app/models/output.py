@@ -60,6 +60,7 @@ class Output(Document):
             oss.delete(
                 current_app.config["OSS_OUTPUT_PREFIX"],
                 [str(output.id) + "/" + output.file_name for output in outputs],
+                bucket_name=oss.default_bucket_name() or None,
             )
             oss.rmdir(
                 [
@@ -68,6 +69,7 @@ class Output(Document):
                     )
                     for output in outputs
                 ],
+                bucket_name=oss.default_bucket_name() or None,
             )
         except oss2.exceptions.NoSuchKey as e:
             logger.error(e)
@@ -79,6 +81,7 @@ class Output(Document):
             oss.delete(
                 current_app.config["OSS_OUTPUT_PREFIX"] + str(self.id) + "/",
                 self.file_name,
+                bucket_name=oss.default_bucket_name() or None,
             )
         except oss2.exceptions.NoSuchKey as e:
             logger.error(e)
@@ -113,5 +116,6 @@ class Output(Document):
                 current_app.config["OSS_OUTPUT_PREFIX"] + str(self.id) + "/",
                 self.file_name,
                 download=True,
+                bucket_name=oss.default_bucket_name() or None,
             )
         return data

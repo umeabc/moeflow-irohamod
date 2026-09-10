@@ -162,7 +162,13 @@ class BrandAssetAPI(MoeAPIView):
                 mimetype="image/png",
                 max_age=3600,
             )
-        return redirect(oss.sign_url(BRAND_ASSET_PREFIX, name))
+        return redirect(
+            oss.sign_url(
+                BRAND_ASSET_PREFIX,
+                name,
+                bucket_name=oss.default_bucket_name() or None,
+            )
+        )
 
 
 class AdminBrandAssetAPI(MoeAPIView):
@@ -198,7 +204,12 @@ class AdminBrandAssetAPI(MoeAPIView):
             return {"message": gettext("仅支持 png/jpg/jpeg/webp/gif 图片")}, 400
         save_name = str(ObjectId()) + ext
         try:
-            oss.upload(BRAND_ASSET_PREFIX, save_name, file)
+            oss.upload(
+                BRAND_ASSET_PREFIX,
+                save_name,
+                file,
+                bucket_name=oss.default_bucket_name() or None,
+            )
         except Exception as e:
             logger.error("upload brand asset failed: %s", e)
             return {"message": gettext("图片上传失败")}, 500
@@ -209,7 +220,11 @@ class AdminBrandAssetAPI(MoeAPIView):
         # 删除旧文件（尽力而为，失败不阻塞）
         if old_name:
             try:
-                oss.delete(BRAND_ASSET_PREFIX, old_name)
+                oss.delete(
+                    BRAND_ASSET_PREFIX,
+                    old_name,
+                    bucket_name=oss.default_bucket_name() or None,
+                )
             except Exception as e:
                 logger.error("delete old brand asset failed: %s", e)
         return {
@@ -236,11 +251,20 @@ class StorageUsageAPI(MoeAPIView):
             "used": 10522601472,
             "free": 21471334400,
         }
+        R2 模式返回多桶总容量/占用/剩余（免费额度总和）。
         """
         from app import STORAGE_PATH, app_config
 
         if app_config["STORAGE_TYPE"] == StorageType.LOCAL_STORAGE:
             total, used, free = shutil.disk_usage(STORAGE_PATH)
+        elif app_config["STORAGE_TYPE"] == StorageType.R2:
+            # R2：多桶总容量/占用/剩余（免费额度）
+            from app import oss
+
+            buckets = oss.list_buckets_usage()
+            total = sum(b["quota_bytes"] for b in buckets)
+            used = sum(b["used_bytes"] for b in buckets)
+            free = sum(b["free_bytes"] for b in buckets)
         else:
             total = used = free = 0
         return {
@@ -249,6 +273,33 @@ class StorageUsageAPI(MoeAPIView):
             "used": used,
             "free": free,
         }
+
+
+class R2BucketsUsageAPI(MoeAPIView):
+    """admin：R2 多桶存储概览（桶名称 / 容量 / 剩余 / 已用）"""
+
+    @admin_required
+    def get(self):
+        """
+        @api {get} /v1/admin/r2-buckets 获取 R2 各桶存储概览
+        @apiVersion 1.0.0
+        @apiName getR2BucketsUsage
+        @apiGroup SiteSetting
+        @apiUse APIHeader
+        @apiUse TokenHeader
+
+        @apiSuccessExample {json} 返回示例
+        {
+            "buckets": [
+                {"name": "moeflow-r2-1", "quota_bytes": 10737418240, "used_bytes": 123456, "free_bytes": 10737294784, "domain": "https://..."}
+            ]
+        }
+        """
+        from app import oss
+
+        if oss.storage_type != StorageType.R2:
+            return {"buckets": []}
+        return {"buckets": oss.list_buckets_usage()}
 
 
 class SystemStatusAPI(MoeAPIView):

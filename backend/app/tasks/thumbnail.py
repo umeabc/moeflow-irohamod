@@ -42,7 +42,8 @@ def create_thumbnail_task(image_id: str):
         return f"失败：创建缩略图失败，不支持的存储模式 {image_id}"
     try:
         image = File.by_id(image_id)
-        if not oss.is_exist(oss_file_prefix, image.save_name):
+        image_bucket = image.storage_bucket or None
+        if not oss.is_exist(oss_file_prefix, image.save_name, bucket_name=image_bucket):
             return f"失败：创建缩略图失败，原图文件未找到 {image_id}"
         cover_name = celery.conf.app_config["OSS_PROCESS_COVER_NAME"] + "-" + image.save_name
         safe_check_name = (
@@ -62,22 +63,30 @@ def create_thumbnail_task(image_id: str):
             thumbnail2.thumbnail((400, 500))
             thumbnail2.save(safe_check_image_path)
             thumbnail2.close()
-        else:  # R2：内存生成缩略图后上传
+        else:  # R2：内存生成缩略图后上传（与原图同桶）
             from io import BytesIO
 
-            buf = BytesIO(oss.download(oss_file_prefix, image.save_name).read())
+            buf = BytesIO(
+                oss.download(
+                    oss_file_prefix, image.save_name, bucket_name=image_bucket
+                ).read()
+            )
             original = Image.open(buf)
             cover = ImageOps.fit(original, (180, 140), Image.ANTIALIAS)
             cover_buf = BytesIO()
             cover.save(cover_buf, format="JPEG", quality=85)
             cover_buf.seek(0)
-            oss.upload(oss_file_prefix, cover_name, cover_buf)
+            oss.upload(
+                oss_file_prefix, cover_name, cover_buf, bucket_name=image_bucket
+            )
             safe = original.copy()
             safe.thumbnail((400, 500))
             safe_buf = BytesIO()
             safe.save(safe_buf, format="JPEG", quality=85)
             safe_buf.seek(0)
-            oss.upload(oss_file_prefix, safe_check_name, safe_buf)
+            oss.upload(
+                oss_file_prefix, safe_check_name, safe_buf, bucket_name=image_bucket
+            )
             original.close()
     except FileNotExistError:
         return f"失败：创建缩略图失败，原图不存在 {image_id}"

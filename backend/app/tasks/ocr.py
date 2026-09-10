@@ -446,7 +446,9 @@ def merge_and_ocr(parsing_images, /, *, parse_alone=False):
                     try:
                         image_file = BytesIO(
                             oss.download(
-                                oss_file_prefix, downloading_image.save_name
+                                oss_file_prefix,
+                                downloading_image.save_name,
+                                bucket_name=downloading_image.storage_bucket or None,
                             ).read()
                         )
                         image_files.append(image_file)

@@ -13,6 +13,7 @@ import { AdminSiteSetting } from '@/components/admin/AdminSiteSetting';
 import { AdminInviteCode } from '@/components/admin/AdminInviteCode';
 import { AdminTeam } from '@/components/admin/AdminTeam';
 import { AdminNoticeList } from '@/components/admin/AdminNoticeList';
+import { AdminR2Storage } from '@/components/admin/AdminR2Storage';
 import { routes } from './routes';
 
 /** 管理员页面 */
@@ -57,6 +58,9 @@ const Admin: FC = () => {
         </Route>
         <Route path={`${path}/team-manage`}>
           {page('admin.teamManage', 'admin.pageDescription.teamManage', <AdminTeam />)}
+        </Route>
+        <Route path={`${path}/r2-storage`}>
+          {page('admin.r2Storage', 'admin.pageDescription.r2Storage', <AdminR2Storage />)}
         </Route>
         <Redirect to={routes.admin} />
       </Switch>

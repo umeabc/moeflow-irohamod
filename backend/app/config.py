@@ -83,6 +83,12 @@ R2_ACCOUNT_ID = env.get("R2_ACCOUNT_ID", "")  # 形如 <account_id>，用于拼 
 R2_ACCESS_KEY_ID = env.get("R2_ACCESS_KEY_ID", "")
 R2_SECRET_ACCESS_KEY = env.get("R2_SECRET_ACCESS_KEY", "")
 R2_BUCKET_NAME = env.get("R2_BUCKET_NAME", "")
+# 多账号多桶：JSON 数组，每项含 account_id / access_key_id / secret_access_key / bucket / domain / quota_gb
+# 设置后优先于上面单桶配置。示例：
+# R2_BUCKETS='[{"account_id":"a1","access_key_id":"k1","secret_access_key":"s1","bucket":"b1","domain":"https://b1.example.com/","quota_gb":10},{"account_id":"a2","access_key_id":"k2","secret_access_key":"s2","bucket":"b2","domain":"https://b2.example.com/","quota_gb":10}]'
+R2_BUCKETS = env.get("R2_BUCKETS", "")
+# Cloudflare API Token（查 R2 桶用量 /r2/buckets/{bucket}/usage 用，需 R2 Read 权限）
+R2_CF_API_TOKEN = env.get("R2_CF_API_TOKEN", "")
 # -----------
 # 内容安全
 # -----------

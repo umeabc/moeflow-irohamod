@@ -35,6 +35,7 @@ from app.apis.site_setting import (
     BrandAssetAPI,
     CustomMessagesAPI,
     HomepageAPI,
+    R2BucketsUsageAPI,
     SiteSettingAPI,
     StorageUsageAPI,
     SystemStatusAPI,
@@ -524,6 +525,11 @@ admin.add_url_rule(
     "/storage-usage",
     methods=["GET", "OPTIONS"],
     view_func=StorageUsageAPI.as_view("admin_storage_usage"),
+)
+admin.add_url_rule(
+    "/r2-buckets",
+    methods=["GET", "OPTIONS"],
+    view_func=R2BucketsUsageAPI.as_view("admin_r2_buckets"),
 )
 admin.add_url_rule(
     "/system-status",

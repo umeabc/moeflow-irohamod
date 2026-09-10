@@ -66,7 +66,9 @@ def parse_text_task(file_id, old_revision_id=None):
         parse_start_time=datetime.datetime.utcnow(),
     )
     # 下载文件，并获取内容
-    text_file = oss.download(oss_file_prefix, file.save_name)
+    text_file = oss.download(
+        oss_file_prefix, file.save_name, bucket_name=file.storage_bucket or None
+    )
     try:
         text = text_file.read()
     except Exception as e:
@@ -171,7 +173,11 @@ def safe_task(self, file_id):
     tasks = [
         {
             "dataId": str(uuid.uuid1()),
-            "url": oss.sign_url(oss_file_prefix, file.save_name),
+            "url": oss.sign_url(
+                oss_file_prefix,
+                file.save_name,
+                bucket_name=file.storage_bucket or None,
+            ),
             "time": datetime.datetime.utcnow().microsecond,
         }
     ]
@@ -268,7 +274,11 @@ def safe_result_task(self, file_id):
                             # 确认黄图直接屏蔽
                             elif suggestion == "block":
                                 # 删除oss上文件
-                                oss.delete(oss_file_prefix, file.save_name)
+                                oss.delete(
+                                    oss_file_prefix,
+                                    file.save_name,
+                                    bucket_name=file.storage_bucket or None,
+                                )
                                 file.update(
                                     save_name="",
                                     file_not_exist_reason=FileNotExistReason.BLOCK,  # noqa: E501

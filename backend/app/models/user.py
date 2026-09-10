@@ -223,7 +223,9 @@ class User(Document):
     def avatar(self):
         if self._avatar:
             return oss.sign_url(
-                current_app.config["OSS_USER_AVATAR_PREFIX"], self._avatar
+                current_app.config["OSS_USER_AVATAR_PREFIX"],
+                self._avatar,
+                bucket_name=oss.default_bucket_name() or None,
             )
         return current_app.config.get("DEFAULT_USER_AVATAR", None)
 

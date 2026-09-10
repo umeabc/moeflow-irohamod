@@ -180,6 +180,7 @@ class File(Document):
 
     # == 源文件相关 ==
     save_name = StringField(db_field="sa", default="")  # 上传的文件名
+    storage_bucket = StringField(db_field="sb", default="")  # 所在存储桶（多桶 R2 时记录；空=单桶/默认）
     md5 = StringField(db_field="md", default="")  # md5
 
     # 文件大小，单位KB，需要使用inc_cache更新
@@ -681,7 +682,11 @@ class File(Document):
     def url(self):
         if not self.save_name:
             return ""
-        return oss.sign_url(current_app.config["OSS_FILE_PREFIX"], self.save_name)
+        return oss.sign_url(
+            current_app.config["OSS_FILE_PREFIX"],
+            self.save_name,
+            bucket_name=self.storage_bucket or None,
+        )
 
     @property
     def cover_url(self):
@@ -699,6 +704,7 @@ class File(Document):
             current_app.config["OSS_FILE_PREFIX"],
             self.save_name,
             process_name=current_app.config["OSS_PROCESS_COVER_NAME"],
+            bucket_name=self.storage_bucket or None,
         )
 
     @property
@@ -717,6 +723,7 @@ class File(Document):
             current_app.config["OSS_FILE_PREFIX"],
             self.save_name,
             process_name=current_app.config["OSS_PROCESS_SAFE_CHECK_NAME"],
+            bucket_name=self.storage_bucket or None,
         )
 
     @only_file
@@ -730,7 +737,10 @@ class File(Document):
         if not self.save_name:
             raise SourceFileNotExist(self.file_not_exist_reason)
         return oss.download(
-            current_app.config["OSS_FILE_PREFIX"], self.save_name, local_path=local_path
+            current_app.config["OSS_FILE_PREFIX"],
+            self.save_name,
+            local_path=local_path,
+            bucket_name=self.storage_bucket or None,
         )
 
     @only_file
@@ -756,12 +766,15 @@ class File(Document):
         md5 = get_file_md5(real_file)
         # 文件大小
         file_size = math.ceil(get_file_size(real_file))  # 获取文件大小，去掉小数
-        # 将文件上传到OSS
-        oss_result = oss.upload(
+        # 将文件上传到OSS/R2（R2 多桶自动选桶，返回实际桶名）
+        oss_result, storage_bucket = oss.upload(
             current_app.config["OSS_FILE_PREFIX"], save_name, real_file
         )
-        # 替换原存储名和md5
-        self.update(save_name=save_name, md5=md5)
+        # 替换原存储名和md5（R2 多桶时记录所在桶）
+        update_kwargs = {"save_name": save_name, "md5": md5}
+        if storage_bucket:
+            update_kwargs["storage_bucket"] = storage_bucket
+        self.update(**update_kwargs)
         # 更新文件大小，非激活修订版只更新自身文件大小
         if self.activated:
             self.inc_cache("file_size", file_size - self.file_size)
@@ -811,6 +824,7 @@ class File(Document):
                     + "-"
                     + self.save_name,
                 ],
+                bucket_name=self.storage_bucket or None,
             )
             # 初始化对象，并更新缓存计数
             if init_obj:

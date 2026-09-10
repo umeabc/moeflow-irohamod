@@ -63,6 +63,22 @@ const getStorageUsage = ({ configs }: { configs?: AxiosRequestConfig }) => {
   });
 };
 
+export interface APIR2BucketUsage {
+  name: string;
+  accountId: string;
+  quotaBytes: number;
+  usedBytes: number;
+  freeBytes: number;
+  domain: string;
+}
+const getR2Buckets = ({ configs }: { configs?: AxiosRequestConfig }) => {
+  return request<{ buckets: APIR2BucketUsage[] }>({
+    method: 'GET',
+    url: `/v1/admin/r2-buckets`,
+    ...configs,
+  });
+};
+
 export interface APISystemStatus {
   cpuPercent: number | null;
   memoryPercent: number | null;
@@ -156,6 +172,7 @@ export default {
   editSiteSetting,
   getHomepage,
   getStorageUsage,
+  getR2Buckets,
   getSystemStatus,
   getCustomMessages,
   saveCustomMessages,

@@ -1,13 +1,15 @@
 import { css } from '@emotion/core';
 import classNames from 'classnames';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Link, useLocation } from 'react-router-dom';
 import { AppState } from '@/store';
 import { useIntl } from 'react-intl';
 import { Avatar, Icon } from '@/components';
+import { api } from '@/apis';
 import { FC } from '@/interfaces';
 import { routes } from '@/pages/routes';
+import { toLowerCamelCase } from '@/utils';
 import style from '@/style';
 
 interface AdminSidebarProps {
@@ -51,6 +53,16 @@ const AdminNavItem: FC<AdminNavItemProps> = ({
 export const AdminSidebar: FC<AdminSidebarProps> = ({ onNavigate }) => {
   const { formatMessage } = useIntl();
   const user = useSelector((state: AppState) => state.user);
+  const [isR2Storage, setIsR2Storage] = useState(false);
+  useEffect(() => {
+    api.siteSetting
+      .getStorageUsage({})
+      .then((result) => {
+        const data = toLowerCamelCase<{ storageType?: string }>(result.data);
+        setIsR2Storage(data?.storageType === 'R2');
+      })
+      .catch(() => {});
+  }, []);
   return (
     <div
       className="AdminSidebar"
@@ -184,6 +196,14 @@ export const AdminSidebar: FC<AdminSidebarProps> = ({ onNavigate }) => {
             label={formatMessage({ id: 'admin.teamManage' })}
             onNavigate={onNavigate}
           />
+          {isR2Storage && (
+            <AdminNavItem
+              to={`${routes.admin}/r2-storage`}
+              icon="cloud"
+              label={formatMessage({ id: 'admin.r2Storage' })}
+              onNavigate={onNavigate}
+            />
+          )}
         </div>
         <div className="AdminSidebar__Section">
           <div className="AdminSidebar__SectionTitle">
