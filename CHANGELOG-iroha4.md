@@ -60,6 +60,22 @@
 - 语义：7 天内的导出全部保留；7 天前的保留最近 3 个兜底，其余删除（兼顾按天保留与数量上限）。
 - 文件：`backend/app/apis/project.py`（单项目导出）、`backend/app/tasks/output_team_projects.py`（团队导出）。
 
+### 六、R2 多账号多桶负载均衡 + 存储概览
+
+- **多账号多桶**：`STORAGE_TYPE=R2` 支持多账号多桶配置（`R2_BUCKETS` JSON 数组，每桶含 account_id / access_key / secret / bucket / domain / quota_gb / cf_api_token；不设则回退单桶 `R2_*` 配置）。
+- **按剩余容量路由**：上传时 `select_r2_bucket()` 选择剩余容量最大的桶；`File` 新增 `storage_bucket` 字段记录所在桶，读/删/URL 生成按桶定位；非 File 资源（头像/导出/品牌图）固定默认桶。
+- **用量查询**：`R2_CF_API_TOKEN`（每桶可独立）调 Cloudflare `GET /accounts/{id}/r2/buckets/{bucket}/usage` 拿真实用量。
+- **admin 存储空间**：R2 模式下 `/v1/admin/storage-usage` 返回多桶**总容量/占用/剩余**汇总；前端 dashboard 卡片显示「R2 总存储占用」（LOCAL 模式仍显示剩余容量）。
+- **R2 存储概览页**：新增 `GET /v1/admin/r2-buckets`（各桶 name/容量/已用/剩余/公共URL）；前端新增 `AdminR2Storage` 页 + 侧边栏入口（**仅 R2 模式显示**），表格列：桶名称 / 公共开发URL / 容量 / 已用 / 剩余（免费额度）/ 使用率。
+- **修复**：`_sign_local_url` 忽略传入 `oss_domain`（多桶下 URL 域名串桶）。
+- 文件：`backend/app/services/oss.py`、`backend/app/config.py`、`backend/app/models/file.py`、`backend/app/apis/site_setting.py`、`backend/app/apis/urls.py`、`backend/app/tasks/thumbnail.py` 等；前端 `AdminR2Storage.tsx`、`AdminDashboard.tsx`、`AdminSidebar.tsx`、`apis/siteSetting.ts`、`locales/*`。
+
+### 七、已完结项目的图片不计入统计与审核
+
+- **dashboard 图片数**：只统计**进行中（WORKING）**项目的图片，已完结（FINISHED）等非进行中项目的图片不计入总数（`admin_team.py`）。
+- **图片审核列表**：`AdminFileListAPI` 仅返回进行中项目下的图片，已完结项目的图片不参与审核（`file.py`）。
+- 文件：`backend/app/apis/admin_team.py`、`backend/app/apis/file.py`。
+
 ---
 
 ## iroha9 新增特性（基于 iroha8）

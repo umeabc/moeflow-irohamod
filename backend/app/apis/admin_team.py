@@ -5,6 +5,7 @@ from app.core.views import MoeAPIView
 from app.decorators.auth import admin_required
 from app.decorators.url import fetch_model
 from app.constants.file import FileType
+from app.constants.project import ProjectStatus
 from app.models.team import Team
 from app.models.project import Project, ProjectSet
 from app.models.file import File
@@ -19,9 +20,18 @@ class AdminTeamListAPI(MoeAPIView):
             project_ids = [
                 project.id for project in Project.objects(team=team).only("id")
             ]
+            # 图片总数只统计进行中（WORKING）项目，已完结项目的图片不计入
+            working_project_ids = [
+                project.id
+                for project in Project.objects(
+                    team=team, status=ProjectStatus.WORKING
+                ).only("id")
+            ]
             image_count = (
-                File.objects(project__in=project_ids, type=FileType.IMAGE).count()
-                if project_ids
+                File.objects(
+                    project__in=working_project_ids, type=FileType.IMAGE
+                ).count()
+                if working_project_ids
                 else 0
             )
             result.append(

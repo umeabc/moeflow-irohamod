@@ -472,6 +472,12 @@ class AdminFileListAPI(MoeAPIView):
         db_query = {}
         if query["safe_status"]:
             db_query["safe_status__in"] = query["safe_status"]
+        # 仅显示进行中（WORKING）项目下的图片，已完结项目的图片不参与审核
+        active_project_ids = [
+            proj.id
+            for proj in Project.objects(status=ProjectStatus.WORKING).only("id")
+        ]
+        db_query["project__in"] = active_project_ids
         files = (
             File.objects(**db_query).skip(p.skip).limit(p.limit).order_by("-edit_time")
         )
