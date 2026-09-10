@@ -692,12 +692,14 @@ class File(Document):
     def cover_url(self):
         if not self.save_name:
             return ""
-        if current_app.config[
-            "STORAGE_TYPE"
-        ] == StorageType.LOCAL_STORAGE and not oss.is_exist(
+        if current_app.config["STORAGE_TYPE"] in (
+            StorageType.LOCAL_STORAGE,
+            StorageType.R2,
+        ) and not oss.is_exist(
             current_app.config["OSS_FILE_PREFIX"],
             self.save_name,
             process_name=current_app.config["OSS_PROCESS_COVER_NAME"],
+            bucket_name=self.storage_bucket or None,
         ):
             return "generating"
         return oss.sign_url(
@@ -711,12 +713,14 @@ class File(Document):
     def safe_check_url(self):
         if not self.save_name:
             return ""
-        if current_app.config[
-            "STORAGE_TYPE"
-        ] == StorageType.LOCAL_STORAGE and not oss.is_exist(
+        if current_app.config["STORAGE_TYPE"] in (
+            StorageType.LOCAL_STORAGE,
+            StorageType.R2,
+        ) and not oss.is_exist(
             current_app.config["OSS_FILE_PREFIX"],
             self.save_name,
             process_name=current_app.config["OSS_PROCESS_SAFE_CHECK_NAME"],
+            bucket_name=self.storage_bucket or None,
         ):
             return "generating"
         return oss.sign_url(

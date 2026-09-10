@@ -326,6 +326,32 @@ class OSS:
                 with open(file_path, "rb") as file:
                     return BytesIO(file.read())
 
+    def _r2_list_keys(self, conf: dict, prefix: str) -> set:
+        """列出某桶某前缀下所有对象 key（进程内缓存，TTL 60s）。
+
+        用于替代逐文件 head_object（R2 head 单次约数百 ms，列表渲染会累加到数十秒）。
+        """
+        import time as _time
+
+        cache_key = conf["bucket"] + "|" + prefix
+        if not hasattr(self, "_r2_keys_cache"):
+            self._r2_keys_cache = {}
+        cached = self._r2_keys_cache.get(cache_key)
+        now = _time.time()
+        if cached and now - cached["ts"] < 60:
+            return cached["keys"]
+        keys: set = set()
+        try:
+            paginator = conf["client"].get_paginator("list_objects_v2")
+            for page in paginator.paginate(Bucket=conf["bucket"], Prefix=prefix):
+                for obj in page.get("Contents", []):
+                    keys.add(obj["Key"])
+        except Exception as e:  # noqa: BLE001 列举失败则回退（不缓存）
+            logging.warning("R2 list_objects failed for %s: %s", conf["bucket"], e)
+            return keys
+        self._r2_keys_cache[cache_key] = {"keys": keys, "ts": now}
+        return keys
+
     def is_exist(self, path, filename, process_name=None, bucket_name: Optional[str] = None):
         """检查文件是否存在"""
         if self.storage_type == StorageType.OSS:
@@ -334,13 +360,13 @@ class OSS:
             conf = self._r2_conf_by_bucket(bucket_name)
             if conf is None:
                 return False
-            try:
-                conf["client"].head_object(
-                    Bucket=conf["bucket"], Key=path + filename
-                )
-                return True
-            except Exception:  # noqa: BLE001 404 / 403 等均视为不存在
-                return False
+            key = (
+                path
+                + (process_name + "-" if process_name is not None else "")
+                + filename
+            )
+            # 用前缀列举 + 内存缓存判断，避免逐文件 head_object 的网络往返
+            return key in self._r2_list_keys(conf, path)
         else:
             if os.path.isabs(path):
                 return os.path.isfile(

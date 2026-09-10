@@ -72,9 +72,20 @@ def create_thumbnail_task(image_id: str):
                 ).read()
             )
             original = Image.open(buf)
+
+            def _to_rgb(img):
+                """JPEG 不支持 RGBA/P 模式，需转为 RGB（透明区填白底）。"""
+                if img.mode == "RGBA":
+                    bg = Image.new("RGB", img.size, (255, 255, 255))
+                    bg.paste(img, mask=img.split()[3])
+                    return bg
+                if img.mode not in ("RGB", "L"):
+                    return img.convert("RGB")
+                return img
+
             cover = ImageOps.fit(original, (180, 140), Image.ANTIALIAS)
             cover_buf = BytesIO()
-            cover.save(cover_buf, format="JPEG", quality=85)
+            _to_rgb(cover).convert("RGB").save(cover_buf, format="JPEG", quality=85)
             cover_buf.seek(0)
             oss.upload(
                 oss_file_prefix, cover_name, cover_buf, bucket_name=image_bucket
@@ -82,7 +93,7 @@ def create_thumbnail_task(image_id: str):
             safe = original.copy()
             safe.thumbnail((400, 500))
             safe_buf = BytesIO()
-            safe.save(safe_buf, format="JPEG", quality=85)
+            _to_rgb(safe).convert("RGB").save(safe_buf, format="JPEG", quality=85)
             safe_buf.seek(0)
             oss.upload(
                 oss_file_prefix, safe_check_name, safe_buf, bucket_name=image_bucket
