@@ -50,10 +50,21 @@ def output_team_projects_task(team_id, current_user_id):
                 < datetime.timedelta(seconds=OUTPUT_WAIT_SECONDS)
             ):
                 continue
-            # 删除三个导出之前的
-            old_targets = target.outputs().skip(2)
-            Output.delete_real_files(old_targets)
-            old_targets.delete()
+            # 删除导出：保留「最近 3 个」且「最近 7 天」内的
+            # 删除条件：7 天以前 且 不在最近 3 个内
+            cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+            latest_three_ids = {
+                str(o.id) for o in target.outputs().limit(3)
+            }
+            old_targets = [
+                o
+                for o in target.outputs().filter(create_time__lt=cutoff)
+                if str(o.id) not in latest_three_ids
+            ]
+            if old_targets:
+                Output.delete_real_files(old_targets)
+                for o in old_targets:
+                    o.delete()
             # 创建新target
             output = Output.create(
                 project=project,

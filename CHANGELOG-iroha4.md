@@ -37,6 +37,29 @@
 - 站点设置：`SiteSetting` 新增 `bluesky_anonymous` / `bluesky_handle` / `bluesky_password`（后端模型 + 校验 + `AdminSiteSetting.tsx` 配置 UI）。
 - 前端：`FileList.tsx` 下拉新增两来源、`ImportFromURLModal.tsx` 支持、`apis/siteSetting.ts` 新配置项、i18n 新增 `file.importFromBlueskyUser*` / `file.importFromPixivUser*` / `admin.bluesky*` 文案。
 
+### 三、社交媒体获取失败明细（失败提示）
+
+- **导入任务失败明细**：`MediaImportTask` 新增 `failures` 字段（`ListField(dict)`），后台线程逐张记录失败信息 `{index, filename, step, reason}`——`step` 区分 `download`（下载/取图失败）与 `import`（入库失败），`reason` 为具体错误；`to_progress()` 返回失败列表。
+- **前端**：进度式导入完成时若存在失败，保持弹窗并展示失败明细（第几张、文件名、下载或入库、原因），不再静默；一次性导入失败调用 `e.default()` 显示后端具体错误（修复了此前「获取失败无任何提示」）。
+- **Bluesky 敏感图下载增强**：`_download_bluesky_pic` 支持携带登录 JWT（`auth_headers`），CDN 拒绝（401/403/404）时回退 PDS `com.atproto.sync.getBlob` 获取原图；进度式导入（`_run_media_import_task_inner`）非匿名时预登录传 JWT。
+- **Bluesky gallery 兼容**：适配 `app.bsky.embed.gallery` 画廊新类型（`embed.items[]` 与 `record.embed.items[]` 的图片解析），修复成人/多图帖报「该贴文中未找到图片」。
+- 文件：`backend/app/models/media_import_task.py`、`backend/app/apis/file_download.py`、`backend/app/services/image_download.py`、`frontend/src/components/file/ImportFromURLModal.tsx`、`frontend/src/apis/file.ts`、`frontend/src/locales/*`；i18n 新增 `file.importFromUserFailed*` 系列。
+
+### 四、Cloudflare R2 存储支持（STORAGE_TYPE=R2）
+
+- **新增存储后端 R2**：`StorageType.R2`；用 **boto3**（S3 兼容 API）对接 Cloudflare R2，`endpoint_url = https://<account_id>.r2.cloudflarestorage.com`。
+- **公开桶免签名直读**：`sign_url` 在 R2 模式直接拼 `STORAGE_DOMAIN + path + filename`（`https://<自定义域名或 pub-*.r2.dev>/...`），无需 URL 签名；配合 R2 自定义域名（如 `r2-ririna.de5.net`）即可公开访问。
+- **缩略图**：`create_thumbnail_task` 支持 R2——内存生成 `cover-*` / `safe-check-*`（Pillow）后上传 R2（OSS 模式的 `x-oss-process` 实时处理在 R2 不可用）。
+- **修复**：`file.py` 上传后触发缩略图的条件原仅 `LOCAL_STORAGE`，漏掉 R2 导致 R2 模式 cover 不生成；改为 `in (LOCAL_STORAGE, R2)`。
+- **配置**：`.env-backend` 新增 `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET_NAME`；`STORAGE_TYPE=R2`、`STORAGE_DOMAIN` 填 R2 公网域名。
+- 文件：`backend/app/constants/storage.py`、`backend/app/config.py`、`backend/app/services/oss.py`、`backend/app/tasks/thumbnail.py`、`backend/app/models/file.py`、`backend/requirements.txt`（新增 `boto3==1.34.140`）。
+
+### 五、导出保留策略（最近 3 次 + 最近 7 天）
+
+- **调整**：导出清理逻辑从「仅保留最近 3 个」（`target.outputs().skip(2)` 删除更早）改为「**保留最近 3 个 + 最近 7 天**」——删除「7 天以前 且 不在最近 3 个内」的导出。
+- 语义：7 天内的导出全部保留；7 天前的保留最近 3 个兜底，其余删除（兼顾按天保留与数量上限）。
+- 文件：`backend/app/apis/project.py`（单项目导出）、`backend/app/tasks/output_team_projects.py`（团队导出）。
+
 ---
 
 ## iroha9 新增特性（基于 iroha8）
