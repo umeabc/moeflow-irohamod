@@ -38,7 +38,11 @@ def create_thumbnail_task(image_id: str):
     connect_db(celery.conf.app_config)
     oss.init(celery.conf.app_config)
     storage_type = celery.conf.app_config["STORAGE_TYPE"]
-    if storage_type not in (StorageType.LOCAL_STORAGE, StorageType.R2):
+    if storage_type not in (
+        StorageType.LOCAL_STORAGE,
+        StorageType.R2,
+        StorageType.REMOTE_HTTP,
+    ):
         return f"失败：创建缩略图失败，不支持的存储模式 {image_id}"
     try:
         image = File.by_id(image_id)
@@ -63,7 +67,7 @@ def create_thumbnail_task(image_id: str):
             thumbnail2.thumbnail((400, 500))
             thumbnail2.save(safe_check_image_path)
             thumbnail2.close()
-        else:  # R2：内存生成缩略图后上传（与原图同桶）
+        else:  # R2 / REMOTE_HTTP：内存生成缩略图后上传（与原文件同前缀）
             from io import BytesIO
 
             buf = BytesIO(

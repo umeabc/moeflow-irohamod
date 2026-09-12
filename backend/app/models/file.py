@@ -695,6 +695,7 @@ class File(Document):
         if current_app.config["STORAGE_TYPE"] in (
             StorageType.LOCAL_STORAGE,
             StorageType.R2,
+            StorageType.REMOTE_HTTP,
         ) and not oss.is_exist(
             current_app.config["OSS_FILE_PREFIX"],
             self.save_name,
@@ -716,6 +717,7 @@ class File(Document):
         if current_app.config["STORAGE_TYPE"] in (
             StorageType.LOCAL_STORAGE,
             StorageType.R2,
+            StorageType.REMOTE_HTTP,
         ) and not oss.is_exist(
             current_app.config["OSS_FILE_PREFIX"],
             self.save_name,
@@ -795,7 +797,7 @@ class File(Document):
         if (
             self.type == FileType.IMAGE
             and current_app.config["STORAGE_TYPE"]
-            in (StorageType.LOCAL_STORAGE, StorageType.R2)
+            in (StorageType.LOCAL_STORAGE, StorageType.R2, StorageType.REMOTE_HTTP)
         ):
             create_thumbnail(str(self.id))
         self.reload()

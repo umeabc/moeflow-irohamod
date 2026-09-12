@@ -265,6 +265,17 @@ class StorageUsageAPI(MoeAPIView):
             total = sum(b["quota_bytes"] for b in buckets)
             used = sum(b["used_bytes"] for b in buckets)
             free = sum(b["free_bytes"] for b in buckets)
+        elif app_config["STORAGE_TYPE"] == StorageType.REMOTE_HTTP:
+            # REMOTE_HTTP：imgstore /stats 返回实际占用
+            from app import oss
+
+            try:
+                stats = oss.remote_stats()
+                used = int(stats.get("bytes", 0))
+            except Exception:  # noqa: BLE001
+                used = 0
+            total = used
+            free = 0
         else:
             total = used = free = 0
         return {

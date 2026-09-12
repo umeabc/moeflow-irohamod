@@ -16,6 +16,8 @@ import oss2
 from oss2 import to_string
 from oss2.exceptions import NoSuchKey
 
+import requests
+
 from app.constants.storage import StorageType
 
 logger = logging.getLogger(__name__)
@@ -117,6 +119,13 @@ class OSS:
             self.cdn_url_key = ""
             if self.r2_buckets:
                 self.oss_domain = self.r2_buckets[0]["domain"]
+        elif self.storage_type == StorageType.REMOTE_HTTP:
+            # 轻量图片存储服务（imgstore）：HTTP API + 外链直读
+            self.remote_base_url = config.get("REMOTE_HTTP_BASE_URL", "").rstrip("/")
+            self.remote_api_key = config.get("REMOTE_HTTP_API_KEY", "")
+            self.oss_domain = config["STORAGE_DOMAIN"]
+            self.oss_via_cdn = False
+            self.cdn_url_key = ""
         else:
             from app import STORAGE_PATH
 
@@ -275,6 +284,21 @@ class OSS:
                 Body=body,
             )
             return result, conf["bucket"]
+        elif self.storage_type == StorageType.REMOTE_HTTP:
+            body = file
+            if isinstance(body, str):
+                body = body.encode("utf-8")
+            elif hasattr(body, "read") and not isinstance(body, (BufferedReader, FileIO)):
+                body = body.read()
+            resp = requests.put(
+                f"{self.remote_base_url}/put/{path}{filename}",
+                data=body,
+                headers={"X-Api-Key": self.remote_api_key},
+                timeout=120,
+            )
+            if resp.status_code not in (200, 201):
+                raise OSError(f"imgstore PUT failed: {resp.status_code} {resp.text[:200]}")
+            return resp.json(), None
         else:
             folder_path = os.path.join(self.STORAGE_PATH, path)
             os.makedirs(folder_path, exist_ok=True)
@@ -314,6 +338,17 @@ class OSS:
                     Bucket=conf["bucket"], Key=path + filename
                 )
                 return BytesIO(obj["Body"].read())
+        elif self.storage_type == StorageType.REMOTE_HTTP:
+            resp = requests.get(
+                f"{self.remote_base_url}/files/{path}{filename}", timeout=120
+            )
+            if resp.status_code != 200:
+                raise NoSuchKey(status=404, headers={}, body={}, details={})
+            if local_path:
+                with open(local_path, "wb") as f:
+                    f.write(resp.content)
+            else:
+                return BytesIO(resp.content)
         else:
             folder_path = os.path.join(self.STORAGE_PATH, path)
             file_path = os.path.join(folder_path, filename)
@@ -352,6 +387,34 @@ class OSS:
         self._r2_keys_cache[cache_key] = {"keys": keys, "ts": now}
         return keys
 
+    def _remote_list_keys(self, prefix: str) -> set:
+        """列出 imgstore 某前缀下所有文件名（进程内缓存，TTL 60s）。
+
+        与 R2 同思路：列表渲染逐文件 HEAD 会累加网络往返，改用一次性 LIST + 缓存。
+        """
+        import time as _time
+
+        if not hasattr(self, "_remote_keys_cache"):
+            self._remote_keys_cache = {}
+        cached = self._remote_keys_cache.get(prefix)
+        now = _time.time()
+        if cached and now - cached["ts"] < 60:
+            return cached["keys"]
+        keys: set = set()
+        try:
+            resp = requests.get(
+                f"{self.remote_base_url}/list/{prefix}",
+                headers={"X-Api-Key": self.remote_api_key},
+                timeout=60,
+            )
+            if resp.status_code == 200:
+                keys = set(resp.json().get("names", []))
+        except Exception as e:  # noqa: BLE001 列举失败则回退（不缓存）
+            logging.warning("imgstore list failed for %s: %s", prefix, e)
+            return keys
+        self._remote_keys_cache[prefix] = {"keys": keys, "ts": now}
+        return keys
+
     def is_exist(self, path, filename, process_name=None, bucket_name: Optional[str] = None):
         """检查文件是否存在"""
         if self.storage_type == StorageType.OSS:
@@ -367,6 +430,13 @@ class OSS:
             )
             # 用前缀列举 + 内存缓存判断，避免逐文件 head_object 的网络往返
             return key in self._r2_list_keys(conf, path)
+        elif self.storage_type == StorageType.REMOTE_HTTP:
+            # imgstore LIST 返回纯文件名（不含前缀）
+            name = (
+                (process_name + "-" if process_name is not None else "")
+                + filename
+            )
+            return name in self._remote_list_keys(path)
         else:
             if os.path.isabs(path):
                 return os.path.isfile(
@@ -413,6 +483,19 @@ class OSS:
             return conf["client"].delete_object(
                 Bucket=conf["bucket"], Key=path + filename
             )
+        elif self.storage_type == StorageType.REMOTE_HTTP:
+            names = filename if isinstance(filename, list) else [filename]
+            for name in names:
+                resp = requests.delete(
+                    f"{self.remote_base_url}/delete/{path}{name}",
+                    headers={"X-Api-Key": self.remote_api_key},
+                    timeout=60,
+                )
+                if resp.status_code not in (200, 204, 404):
+                    logging.warning("imgstore DELETE failed: %s %s", resp.status_code, resp.text[:200])
+            if not hasattr(self, "_remote_keys_cache"):
+                self._remote_keys_cache = {}
+            self._remote_keys_cache.pop(path, None)
         else:
             folder_path = os.path.join(self.STORAGE_PATH, path)
             # 如果给予列表，则批量删除
@@ -445,6 +528,20 @@ class OSS:
                     )
             except Exception:  # noqa: BLE001 删除失败不阻断
                 pass
+        elif self.storage_type == StorageType.REMOTE_HTTP:
+            # imgstore 无目录概念：列出前缀逐个删除
+            names = self._remote_list_keys(path)
+            if names:
+                for name in names:
+                    try:
+                        requests.delete(
+                            f"{self.remote_base_url}/delete/{path}{name}",
+                            headers={"X-Api-Key": self.remote_api_key},
+                            timeout=60,
+                        )
+                    except Exception:  # noqa: BLE001
+                        pass
+                self._remote_keys_cache.pop(path, None)
         elif self.storage_type == StorageType.LOCAL_STORAGE:
             # 如果给予列表，则批量删除
             if isinstance(path, list):
@@ -456,6 +553,19 @@ class OSS:
                 folder_path = os.path.join(self.STORAGE_PATH, path)
                 if os.path.isdir(folder_path) and len(os.listdir(folder_path)) == 0:
                     os.rmdir(folder_path)
+
+    def remote_stats(self) -> dict:
+        """imgstore /stats：返回文件数与占用字节（写 API 鉴权）"""
+        if self.storage_type != StorageType.REMOTE_HTTP:
+            return {}
+        resp = requests.get(
+            f"{self.remote_base_url}/stats",
+            headers={"X-Api-Key": self.remote_api_key},
+            timeout=30,
+        )
+        if resp.status_code != 200:
+            return {}
+        return resp.json()
 
     def sign_url(self, *args, **kwargs):
         if self.storage_type == StorageType.OSS:
@@ -471,6 +581,9 @@ class OSS:
                 conf = self._r2_conf_by_bucket(bucket_name)
                 if conf:
                     kwargs["oss_domain"] = conf["domain"]
+            return self._sign_local_url(*args, **kwargs)
+        elif self.storage_type == StorageType.REMOTE_HTTP:
+            # imgstore 公开直读：无需签名，直接拼 STORAGE_DOMAIN URL（与 LOCAL_STORAGE 一致）
             return self._sign_local_url(*args, **kwargs)
         else:
             return self._sign_local_url(*args, **kwargs)

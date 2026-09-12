@@ -90,6 +90,12 @@ R2_BUCKETS = env.get("R2_BUCKETS", "")
 # Cloudflare API Token（查 R2 桶用量 /r2/buckets/{bucket}/usage 用，需 R2 Read 权限）
 R2_CF_API_TOKEN = env.get("R2_CF_API_TOKEN", "")
 # -----------
+# REMOTE_HTTP 配置（STORAGE_TYPE=REMOTE_HTTP 时使用，轻量图片存储服务）
+# 写 API（PUT/DELETE/LIST）走 REMOTE_HTTP_BASE_URL + X-Api-Key；读走 STORAGE_DOMAIN 外链直读
+# -----------
+REMOTE_HTTP_BASE_URL = env.get("REMOTE_HTTP_BASE_URL", "")  # 如 http://192.168.1.10:8080
+REMOTE_HTTP_API_KEY = env.get("REMOTE_HTTP_API_KEY", "")  # 写操作鉴权密钥
+# -----------
 # 内容安全
 # -----------
 SAFE_ACCESS_KEY_ID = "-"
