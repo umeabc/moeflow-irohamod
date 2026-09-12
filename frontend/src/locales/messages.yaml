@@ -147,9 +147,6 @@ auth.loginedTip:
 auth.logout:
   zhCn: 登出
   en: Log Out
-auth.storageFreeSpace:
-  zhCn: '存储剩余空间：{space}'
-  en: 'Storage free space: {space}'
 router.goDashboard:
   zhCn: 前往仪表盘
   en: Go to Dashboard
@@ -1522,6 +1519,33 @@ admin.r2StorageDetail:
 admin.r2Storage:
   zhCn: R2存储概览
   en: R2 Storage Overview
+admin.imgstoreStorageUsed:
+  zhCn: imgstore 总存储占用
+  en: imgstore Total Storage Used
+admin.imgstoreStorageDetail:
+  zhCn: 已用 {used} / 剩余 {free}
+  en: '{used} used / {free} free'
+admin.imgstoreStorage:
+  zhCn: imgstore 存储概览
+  en: imgstore Storage Overview
+admin.imgstoreUrl:
+  zhCn: imgstore 服务 URL
+  en: imgstore Service URL
+admin.imgstoreUsed:
+  zhCn: 已用容量
+  en: Used
+admin.imgstoreFree:
+  zhCn: 剩余容量
+  en: Free
+admin.imgstoreTotal:
+  zhCn: 总容量
+  en: Total
+admin.imgstoreUsagePercent:
+  zhCn: 占用比例
+  en: Usage
+admin.imgstoreNoData:
+  zhCn: 暂未配置 imgstore 服务
+  en: No imgstore service configured
 admin.r2BucketName:
   zhCn: 桶名称
   en: Bucket
@@ -1573,6 +1597,9 @@ admin.pageDescription.teamManage:
 admin.pageDescription.r2Storage:
   zhCn: 查看所有 R2 桶的容量与剩余（免费额度）。
   en: View capacity and free quota of all R2 buckets.
+admin.pageDescription.imgstoreStorage:
+  zhCn: 查看 imgstore 服务的存储占用与剩余空间。
+  en: View storage usage and free space of imgstore service.
 admin.title:
   zhCn: 管理员中心
   en: Admin Center

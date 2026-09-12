@@ -54,12 +54,14 @@ export const AdminSidebar: FC<AdminSidebarProps> = ({ onNavigate }) => {
   const { formatMessage } = useIntl();
   const user = useSelector((state: AppState) => state.user);
   const [isR2Storage, setIsR2Storage] = useState(false);
+  const [isImgstoreStorage, setIsImgstoreStorage] = useState(false);
   useEffect(() => {
     api.siteSetting
       .getStorageUsage({})
       .then((result) => {
         const data = toLowerCamelCase<{ storageType?: string }>(result.data);
         setIsR2Storage(data?.storageType === 'R2');
+        setIsImgstoreStorage(data?.storageType === 'REMOTE_HTTP');
       })
       .catch(() => {});
   }, []);
@@ -201,6 +203,14 @@ export const AdminSidebar: FC<AdminSidebarProps> = ({ onNavigate }) => {
               to={`${routes.admin}/r2-storage`}
               icon="cloud"
               label={formatMessage({ id: 'admin.r2Storage' })}
+              onNavigate={onNavigate}
+            />
+          )}
+          {isImgstoreStorage && (
+            <AdminNavItem
+              to={`${routes.admin}/imgstore-storage`}
+              icon="cloud"
+              label={formatMessage({ id: 'admin.imgstoreStorage' })}
               onNavigate={onNavigate}
             />
           )}

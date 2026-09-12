@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -209,23 +210,49 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	if !s.requireAuth(w, r) {
 		return
 	}
-	var total, files int64
+	var used, files int64
 	_ = filepath.Walk(s.dataDir, func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
 		if !info.IsDir() {
 			files++
-			total += info.Size()
+			used += info.Size()
 		}
 		return nil
 	})
+	// 数据目录所在磁盘容量/剩余（statfs）
+	var fsTotal, fsFree int64
+	if st, err := diskUsage(s.dataDir); err == nil {
+		fsTotal = st.total
+		fsFree = st.free
+	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"files": files,
-		"bytes": total,
+		"bytes": used,
 		"dir":   s.dataDir,
+		"total": fsTotal,
+		"free":  fsFree,
 	})
+}
+
+type diskStat struct {
+	total int64
+	free  int64
+}
+
+// diskUsage 返回目录所在文件系统的总容量与可用字节（Linux statfs）
+func diskUsage(dir string) (diskStat, error) {
+	var st syscall.Statfs_t
+	if err := syscall.Statfs(dir, &st); err != nil {
+		return diskStat{}, err
+	}
+	bs := int64(st.Bsize)
+	return diskStat{
+		total: int64(st.Blocks) * bs,
+		free:  int64(st.Bavail) * bs,
+	}, nil
 }
 
 // handleRead 匿名直读：/files/<prefix>/<name>

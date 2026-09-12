@@ -79,6 +79,20 @@ const getR2Buckets = ({ configs }: { configs?: AxiosRequestConfig }) => {
   });
 };
 
+export interface APIImgstoreUsage {
+  url: string;
+  usedBytes: number;
+  freeBytes: number;
+  totalBytes: number;
+}
+const getImgstoreOverview = ({ configs }: { configs?: AxiosRequestConfig }) => {
+  return request<{ imgstores: APIImgstoreUsage[] }>({
+    method: 'GET',
+    url: `/v1/admin/imgstore-overview`,
+    ...configs,
+  });
+};
+
 export interface APISystemStatus {
   cpuPercent: number | null;
   memoryPercent: number | null;
@@ -173,6 +187,7 @@ export default {
   getHomepage,
   getStorageUsage,
   getR2Buckets,
+  getImgstoreOverview,
   getSystemStatus,
   getCustomMessages,
   saveCustomMessages,

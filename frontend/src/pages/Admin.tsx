@@ -14,6 +14,7 @@ import { AdminInviteCode } from '@/components/admin/AdminInviteCode';
 import { AdminTeam } from '@/components/admin/AdminTeam';
 import { AdminNoticeList } from '@/components/admin/AdminNoticeList';
 import { AdminR2Storage } from '@/components/admin/AdminR2Storage';
+import { AdminImgstoreStorage } from '@/components/admin/AdminImgstoreStorage';
 import { routes } from './routes';
 
 /** 管理员页面 */
@@ -61,6 +62,9 @@ const Admin: FC = () => {
         </Route>
         <Route path={`${path}/r2-storage`}>
           {page('admin.r2Storage', 'admin.pageDescription.r2Storage', <AdminR2Storage />)}
+        </Route>
+        <Route path={`${path}/imgstore-storage`}>
+          {page('admin.imgstoreStorage', 'admin.pageDescription.imgstoreStorage', <AdminImgstoreStorage />)}
         </Route>
         <Redirect to={routes.admin} />
       </Switch>

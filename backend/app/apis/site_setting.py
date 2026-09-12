@@ -266,16 +266,16 @@ class StorageUsageAPI(MoeAPIView):
             used = sum(b["used_bytes"] for b in buckets)
             free = sum(b["free_bytes"] for b in buckets)
         elif app_config["STORAGE_TYPE"] == StorageType.REMOTE_HTTP:
-            # REMOTE_HTTP：imgstore /stats 返回实际占用
+            # REMOTE_HTTP：imgstore /stats 返回实际占用 + 数据盘容量/剩余
             from app import oss
 
             try:
                 stats = oss.remote_stats()
                 used = int(stats.get("bytes", 0))
+                total = int(stats.get("total", 0))
+                free = int(stats.get("free", 0))
             except Exception:  # noqa: BLE001
-                used = 0
-            total = used
-            free = 0
+                used = total = free = 0
         else:
             total = used = free = 0
         return {
@@ -311,6 +311,43 @@ class R2BucketsUsageAPI(MoeAPIView):
         if oss.storage_type != StorageType.R2:
             return {"buckets": []}
         return {"buckets": oss.list_buckets_usage()}
+
+
+class ImgstoreOverviewAPI(MoeAPIView):
+    """admin：imgstore 存储概览（服务 URL / 已用 / 剩余），仅 REMOTE_HTTP 模式"""
+
+    @admin_required
+    def get(self):
+        """
+        @api {get} /v1/admin/imgstore-overview 获取 imgstore 存储概览
+        @apiVersion 1.0.0
+        @apiName getImgstoreOverview
+        @apiGroup SiteSetting
+        @apiUse APIHeader
+        @apiUse TokenHeader
+
+        @apiSuccessExample {json} 返回示例
+        {
+            "imgstores": [
+                {"url": "http://192.168.1.10:8080", "used_bytes": 123456, "free_bytes": 10737294784, "total_bytes": 10737418240}
+            ]
+        }
+        """
+        from app import oss
+
+        if oss.storage_type != StorageType.REMOTE_HTTP:
+            return {"imgstores": []}
+        stats = oss.remote_stats()
+        return {
+            "imgstores": [
+                {
+                    "url": oss.remote_base_url,
+                    "used_bytes": int(stats.get("bytes", 0)),
+                    "free_bytes": int(stats.get("free", 0)),
+                    "total_bytes": int(stats.get("total", 0)),
+                }
+            ]
+        }
 
 
 class SystemStatusAPI(MoeAPIView):

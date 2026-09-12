@@ -35,6 +35,7 @@ from app.apis.site_setting import (
     BrandAssetAPI,
     CustomMessagesAPI,
     HomepageAPI,
+    ImgstoreOverviewAPI,
     R2BucketsUsageAPI,
     SiteSettingAPI,
     StorageUsageAPI,
@@ -530,6 +531,11 @@ admin.add_url_rule(
     "/r2-buckets",
     methods=["GET", "OPTIONS"],
     view_func=R2BucketsUsageAPI.as_view("admin_r2_buckets"),
+)
+admin.add_url_rule(
+    "/imgstore-overview",
+    methods=["GET", "OPTIONS"],
+    view_func=ImgstoreOverviewAPI.as_view("admin_imgstore_overview"),
 )
 admin.add_url_rule(
     "/system-status",
