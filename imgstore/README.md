@@ -6,6 +6,8 @@ Go 单二进制实现，Docker 承载，镜像约 7MB、常驻内存 < 20MB。
 
 - **HTTP API**：上传 `/put/<prefix>/<name>`、删除 `/delete/<prefix>/<name>`、列表 `/list/<prefix>`、用量 `/stats`
 - **外链直读**：`GET /files/<prefix>/<name>` 匿名直读（支持 HTTP 外链；HTTPS 可前置 nginx/Caddy 反代）
+- **多级 key**：key 支持 `outputs/<id>/<file>` 嵌套路径（前缀 + 任意层级文件名）
+- **磁盘空间**：`/stats` 返回 `bytes`（已用）/ `total` / `free`（数据目录所在磁盘容量与剩余，statfs）
 - **鉴权**：写操作（PUT/DELETE/LIST/STATS）需 `X-Api-Key`；读操作匿名
 - **轻量**：进程内列表缓存（60s），无外部依赖
 

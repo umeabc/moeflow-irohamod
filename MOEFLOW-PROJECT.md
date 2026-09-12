@@ -12,9 +12,12 @@
 - 镜像 tag：`moeflow-frontend:1.1.7-iroha10`、`moeflow-backend:1.1.8-iroha10`。
 
 ## 2. 部署拓扑（通用）
-- 一组 Docker Compose 服务：mongodb、rabbitmq、backend、celery-default、celery-output、frontend。
-- 外部存储：`STORAGE_TYPE=LOCAL_STORAGE`，后端/前端容器共享挂载。
-- 环境配置：`.env` / `.env-backend`；数据（mongodb/rabbitmq 卷）与 `backup-*`。
+- 一组 Docker Compose 服务：mongodb、redis、backend、celery、frontend。
+- 外部存储：支持 `STORAGE_TYPE`：
+  - `LOCAL_STORAGE`（默认）：后端/前端容器共享挂载。
+  - `R2`：Cloudflare R2（S3 兼容 + 公开桶直读，支持多账号多桶负载均衡）。
+  - `REMOTE_HTTP`：**独立图片存储服务 imgstore**（Go 单二进制，镜像约 7MB；部署编排见 `umeabc/moeflow-irohamod-imgstore`），Moeflow 上传/删除/列表/用量走 imgstore HTTP API，图片外链直读 imgstore 主机。
+- 环境配置：`.env` / `.env-backend`；数据（mongodb/redis 卷）与 `backup-*`。
 - 前端 nginx 仅在 `/api` 前缀反代后端；前端以 `/api/v1/...` 访问后端（前端 baseURL 默认 `/api/`）。
 
 ## 3. 部署迁移方式
@@ -23,7 +26,7 @@
 
 ## 4. 本次改动摘要
 详见 `CHANGELOG-iroha4.md`。
-- **前端**：文件卡角色栏（翻译/校对/嵌字）自由文本编辑 + 自动填充 + 权限矩阵；「嵌字」变绿；项目集设置/改名(默认集可)/删除(仅管理员，级联)/移动(仅 admin+creator)；定制文案(彩翻/IRTrans/验证你不是鸽/网络爆炸了/一键机翻/SAYURI/IrohaTrans)；mascot 立绘 + favicon 像素猪；登录页展示存储剩余空间(管理员)；跨「组」文件搜索；暗色模式(明暗主题)；图片翻译器符号工具 + 拉伸条；AI 机翻预设更新。
+- **前端**：文件卡角色栏（翻译/校对/嵌字）自由文本编辑 + 自动填充 + 权限矩阵；「嵌字」变绿；项目集设置/改名(默认集可)/删除(仅管理员，级联)/移动(仅 admin+creator)；定制文案(彩翻/IRTrans/验证你不是鸽/网络爆炸了/一键机翻/SAYURI/IrohaTrans)；mascot 立绘 + favicon 像素猪；存储空间集成在 admin 面板（dashboard「存储空间」卡片 + 存储概览页）；跨「组」文件搜索；暗色模式(明暗主题)；图片翻译器符号工具 + 拉伸条；AI 机翻预设更新。
 - **后端**：File 模型新增 `translator/proofreader/typesetter`(StringField)；角色编辑按项目角色判权；导出只填 typesetter；项目集默认改名放开、删除仅 admin(级联)、移动仅 admin/creator；新增 `GET /v1/admin/storage-usage`、`GET /v1/files/search`；上传 MD5 去重（`FileDuplicateError`，code 8008）。
 
 ## 4.1 iroha6 新增（基于 iroha5）
@@ -63,6 +66,10 @@
   - Pixiv 用户：`/ajax/user/<uid>/profile/all` 作品列表 → `/ajax/illust/<id>/pages` 全部页面原图。
 - **进度式导入**：发起时先枚举图片 URL 存任务（`MediaImportTask` 模型，Mongo 持久化）并返回 `{task_id, total}`，后台线程逐张下载入库更新进度；前端轮询 `GET /v1/files/from-url-task/<task_id>` 显示「正在下载第 a/b 张，有 X 张可入库」+ 进度条，完成后提示已导入/重复数。`_run_media_import_task` 按 `download_kind` 区分 `twitter`/`pixiv`/`bluesky`。
 - 关键文件：后端 `services/image_download.py`（`enumerate_twitter_user_media` / `enumerate_bluesky_user_media` / `enumerate_pixiv_user_media` 等）、`apis/file_download.py`（`ProjectFileFromURLAPI`，source 校验含 `twitter_user`/`bluesky_user`/`pixiv_user`）、`models/media_import_task.py`；前端 `FileList.tsx`（下拉）、`ImportFromURLModal.tsx`（来源弹窗 + 进度）、`AdminSiteSetting.tsx`（Twitter auth/ct0、HTTP 代理、Pixiv PHPSESSID、Bluesky 匿名/账号）、`apis/file.ts`/`siteSetting.ts`、i18n。
+- **独立图片存储服务（STORAGE_TYPE=REMOTE_HTTP + imgstore）**：新增轻量图片存储服务 **imgstore**（Go 单二进制、Docker 承载、镜像约 7MB，源码在 `imgstore/` 目录，部署编排见 `umeabc/moeflow-irohamod-imgstore`）；Moeflow 新增 `REMOTE_HTTP` 存储驱动（`oss.py` upload/download/is_exist/delete/rmdir/sign_url/remote_stats 全走 imgstore HTTP API），图片外链直读 `STORAGE_DOMAIN`，可将图片落到**独立主机**；imgstore 支持**多级 key**（`outputs/<id>/<file>`）与 `/stats` 磁盘空间（bytes/total/free，statfs）。
+- **imgstore 存储概览（admin）**：dashboard「存储空间」卡片在 REMOTE_HTTP 模式显示「imgstore 总存储占用」（已用/剩余）；管理后台新增「imgstore 存储概览」页（服务 URL / 已用 / 剩余 / 总容量 / 占用比例）；`GET /v1/admin/imgstore-overview`。LOCAL / R2 模式照常显示。
+- **缩略图与删除缓存竞态修复**：缩略图任务判断「原图存在」从列表缓存 `is_exist` 改为**实时 download**（修复批量导入只生成 1 张缩略图）；`upload/delete/rmdir` 后列表缓存**双向失效**（子前缀 + 父前缀）。
+- **社交媒体文件名格式**：X → `Twitter-<前40字>-<YYYYMMDDHHMM>-P<n>`、Bluesky → `Bluesky-...`、Pixiv → `Pixiv-<PID>-<标题>-P<n>`；去 # 号与 emoji。
 - 镜像 tag：`moeflow-frontend:1.1.7-iroha10` / `moeflow-backend:1.1.8-iroha10`。
 
 ## 5. 关键环境坑（务必牢记）
