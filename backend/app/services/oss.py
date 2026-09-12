@@ -298,6 +298,7 @@ class OSS:
             )
             if resp.status_code not in (200, 201):
                 raise OSError(f"imgstore PUT failed: {resp.status_code} {resp.text[:200]}")
+            self._remote_invalidate_cache(path)
             return resp.json(), None
         else:
             folder_path = os.path.join(self.STORAGE_PATH, path)
@@ -415,6 +416,23 @@ class OSS:
         self._remote_keys_cache[prefix] = {"keys": keys, "ts": now}
         return keys
 
+    def _remote_invalidate_cache(self, prefix: str):
+        """失效 imgstore 列表缓存中所有与 prefix 相关的 key。
+
+        upload/delete/rmdir 后调用。imgstore 的 LIST 是递归的：
+        - 子前缀列表受父前缀影响（如 outputs/ 的列表含 outputs/<id>/ 的文件）
+        - 父前缀列表也受子前缀影响（如 outputs/<id>/ 变更后 outputs/ 列表过期）
+        因此同时失效「prefix 前缀的 key」和「prefix 的父前缀 key」。
+        """
+        if not hasattr(self, "_remote_keys_cache"):
+            self._remote_keys_cache = {}
+        for k in [
+            k
+            for k in self._remote_keys_cache
+            if k.startswith(prefix) or prefix.startswith(k)
+        ]:
+            self._remote_keys_cache.pop(k, None)
+
     def is_exist(self, path, filename, process_name=None, bucket_name: Optional[str] = None):
         """检查文件是否存在"""
         if self.storage_type == StorageType.OSS:
@@ -493,9 +511,7 @@ class OSS:
                 )
                 if resp.status_code not in (200, 204, 404):
                     logging.warning("imgstore DELETE failed: %s %s", resp.status_code, resp.text[:200])
-            if not hasattr(self, "_remote_keys_cache"):
-                self._remote_keys_cache = {}
-            self._remote_keys_cache.pop(path, None)
+            self._remote_invalidate_cache(path)
         else:
             folder_path = os.path.join(self.STORAGE_PATH, path)
             # 如果给予列表，则批量删除
@@ -532,16 +548,17 @@ class OSS:
             # imgstore 无目录概念：列出前缀逐个删除
             names = self._remote_list_keys(path)
             if names:
+                base_path = path.rstrip("/") + "/"
                 for name in names:
                     try:
                         requests.delete(
-                            f"{self.remote_base_url}/delete/{path}{name}",
+                            f"{self.remote_base_url}/delete/{base_path}{name}",
                             headers={"X-Api-Key": self.remote_api_key},
                             timeout=60,
                         )
                     except Exception:  # noqa: BLE001
                         pass
-                self._remote_keys_cache.pop(path, None)
+                self._remote_invalidate_cache(path)
         elif self.storage_type == StorageType.LOCAL_STORAGE:
             # 如果给予列表，则批量删除
             if isinstance(path, list):

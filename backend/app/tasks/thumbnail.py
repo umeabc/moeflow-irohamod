@@ -5,6 +5,8 @@
 import os
 from PIL import Image, ImageOps
 
+from oss2.exceptions import NoSuchKey
+
 from app import STORAGE_PATH, celery
 from app.constants.storage import StorageType
 from app.exceptions.file import FileNotExistError
@@ -47,8 +49,6 @@ def create_thumbnail_task(image_id: str):
     try:
         image = File.by_id(image_id)
         image_bucket = image.storage_bucket or None
-        if not oss.is_exist(oss_file_prefix, image.save_name, bucket_name=image_bucket):
-            return f"失败：创建缩略图失败，原图文件未找到 {image_id}"
         cover_name = celery.conf.app_config["OSS_PROCESS_COVER_NAME"] + "-" + image.save_name
         safe_check_name = (
             celery.conf.app_config["OSS_PROCESS_SAFE_CHECK_NAME"] + "-" + image.save_name
@@ -70,11 +70,17 @@ def create_thumbnail_task(image_id: str):
         else:  # R2 / REMOTE_HTTP：内存生成缩略图后上传（与原文件同前缀）
             from io import BytesIO
 
-            buf = BytesIO(
-                oss.download(
-                    oss_file_prefix, image.save_name, bucket_name=image_bucket
-                ).read()
-            )
+            # 注意：不能用 oss.is_exist() 判断原图存在性——它走列表缓存（60s），
+            # 批量导入时 celery 进程可能命中旧缓存（只含部分文件）而误判"原图不存在"。
+            # 这里直接实时 download：成功=存在并复用为缩略图数据源，404 报未找到。
+            try:
+                buf = BytesIO(
+                    oss.download(
+                        oss_file_prefix, image.save_name, bucket_name=image_bucket
+                    ).read()
+                )
+            except NoSuchKey:
+                return f"失败：创建缩略图失败，原图文件未找到 {image_id}"
             original = Image.open(buf)
 
             def _to_rgb(img):

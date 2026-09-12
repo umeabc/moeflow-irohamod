@@ -53,13 +53,20 @@ func NewServer(dataDir, apiKey string, maxBody int64) *Server {
 }
 
 // safeJoin 校验并拼接 prefix/name，禁止路径穿越
+// name 允许包含 "/"（多级 key，如 outputs/<id>/<file>），但拒绝 ".." 穿越与绝对路径
 func (s *Server) safeJoin(prefix, name string) (string, bool) {
-	if strings.Contains(prefix, "..") || strings.Contains(name, "..") ||
-		strings.Contains(prefix, "/") || strings.HasPrefix(name, "/") ||
-		strings.Contains(name, "/") {
+	if prefix == "" || name == "" ||
+		strings.Contains(prefix, "..") || strings.HasPrefix(prefix, "/") ||
+		strings.Contains(name, "..") || strings.HasPrefix(name, "/") {
 		return "", false
 	}
-	return filepath.Join(s.dataDir, prefix, name), true
+	// 逐段校验 name，确保每段非空且无 ".."
+	for _, seg := range strings.Split(name, "/") {
+		if seg == "" || seg == "." || seg == ".." {
+			return "", false
+		}
+	}
+	return filepath.Join(s.dataDir, filepath.FromSlash(prefix), filepath.FromSlash(name)), true
 }
 
 func (s *Server) auth(r *http.Request) bool {
@@ -89,6 +96,7 @@ func (s *Server) invalidateCache(prefix string) {
 }
 
 // listNames 返回某前缀下所有文件名（带缓存）
+// 支持多级 key：返回相对 prefix 的路径（如 "<id>/<file>.jpg"），递归遍历子目录
 func (s *Server) listNames(prefix string) map[string]struct{} {
 	cacheKey := prefix + "/"
 	s.mu.Lock()
@@ -98,16 +106,19 @@ func (s *Server) listNames(prefix string) map[string]struct{} {
 	}
 	s.mu.Unlock()
 
-	dir := filepath.Join(s.dataDir, prefix)
-	entries, err := os.ReadDir(dir)
 	names := map[string]struct{}{}
-	if err == nil {
-		for _, e := range entries {
-			if !e.IsDir() {
-				names[e.Name()] = struct{}{}
-			}
+	dir := filepath.Join(s.dataDir, prefix)
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info == nil || info.IsDir() {
+			return nil
 		}
-	}
+		rel, rerr := filepath.Rel(dir, path)
+		if rerr != nil {
+			return nil
+		}
+		names[filepath.ToSlash(rel)] = struct{}{}
+		return nil
+	})
 
 	s.mu.Lock()
 	s.listCache[cacheKey] = &listCacheEntry{names: names, ts: time.Now()}
@@ -234,13 +245,25 @@ func (s *Server) handleRead(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, full)
 }
 
-// parseWritePath: /put/<prefix>/<name> 或 /delete/<prefix>/<name>
+// parseWritePath: /<verb>/<prefix>/<name...>
+// prefix 为第一段（如 files、outputs），name 为剩余全部（可含 "/" 多级，如 <id>/<file>）
 func parseWritePath(p string) (prefix, name string, ok bool) {
-	parts := strings.Split(strings.TrimPrefix(p, "/"), "/")
-	if len(parts) != 3 || parts[0] == "" || parts[1] == "" || parts[2] == "" {
+	rest := strings.TrimPrefix(p, "/")
+	verbEnd := strings.Index(rest, "/")
+	if verbEnd <= 0 {
 		return "", "", false
 	}
-	return parts[1], parts[2], true
+	rest = rest[verbEnd+1:]
+	idx := strings.Index(rest, "/")
+	if idx <= 0 {
+		return "", "", false
+	}
+	prefix = rest[:idx]
+	name = rest[idx+1:]
+	if prefix == "" || name == "" {
+		return "", "", false
+	}
+	return prefix, name, true
 }
 
 func main() {
