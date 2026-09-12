@@ -106,6 +106,14 @@
 - **删除缓存双向失效**：`upload/delete/rmdir` 后失效「子前缀 + 父前缀」列表缓存，避免 `is_exist` 命中旧缓存（如 `outputs/<id>/` 变更后 `outputs/` 列表过期）。
 - 文件：`backend/app/tasks/thumbnail.py`、`backend/app/services/oss.py`。
 
+### 十二、imgstore 存储概览与 dashboard 存储占用
+
+- **移除 login 页存储剩余空间显示**：可用空间已集成进 admin 面板（`AuthLoginedTip.tsx`）。
+- **dashboard「存储空间」卡片**：REMOTE_HTTP 模式下显示「imgstore 总存储占用」（已用容量），并展示「已用/剩余」详情（LOCAL/R2 照常）。
+- **imgstore 存储概览页**：新增 `/admin/imgstore-storage`，表格列：imgstore 服务 URL / 已用容量 / 剩余容量 / 总容量 / 占用比例（仅 REMOTE_HTTP 模式显示入口，LOCAL/R2 照常）。
+- imgstore `/stats` 增加磁盘 `total`/`free`（statfs）；`StorageUsageAPI` REMOTE_HTTP 分支返回真实磁盘容量，修复 dashboard 显示 0B。
+- 文件：`backend/app/apis/site_setting.py`、`backend/app/apis/urls.py`、`backend/app/services/oss.py`、`imgstore/main.go`；前端 `AdminDashboard.tsx`、`AdminSidebar.tsx`、`AdminImgstoreStorage.tsx`、`AuthLoginedTip.tsx`、`apis/siteSetting.ts`、`locales/*`。
+
 ---
 
 ## iroha9 新增特性（基于 iroha8）
