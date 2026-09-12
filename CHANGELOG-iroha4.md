@@ -93,6 +93,19 @@
 - 用户主页抓取（进度式导入）同样传入 P 数与 Pixiv PID。
 - 文件：`backend/app/services/image_download.py`、`backend/app/apis/file_download.py`。
 
+### 十、独立图片存储服务接入（STORAGE_TYPE=REMOTE_HTTP + imgstore）
+
+- 新增**轻量图片存储服务 imgstore**（Go 单二进制，Docker 承载，镜像约 7MB），源码在仓库 `imgstore/` 目录，部署编排见 `umeabc/moeflow-irohamod-imgstore`。
+- Moeflow 新增 `STORAGE_TYPE=REMOTE_HTTP` 存储驱动：上传/删除/列表/用量走 imgstore HTTP API，外链直读走 `STORAGE_DOMAIN`。**图片可落到独立主机**，支持 HTTP/HTTPS 外链。
+- imgstore 支持**多级 key**（`outputs/<id>/<file>`），删除/rmdir 正常。
+- 文件：`backend/app/services/oss.py`、`backend/app/config.py`、`backend/app/constants/storage.py`、`backend/app/models/file.py`、`backend/app/tasks/thumbnail.py`、`backend/app/apis/site_setting.py`、`imgstore/*`。
+
+### 十一、缩略图与删除缓存竞态修复
+
+- **批量导入只生成 1 张缩略图修复**：缩略图任务判断「原图存在」从 `is_exist`（列表缓存 60s）改为**实时 download**——批量导入时 celery 进程会命中旧列表缓存（只含部分文件）而误判「原图不存在」。现改为实时 GET，404 才报未找到。
+- **删除缓存双向失效**：`upload/delete/rmdir` 后失效「子前缀 + 父前缀」列表缓存，避免 `is_exist` 命中旧缓存（如 `outputs/<id>/` 变更后 `outputs/` 列表过期）。
+- 文件：`backend/app/tasks/thumbnail.py`、`backend/app/services/oss.py`。
+
 ---
 
 ## iroha9 新增特性（基于 iroha8）
