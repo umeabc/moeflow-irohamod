@@ -1,4 +1,4 @@
-# MoeFlow 项目交接档案（iroha10 定制版）
+# MoeFlow 项目交接档案（iroha11 定制版）
 
 > 项目已稳定并正式上线。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
 > 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。
@@ -9,7 +9,7 @@
 ## 1. 项目概览
 - 名称：MoeFlow（萌翻 / 彩翻）—— 自托管漫画翻译协作平台。
 - 基线：前端 `v1.1.7`、后端 `v1.1.8`。
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha10`、`moeflow-backend:1.1.8-iroha10`。
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha11`、`moeflow-backend:1.1.8-iroha11`。
 
 ## 2. 部署拓扑（通用）
 - 一组 Docker Compose 服务：mongodb、redis、backend、celery、frontend。
@@ -22,7 +22,7 @@
 
 ## 3. 部署迁移方式
 - 镜像 `docker save` 导出 tar → 生产侧 `docker load` → compose（**只替换 backend/frontend，保留 mongodb/rabbitmq 数据**）。
-- 镜像 tar 命名：`moeflow-backend-1.1.8-iroha10.tar`（约 537MB）、`moeflow-frontend-1.1.7-iroha10.tar`（约 77MB）。
+- 镜像 tar 命名：`moeflow-backend-1.1.8-iroha11.tar`（约 537MB）、`moeflow-frontend-1.1.7-iroha11.tar`（约 77MB）。
 
 ## 4. 本次改动摘要
 详见 `CHANGELOG-iroha4.md`。
@@ -72,6 +72,11 @@
 - **社交媒体文件名格式**：X → `Twitter-<前40字>-<YYYYMMDDHHMM>-P<n>`、Bluesky → `Bluesky-...`、Pixiv → `Pixiv-<PID>-<标题>-P<n>`；去 # 号与 emoji。
 - 镜像 tag：`moeflow-frontend:1.1.7-iroha10` / `moeflow-backend:1.1.8-iroha10`。
 
+## 4.6 iroha11 新增（基于 iroha10）
+- **登录页全新改版**：左品牌区（吉祥物立绘 + 光环呼吸动画 + 品牌名/标语，小屏隐藏）+ 右登录/注册分段卡片；登录/注册一体化切换（切换重置表单 + 刷新验证码）；已登录用户访问登录页显示「已登录」卡片（进入仪表盘 / 退出）。
+- **暗色模式高亮修复**：通知标题（登录弹窗 / 通知一览）与站点设置「下载图片设置」分区标题在暗色模式下由黑色改为主题粉色高亮（`html[data-theme='dark'] & { color: var(--moeflow-primaryColor); }`）。
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha11` / `moeflow-backend:1.1.8-iroha11`（后端内容与 iroha10 末版一致）。
+
 ## 5. 关键环境坑（务必牢记）
 1. **前端 build 在资源充足的开发机上做**，再上传远程 `docker build`；远程内存不足跑不动前端构建（OOM）。
 2. **Docker Hub 不稳定** → 用 daocloud `docker.m.daocloud.io` 拉基础镜像再 retag。
@@ -81,7 +86,7 @@
 
 ## 6. 备份
 - 源码快照：GitHub 私有仓库 `umeabc/moeflow-backup`（`frontend/` + `backend/`）。
-- 改动清单：`CHANGELOG-iroha4.md`（当前镜像版本 iroha10）。
+- 改动清单：`CHANGELOG-iroha4.md`（当前镜像版本 iroha11）。
 
 ## 7. 回退
 - 如要回到官方：用官方 tag `v1.1.7` / `v1.1.8` 重新构建即可（本定制版与上游存在差异）。

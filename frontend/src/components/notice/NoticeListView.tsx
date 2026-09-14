@@ -67,7 +67,15 @@ export const NoticeListView: FC<NoticeListViewProps> = ({
             `}
           >
             {notice.title && (
-              <Text strong css={css`font-size: 14px;`}>
+              <Text
+                strong
+                css={css`
+                  font-size: 14px;
+                  html[data-theme='dark'] & {
+                    color: var(--moeflow-primaryColor);
+                  }
+                `}
+              >
                 {notice.title}
               </Text>
             )}

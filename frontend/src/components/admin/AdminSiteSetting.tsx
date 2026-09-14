@@ -475,6 +475,9 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
             border-top: 1px solid ${style.borderColorLight};
             font-size: 15px;
             font-weight: 600;
+            html[data-theme='dark'] & {
+              color: var(--moeflow-primaryColor);
+            }
           `}
         >
           {formatMessage({ id: 'admin.downloadSettings' })}

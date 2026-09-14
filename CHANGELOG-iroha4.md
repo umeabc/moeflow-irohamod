@@ -1,10 +1,31 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha10）
+# MoeFlow 自定义改动 CHANGELOG（iroha11）
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 镜像 tag：`moeflow-frontend:1.1.7-iroha10` / `moeflow-backend:1.1.8-iroha10`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6`/`iroha7`/`iroha8`/`iroha9` 镜像保留各自版本 tag）。
+> 镜像 tag：`moeflow-frontend:1.1.7-iroha11` / `moeflow-backend:1.1.8-iroha11`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6`/`iroha7`/`iroha8`/`iroha9`/`iroha10` 镜像保留各自版本 tag）。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：以 `docker save` 导出镜像 tar → 生产侧 `docker load` 导入（仅替换前端/后端镜像，勿改动 env / compose）。
+
+---
+
+## iroha11 新增特性（基于 iroha10）
+
+### 一、登录页全新改版
+
+- **布局重构**：参照 image-translator 登录页布局——左侧品牌区（吉祥物立绘 + 呼吸光环动画 + 品牌名/标语，小屏自动隐藏）+ 右侧登录/注册分段卡片（顶部斜条纹 + 阴影浮层）。
+- **登录/注册一体化**：分段切换在登录与注册之间即时切换，切换时重置表单并刷新人机验证码；注册逻辑复用 Register 页（需邀请码），成功后询问是否「记住我」再自动登录跳转仪表盘。
+- **已登录状态**：已登录用户访问登录页时展示「已登录」卡片（头像 + 用户名 + 进入仪表盘 / 退出登录按钮）。
+- 文件：`frontend/src/pages/Login.tsx`（重写，+700 行）、`frontend/src/index.css`（品牌配色变量）、`frontend/package-lock.json`。
+
+### 二、暗色模式高亮修复
+
+- **通知标题**：登录弹窗 / 通知一览中的通知标题在暗色模式下由黑色改为主题粉色高亮（`frontend/src/components/notice/NoticeListView.tsx`）。
+- **站点设置分区标题**：admin「站点设置」页「下载图片设置」分区标题在暗色模式下改为粉色高亮（`frontend/src/components/admin/AdminSiteSetting.tsx`）。
+- 两处均用 `html[data-theme='dark'] & { color: var(--moeflow-primaryColor); }`，仅作用于暗色模式，亮色模式不变。
+
+### 三、版本
+
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha11` / `moeflow-backend:1.1.8-iroha11`（后端内容与 iroha10 末版一致，仅升 tag）。
 
 ---
 
