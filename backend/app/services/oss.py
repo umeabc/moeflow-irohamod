@@ -63,6 +63,9 @@ class OSS:
     def init(self, config):
         """配置初始化"""
         self.storage_type = config["STORAGE_TYPE"]
+        # R2 相关方法（default_bucket_name/select_r2_bucket/_r2_conf_by_bucket 等）统一依赖 r2_buckets，
+        # 非 R2 模式也初始化为空列表，避免 AttributeError
+        self.r2_buckets: list[dict] = []
         if self.storage_type == StorageType.OSS:
             self.auth = oss2.Auth(
                 config["OSS_ACCESS_KEY_ID"],
@@ -83,7 +86,6 @@ class OSS:
             import json as _json
 
             self.r2_cf_api_token = config.get("R2_CF_API_TOKEN", "")
-            self.r2_buckets: list[dict] = []
             buckets_json = config.get("R2_BUCKETS", "") or ""
             if buckets_json.strip():
                 try:

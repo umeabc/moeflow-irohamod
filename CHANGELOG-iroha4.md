@@ -23,9 +23,16 @@
 - **站点设置分区标题**：admin「站点设置」页「下载图片设置」分区标题在暗色模式下改为粉色高亮（`frontend/src/components/admin/AdminSiteSetting.tsx`）。
 - 两处均用 `html[data-theme='dark'] & { color: var(--moeflow-primaryColor); }`，仅作用于暗色模式，亮色模式不变。
 
-### 三、版本
+### 三、后端修复：非 R2 存储下 default_bucket_name 崩溃
 
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha11` / `moeflow-backend:1.1.8-iroha11`（后端内容与 iroha10 末版一致，仅升 tag）。
+- **问题**：`oss.default_bucket_name()`（以及 `select_r2_bucket` / `_r2_conf_by_bucket` 等）引用 `self.r2_buckets`，但该属性只在 `STORAGE_TYPE=R2` 分支初始化。LOCAL_STORAGE / OSS / REMOTE_HTTP 模式下调用会 `AttributeError`，导致团队/用户头像、导出 URL、品牌资源等接口 500。
+- **修复**：`OSS.init()` 开头无条件初始化 `self.r2_buckets = []`，非 R2 模式下相关方法安全返回空值。
+- 镜像 tag：`moeflow-backend:1.1.8-iroha11-fix1`。
+- 文件：`backend/app/services/oss.py`。
+
+### 四、版本
+
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha11` / `moeflow-backend:1.1.8-iroha11-fix1`。
 
 ---
 
