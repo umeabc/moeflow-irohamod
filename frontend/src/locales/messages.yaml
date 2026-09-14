@@ -24,8 +24,14 @@ imageTranslator.imageViewerZoomPanel.zoomOut:
 auth.login:
   zhCn: 登录
   en: Log In
+auth.loginTip:
+  zhCn: 请用注册邮箱及密码进行登录。
+  en: Please log in with your registered email and password.
+auth.registerTip:
+  zhCn: 如遇无法注册，请联系管理员进行注册。
+  en: If you are unable to register, please contact the administrator.
 auth.toReigsterTip:
-  zhCn: 还没有账号？去注册吧
+  zhCn: 没有账号？去注册
   en: Don't have an account? Sign up here.
 auth.resetPassword:
   zhCn: 重置密码
@@ -36,6 +42,9 @@ auth.emailFormatTip:
 register.inviteCode:
   zhCn: 邀请码
   en: Invitation Code
+register.inviteTip:
+  zhCn: 注册必须要填邀请码，否则没法注册。
+  en: An invitation code is required to register; registration is not possible without one.
 reset.contactAdmin:
   zhCn: 忘记密码？请联系站点管理员为您重置密码。
   en: Forgot your password? Please contact the site administrator to reset it.
@@ -1147,7 +1156,7 @@ file.importFromUserFailedDetail:
   en: Fetch finished, but {failed} image(s) failed
 file.importFromUserFailedTitle:
   zhCn: 以下 {failed} 张图片获取失败：
-  en: The following {failed} image(s) failed:
+  en: 'The following {failed} image(s) failed:'
 file.importFromUserFailedOverall:
   zhCn: 整体失败
   en: Overall failure
