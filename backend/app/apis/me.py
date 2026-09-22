@@ -7,6 +7,7 @@ from flask import request
 from app.core.responses import MoePagination
 from app.core.views import MoeAPIView
 from app.decorators.auth import token_required
+from app.decorators.log import log_action
 from app.models.user import User
 from app.models.team import TeamUserRelation
 from app.validators import ChangeInfoSchema
@@ -28,6 +29,7 @@ from app.models.application import Application
 
 
 class MeTokenAPI(MoeAPIView):
+    @log_action("auth.login")
     def post(self):
         """
         @api {post} /v1/user/token 创建用户令牌
@@ -65,6 +67,14 @@ class MeTokenAPI(MoeAPIView):
         return {"token": token}
 
 
+class MeVisitLoginAPI(MoeAPIView):
+    @token_required
+    @log_action("auth.visit_login_page")
+    def post(self):
+        """记录已登录用户访问登录页（统计用）"""
+        return None
+
+
 class MeInfoAPI(MoeAPIView):
     @token_required
     def get(self):
@@ -91,6 +101,7 @@ class MeInfoAPI(MoeAPIView):
         return self.current_user.to_api()
 
     @token_required
+    @log_action("user.update_info")
     def put(self):
         """
         @api {put} /v1/user/info 修改自己资料
@@ -118,6 +129,7 @@ class MeInfoAPI(MoeAPIView):
 
 class MeEmailAPI(MoeAPIView):
     @token_required
+    @log_action("user.change_email")
     def put(self):
         """
         @api {put} /v1/user/email 修改自己邮箱
@@ -151,6 +163,7 @@ class MeEmailAPI(MoeAPIView):
 
 class MePasswordAPI(MoeAPIView):
     @token_required
+    @log_action("user.change_password")
     def put(self):
         """
         @api {put} /v1/user/password 修改自己密码

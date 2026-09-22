@@ -15,6 +15,7 @@ import { AdminTeam } from '@/components/admin/AdminTeam';
 import { AdminNoticeList } from '@/components/admin/AdminNoticeList';
 import { AdminR2Storage } from '@/components/admin/AdminR2Storage';
 import { AdminImgstoreStorage } from '@/components/admin/AdminImgstoreStorage';
+import { AdminLogList } from '@/components/admin/AdminLogList';
 import { routes } from './routes';
 
 /** 管理员页面 */
@@ -65,6 +66,9 @@ const Admin: FC = () => {
         </Route>
         <Route path={`${path}/imgstore-storage`}>
           {page('admin.imgstoreStorage', 'admin.pageDescription.imgstoreStorage', <AdminImgstoreStorage />)}
+        </Route>
+        <Route path={`${path}/logs`}>
+          {page('admin.logs', 'admin.pageDescription.logs', <AdminLogList />)}
         </Route>
         <Redirect to={routes.admin} />
       </Switch>

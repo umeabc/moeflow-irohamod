@@ -12,6 +12,7 @@ from flask_babel import gettext
 from app.core.responses import MoePagination
 from app.core.views import MoeAPIView
 from app.decorators.auth import token_required
+from app.decorators.log import log_action
 from app.decorators.url import fetch_model
 from app.exceptions import NoPermissionError, RequestDataEmptyError
 from app.models.project import Project
@@ -80,6 +81,7 @@ class TeamListAPI(MoeAPIView):
         return p
 
     @token_required
+    @log_action("team.create")
     def post(self):
         """
         @api {post} /v1/teams 新建团队
@@ -153,6 +155,7 @@ class TeamAPI(MoeAPIView):
 
     @token_required
     @fetch_model(Team)
+    @log_action("team.edit", resource_type="team")
     def put(self, team):
         """
         @api {put} /v1/teams/<team_id> 修改团队
@@ -192,6 +195,7 @@ class TeamAPI(MoeAPIView):
 
     @token_required
     @fetch_model(Team)
+    @log_action("team.delete", resource_type="team")
     def delete(self, team):
         """
         @api {delete} /v1/teams/<team_id> 解散团队
@@ -274,6 +278,7 @@ class TeamProjectListAPI(MoeAPIView):
 
     @token_required
     @fetch_model(Team)
+    @log_action("project.create", resource_type="team")
     def post(self, team):
         """
         @api {post} /v1/teams/<team_id>/projects 新建项目
@@ -331,6 +336,7 @@ class TeamProjectListAPI(MoeAPIView):
 class TeamProjectOutputListAPI(MoeAPIView):
     @token_required
     @fetch_model(Team)
+    @log_action("team.output_all_projects", resource_type="team")
     def post(self, team: Team):
         if not self.current_user.can(team, TeamPermission.AUTO_BECOME_PROJECT_ADMIN):
             raise NoPermissionError

@@ -49,7 +49,21 @@ const getRelatedApplications = ({
   });
 };
 
+/** 记录已登录用户访问登录页（统计用） */
+const visitLoginPage = ({
+  configs,
+}: {
+  configs?: AxiosRequestConfig;
+} = {}) => {
+  return request({
+    method: 'POST',
+    url: `/v1/user/visit-login`,
+    ...configs,
+  });
+};
+
 export default {
   getUserInvitations,
   getRelatedApplications,
+  visitLoginPage,
 };

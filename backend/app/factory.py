@@ -56,6 +56,38 @@ def init_flask_app(app: Flask):
             + str([str(i) for i in babel.list_translations()])
         )
     oss.init(app.config)  # 文件储存
+    
+    # 注册日志中间件和错误处理
+    register_logging_handlers(app)
+
+
+def _log_celery_task_failure(
+    sender=None, task_id=None, exception=None, traceback=None, **kwargs
+):
+    """Celery 任务失败时记录错误日志（模块级函数，供信号弱引用）"""
+    try:
+        from app.decorators.log import log_celery_error
+
+        task_name = getattr(sender, "name", str(sender))
+        celery_app = getattr(sender, "app", None)
+        flask_app = getattr(celery_app, "flask_app", None)
+        if flask_app is not None:
+            with flask_app.app_context():
+                log_celery_error(
+                    task_name=task_name,
+                    task_id=task_id,
+                    exception=exception,
+                    traceback_text=traceback,
+                )
+        else:
+            log_celery_error(
+                task_name=task_name,
+                task_id=task_id,
+                exception=exception,
+                traceback_text=traceback,
+            )
+    except Exception as e:  # noqa: BLE001
+        logger.error("Failed to log celery task failure: %s", e)
 
 
 def create_celery(app: Flask) -> celery.Celery:
@@ -95,6 +127,17 @@ def create_celery(app: Flask) -> celery.Celery:
             ("*", {"queue": "default"}),  # default queue for all other tasks
         ],
     )
+
+    # 后台任务失败时记录错误日志（weak=False：保持强引用，避免被 GC）
+    from celery.signals import task_failure
+
+    created.flask_app = app
+    task_failure.connect(
+        _log_celery_task_failure,
+        weak=False,
+        dispatch_uid="moeflow_log_celery_task_failure",
+    )
+
     return created
 
 
@@ -160,3 +203,21 @@ def init_db(app: Flask):
     SiteSetting.init_site_setting()
     admin_user = create_or_override_default_admin(app)
     create_default_team(admin_user)
+
+
+def register_logging_handlers(app: Flask):
+    """注册审计日志中间件和服务器错误处理"""
+    from werkzeug.exceptions import InternalServerError
+
+    from app.decorators.log import log_error, log_middleware_before_request
+
+    # 请求前初始化日志上下文
+    app.before_request(log_middleware_before_request)
+
+    # 未处理异常（500）记录到错误日志
+    @app.errorhandler(InternalServerError)
+    def handle_internal_server_error(e):
+        original = getattr(e, "original_exception", None)
+        if original is not None:
+            log_error(original, error_type="exception", status_code=500)
+        return e

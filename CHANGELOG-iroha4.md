@@ -1,10 +1,27 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha11）
+# MoeFlow 自定义改动 CHANGELOG（iroha12）
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 镜像 tag：`moeflow-frontend:1.1.7-iroha11` / `moeflow-backend:1.1.8-iroha11`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6`/`iroha7`/`iroha8`/`iroha9`/`iroha10` 镜像保留各自版本 tag）。
+> 镜像 tag：`moeflow-frontend:1.1.7-iroha12` / `moeflow-backend:1.1.8-iroha12`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6`/`iroha7`/`iroha8`/`iroha9`/`iroha10`/`iroha11` 镜像保留各自版本 tag）。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：以 `docker save` 导出镜像 tar → 生产侧 `docker load` 导入（仅替换前端/后端镜像，勿改动 env / compose）。
+
+---
+
+## iroha12 新增特性（基于 iroha11）
+
+### 一、日志系统（用户动作 + 服务器错误）
+
+- **数据模型**（Mongo 集合 `action_log` / `error_log`）：
+  - `ActionLog`：动作类型、资源类型/ID/名称、操作用户（用户名/邮箱冗余，便于删除后追溯）、是否管理员、HTTP 方法/路径、客户端 IP、UA、详情（JSON，敏感字段脱敏）、状态码、时间。
+  - `ErrorLog`：错误类型/类名/信息/完整堆栈、触发用户、请求方法/路径/IP/请求数据（脱敏）、状态码、已处理状态/处理人/时间/备注。
+- **动作埋点（`@log_action` 装饰器）**：登录、注册、已登录访问登录页、修改资料/邮箱/密码、项目创建/修改/完结/恢复/导出/新增目标语言、团队创建/修改/解散/导出、文件上传/移动/删除/OCR/安全审核、翻译创建/编辑/删除、管理员新建用户/重置密码/注销/管理员状态、社交媒体图片导入（`file.import_from_url`，详情含来源与 URL）。
+- **错误捕获**：`factory.py` 注册 `InternalServerError` 错误处理器记录未处理异常（500，含请求数据与堆栈）；Celery `task_failure` 信号（`weak=False` + 模块级处理函数，避免局部函数被 GC 导致信号失效）记录后台任务失败。
+- **管理查询 API**：`GET /v1/admin/logs/actions`、`GET /v1/admin/logs/errors`（分页头 + 筛选：用户名/动作/资源/时间范围/处理状态，均模糊匹配）、`GET/PUT /v1/admin/logs/errors/<id>`（详情 + 标记已处理）。
+- **操作 IP（CDN 场景）**：优先 `CF-Connecting-IP` / `True-Client-IP`，其次 `X-Forwarded-For` 中第一个非内网地址，最后回退 `X-Real-IP` / `remote_addr`，套 CDN 也能取到真实用户 IP。
+- **前端**：管理后台新增「日志管理」页（`/admin/logs`，侧边栏带剪贴板图标），操作日志 / 错误日志两个标签页 + 筛选 + 错误详情弹窗（堆栈、请求数据、处理人）+ 标记已处理；操作日志表格在用户名旁展示操作 IP；暗色模式适配（Tabs 标签文字、时间选择器面板与「时/分」列头、详情弹窗 Descriptions、筛选区底色）。
+- 关键文件：后端 `models/log.py`、`apis/admin_log.py`、`decorators/log.py`、`apis/urls.py`、`factory.py` 及各处 `@log_action` 埋点；前端 `components/admin/AdminLogList.tsx`、`apis/log.ts`、`pages/Admin.tsx`、`components/admin/AdminSidebar.tsx`、`pages/Login.tsx`、`App.tsx`、`locales/*`。
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha12` / `moeflow-backend:1.1.8-iroha12`。
 
 ---
 

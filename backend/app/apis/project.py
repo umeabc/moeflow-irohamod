@@ -10,6 +10,7 @@ from flask_babel import gettext
 
 from app.core.views import MoeAPIView
 from app.decorators.auth import token_required
+from app.decorators.log import log_action
 from app.decorators.url import fetch_model
 from app.exceptions import (
     NoPermissionError,
@@ -56,6 +57,7 @@ class ProjectAPI(MoeAPIView):
 
     @token_required
     @fetch_model(Project)
+    @log_action("project.edit", resource_type="project")
     def put(self, project: Project):
         """
         @api {put} /v1/projects/<project_id> 修改项目
@@ -105,6 +107,7 @@ class ProjectAPI(MoeAPIView):
 
     @token_required
     @fetch_model(Project)
+    @log_action("project.finish", resource_type="project")
     def delete(self, project: Project):
         """
         @api {put} /v1/projects/<project_id> 完结项目
@@ -137,6 +140,7 @@ class ProjectAPI(MoeAPIView):
 class ProjectResumeAPI(MoeAPIView):
     @token_required
     @fetch_model(Project)
+    @log_action("project.resume", resource_type="project")
     def post(self, project: Project):
         """
         @api {post} /v1/projects/<project_id>/resume 恢复已完结的项目
@@ -191,6 +195,7 @@ class ProjectTargetListAPI(MoeAPIView):
 
     @token_required
     @fetch_model(Project)
+    @log_action("project.add_target", resource_type="project")
     def post(self, project: Project):
         """
         @api {get} /v1/projects/<project_id>/targets 新增翻译目标
@@ -215,6 +220,7 @@ class ProjectTargetListAPI(MoeAPIView):
 class ProjectOutputListAPI(MoeAPIView):
     @token_required
     @fetch_model(Project)
+    @log_action("project.output", resource_type="project")
     def post(self, project: Project):
         if not self.current_user.can(project, ProjectPermission.OUTPUT_TRA):
             raise NoPermissionError
@@ -285,6 +291,7 @@ class ProjectTargetOutputListAPI(MoeAPIView):
     @token_required
     @fetch_model(Project)
     @fetch_model(Target)
+    @log_action("project.target_output", resource_type="project")
     def post(self, project: Project, target: Target):
         """
         @api {post} /v1/projects/<project_id>/targets/<target_id>/outputs 新增项目导出

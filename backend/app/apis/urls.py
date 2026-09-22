@@ -27,6 +27,7 @@ from app.apis.me import (
     MeTeamListAPI,
     MeTokenAPI,
     MeRelatedApplicationListAPI,
+    MeVisitLoginAPI,
 )
 from app.apis.avatar import AvatarAPI
 from app.apis.site_setting import (
@@ -93,6 +94,11 @@ from app.apis.notice import (
     NoticeReadAPI,
 )
 from app.apis.admin_team import AdminTeamAPI, AdminTeamListAPI
+from app.apis.admin_log import (
+    AdminActionLogAPI,
+    AdminErrorLogAPI,
+    AdminErrorLogDetailAPI,
+)
 from app.apis.language import LanguageListAPI
 from app.apis.target import TargetAPI
 from app.apis.manga_image_translator import (
@@ -193,6 +199,11 @@ me.add_url_rule(
     "/token",
     methods=["POST", "OPTIONS"],
     view_func=MeTokenAPI.as_view("me_token"),
+)
+me.add_url_rule(
+    "/visit-login",
+    methods=["POST", "OPTIONS"],
+    view_func=MeVisitLoginAPI.as_view("me_visit_login"),
 )
 me.add_url_rule(
     "/projects",
@@ -596,6 +607,21 @@ admin.add_url_rule(
     "/notices/<notice_id>",
     methods=["PUT", "DELETE", "OPTIONS"],
     view_func=AdminNoticeAPI.as_view("admin_notice"),
+)
+admin.add_url_rule(
+    "/logs/actions",
+    methods=["GET", "OPTIONS"],
+    view_func=AdminActionLogAPI.as_view("admin_action_log_list"),
+)
+admin.add_url_rule(
+    "/logs/errors",
+    methods=["GET", "OPTIONS"],
+    view_func=AdminErrorLogAPI.as_view("admin_error_log_list"),
+)
+admin.add_url_rule(
+    "/logs/errors/<log_id>",
+    methods=["GET", "PUT", "OPTIONS"],
+    view_func=AdminErrorLogDetailAPI.as_view("admin_error_log_detail"),
 )
 
 if app_config["MIT_STORAGE_ROOT"]:

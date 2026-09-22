@@ -7,6 +7,7 @@ from flask_babel import gettext
 from app.core.responses import MoePagination
 from app.core.views import MoeAPIView
 from app.decorators.auth import admin_required, token_required
+from app.decorators.log import log_action
 from app.decorators.url import fetch_model
 from app.exceptions import RequestDataEmptyError, UserNotExistError
 from app.exceptions.auth import InvalidInviteCodeError
@@ -80,6 +81,7 @@ class UserAPI(MoeAPIView):
         else:
             raise UserNotExistError
 
+    @log_action("user.register")
     def post(self):
         """
         @api {post} /v1/users 新建用户
@@ -172,6 +174,7 @@ class AdminUserListAPI(MoeAPIView):
         return p.set_objects(objects)
 
     @admin_required
+    @log_action("user.create_by_admin")
     def post(self):
         """
         @api {post} /v1/admin/users 管理后台新建用户
@@ -185,6 +188,7 @@ class AdminUserListAPI(MoeAPIView):
 class AdminUserAPI(MoeAPIView):
     @admin_required
     @fetch_model(User)
+    @log_action("user.reset_password", resource_type="user")
     def put(self, user):
         """
         @api {put} /v1/admin/users/<user_id> 重置用户密码
@@ -198,6 +202,7 @@ class AdminUserAPI(MoeAPIView):
 class AdminUserDeactivateAPI(MoeAPIView):
     @admin_required
     @fetch_model(User)
+    @log_action("user.deactivate", resource_type="user")
     def put(self, user):
         """
         @api {put} /v1/admin/users/<user_id>/deactivate 注销用户
@@ -209,6 +214,7 @@ class AdminUserDeactivateAPI(MoeAPIView):
 
 class AdminUserAdminStatusAPI(MoeAPIView):
     @admin_required
+    @log_action("user.change_admin_status")
     def put(self):
         """
         @api {put} /v1/admin/admin-status 修改用户的管理员状态

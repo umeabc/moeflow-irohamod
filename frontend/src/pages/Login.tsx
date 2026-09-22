@@ -7,7 +7,7 @@ import {
   Form as AntdForm,
   InputRef,
 } from 'antd';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router';
@@ -62,6 +62,15 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
   // 已登录状态（token 来自 Cookie，应用启动时写入 Store）
   const currentUser = useSelector((state: AppState) => state.user);
   const isLogined = !!currentUser.token;
+
+  // 已登录用户访问登录页时上报一次（供日志统计）
+  const visitedLoginReported = useRef(false);
+  useEffect(() => {
+    if (isLogined && !visitedLoginReported.current) {
+      visitedLoginReported.current = true;
+      api.me.visitLoginPage({}).catch(() => {});
+    }
+  }, [isLogined]);
 
   // 用于密码错误，自动定位到密码输入框（因为密码错误刷新人机验证码，会错误 focus 到人机验证码输入框）
   const passwordInputRef = useRef<InputRef>(null);

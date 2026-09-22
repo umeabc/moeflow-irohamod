@@ -231,6 +231,12 @@ export const AdminSidebar: FC<AdminSidebarProps> = ({ onNavigate }) => {
             label={formatMessage({ id: 'admin.notices' })}
             onNavigate={onNavigate}
           />
+          <AdminNavItem
+            to={`${routes.admin}/logs`}
+            icon="clipboard-list"
+            label={formatMessage({ id: 'admin.logs' })}
+            onNavigate={onNavigate}
+          />
         </div>
       </nav>
       <div className="AdminSidebar__Bottom">

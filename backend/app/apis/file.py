@@ -5,6 +5,7 @@ from flask_babel import gettext
 from app.core.responses import MoePagination
 from app.core.views import MoeAPIView
 from app.decorators.auth import admin_required, token_required
+from app.decorators.log import log_action
 from app.decorators.url import fetch_model
 from app.exceptions import (
     FileDuplicateError,
@@ -129,6 +130,7 @@ class ProjectFileListAPI(MoeAPIView):
 
     @token_required
     @fetch_model(Project)
+    @log_action("file.upload", resource_type="project")
     def post(self, project: Project):
         """
         @api {post} /v1/projects/<project_id>/files 上传文件
@@ -201,6 +203,7 @@ class ProjectFileListAPI(MoeAPIView):
 class ProjectFileMoveAPI(MoeAPIView):
     @token_required
     @fetch_model(Project)
+    @log_action("file.move", resource_type="project")
     def put(self, project):
         """把勾选的图片批量移动到同一项目集下的其它项目"""
         if not self.current_user.admin_can() and not self.current_user.can(
@@ -341,6 +344,7 @@ class FileAPI(MoeAPIView):
 
     @token_required
     @fetch_model(File)
+    @log_action("file.edit", resource_type="file")
     def put(self, file: File):
         """
         @api {put} /v1/files/<file_id> 修改文件 [一个请求仅可提供一个参数]
@@ -409,6 +413,7 @@ class FileAPI(MoeAPIView):
 
     @token_required
     @fetch_model(File)
+    @log_action("file.delete", resource_type="file")
     def delete(self, file):
         """
         @api {get} /v1/files/<file_id> 修改文件
@@ -433,6 +438,7 @@ class FileAPI(MoeAPIView):
 class FileOCRAPI(MoeAPIView):
     @token_required
     @fetch_model(File)
+    @log_action("file.ocr", resource_type="file")
     def post(self, file: File):
         """
         @api {post} /v1/files/<file_id>/ocr 为文件 OCR
@@ -486,6 +492,7 @@ class AdminFileListAPI(MoeAPIView):
 
 class AdminFileListSafeCheckAPI(MoeAPIView):
     @admin_required
+    @log_action("file.safe_check")
     def put(self):
         data = self.get_json()
         safe_file_ids = data.get("safe_files", [])

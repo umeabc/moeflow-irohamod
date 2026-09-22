@@ -77,6 +77,13 @@
 - **暗色模式高亮修复**：通知标题（登录弹窗 / 通知一览）与站点设置「下载图片设置」分区标题在暗色模式下由黑色改为主题粉色高亮（`html[data-theme='dark'] & { color: var(--moeflow-primaryColor); }`）。
 - 镜像 tag：`moeflow-frontend:1.1.7-iroha11` / `moeflow-backend:1.1.8-iroha11`（后端内容与 iroha10 末版一致）。
 
+## 4.7 iroha12 新增（基于 iroha11）
+- **日志系统（管理后台）**：`/admin/logs` 新增「日志管理」页（操作日志 + 错误日志两个标签页）：
+  - 操作日志：记录用户/管理员动作（登录、注册、已登录访问登录页、改资料/邮箱/密码、项目/团队/文件/翻译增删改导出、管理员操作、社交媒体图片导入等），含用户、操作 IP、时间、动作类型、资源、详情；支持按用户名/动作/资源/时间筛选与分页。
+  - 错误日志：Web 请求未处理异常（500，含完整堆栈与请求数据）与 Celery 后台任务失败；管理员可查看详情并标记「已处理/待处理」。
+  - 操作 IP：优先 `CF-Connecting-IP`/`True-Client-IP` → `X-Forwarded-For` 首个非内网地址 → `X-Real-IP`；敏感字段（密码/验证码等）入库前脱敏。
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha12` / `moeflow-backend:1.1.8-iroha12`。
+
 ## 5. 关键环境坑（务必牢记）
 1. **前端 build 在资源充足的开发机上做**，再上传远程 `docker build`；远程内存不足跑不动前端构建（OOM）。
 2. **Docker Hub 不稳定** → 用 daocloud `docker.m.daocloud.io` 拉基础镜像再 retag。

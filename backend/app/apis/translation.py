@@ -1,6 +1,7 @@
 import datetime
 from app.core.views import MoeAPIView
 from app.decorators.auth import token_required
+from app.decorators.log import log_action
 from app.decorators.url import fetch_model
 from app.exceptions import NoPermissionError
 from app.models.file import Source, Translation
@@ -14,6 +15,7 @@ from app.validators.translation import (
 class SourceTranslationListAPI(MoeAPIView):
     @token_required
     @fetch_model(Source)
+    @log_action("translation.create", resource_type="source")
     def post(self, source):
         """
         @api {post} /v1/sources/<source_id>/translations 新建/修改我的翻译
@@ -45,6 +47,7 @@ class SourceTranslationListAPI(MoeAPIView):
 class TranslationAPI(MoeAPIView):
     @token_required
     @fetch_model(Translation)
+    @log_action("translation.edit", resource_type="translation")
     def put(self, translation):
         """
         @api {put} /v1/translations/<translation_id> 修改、校对、选定翻译
@@ -103,6 +106,7 @@ class TranslationAPI(MoeAPIView):
 
     @token_required
     @fetch_model(Translation)
+    @log_action("translation.delete", resource_type="translation")
     def delete(self, translation):
         """
         @api {delete} /v1/translations/<translation_id> 删除翻译

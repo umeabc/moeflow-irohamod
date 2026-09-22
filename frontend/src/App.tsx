@@ -95,6 +95,26 @@ const App: React.FC = () => {
             background-color: ${style.primaryColor};
           }
 
+          /* 时间选择面板：为小时/分钟两列增加列头标注（antd 默认无） */
+          .ant-picker-time-panel-column::before {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            display: block;
+            padding: 4px 0 5px;
+            font-size: 12px;
+            line-height: 1.4;
+            text-align: center;
+            color: var(--moeflow-textColorSecondary);
+            background-color: var(--moeflow-surface);
+          }
+          .ant-picker-time-panel-column:nth-child(1)::before {
+            content: '时';
+          }
+          .ant-picker-time-panel-column:nth-child(2)::before {
+            content: '分';
+          }
+
           /* == 手机版 == */
           ${isMobile &&
           css`
@@ -272,6 +292,78 @@ const App: React.FC = () => {
             background-color: #2a2a2a;
             border-color: #333;
             color: rgba(255, 255, 255, 0.85);
+          }
+          /* Tabs（默认线型标签页） */
+          html[data-theme='dark'] .ant-tabs {
+            color: rgba(255, 255, 255, 0.85);
+          }
+          html[data-theme='dark'] .ant-tabs-tab,
+          html[data-theme='dark'] .ant-tabs-tab-btn {
+            color: rgba(255, 255, 255, 0.65);
+          }
+          html[data-theme='dark'] .ant-tabs-tab:hover,
+          html[data-theme='dark'] .ant-tabs-tab:hover .ant-tabs-tab-btn {
+            color: rgba(255, 255, 255, 0.85);
+          }
+          html[data-theme='dark'] .ant-tabs-tab.ant-tabs-tab-active,
+          html[data-theme='dark'] .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+            color: var(--moeflow-primaryColor);
+          }
+          html[data-theme='dark'] .ant-tabs-nav::before {
+            border-bottom-color: #333;
+          }
+          html[data-theme='dark'] .ant-tabs-nav-more {
+            color: rgba(255, 255, 255, 0.65);
+          }
+          /* Descriptions（详情弹窗） */
+          html[data-theme='dark'] .ant-descriptions-view,
+          html[data-theme='dark'] .ant-descriptions-row > th,
+          html[data-theme='dark'] .ant-descriptions-row > td {
+            border-color: #333 !important;
+          }
+          html[data-theme='dark'] .ant-descriptions-item-label {
+            background-color: #262626 !important;
+            color: rgba(255, 255, 255, 0.65) !important;
+          }
+          html[data-theme='dark'] .ant-descriptions-item-content {
+            background-color: #1f1f1f !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+          }
+          /* 日期选择器（筛选时间范围） */
+          html[data-theme='dark'] .ant-picker-input > input {
+            color: rgba(255, 255, 255, 0.85);
+          }
+          html[data-theme='dark'] .ant-picker-panel-container {
+            background-color: #262626;
+            color: rgba(255, 255, 255, 0.85);
+          }
+          html[data-theme='dark'] .ant-picker-header,
+          html[data-theme='dark'] .ant-picker-footer,
+          html[data-theme='dark'] .ant-picker-content th,
+          html[data-theme='dark'] .ant-picker-cell {
+            color: rgba(255, 255, 255, 0.45);
+          }
+          html[data-theme='dark'] .ant-picker-cell-in-view {
+            color: rgba(255, 255, 255, 0.85);
+          }
+          html[data-theme='dark'] .ant-picker-cell:hover:not(.ant-picker-cell-selected):not(.ant-picker-cell-range-start):not(.ant-picker-cell-range-end) .ant-picker-cell-inner,
+          html[data-theme='dark'] .ant-picker-time-panel-column > li.ant-picker-time-panel-cell .ant-picker-time-panel-cell-inner:hover {
+            background-color: #333;
+          }
+          /* 时间列（小时/分钟）文字与选中态 */
+          html[data-theme='dark'] .ant-picker-time-panel-column::before {
+            background-color: #262626;
+            color: rgba(255, 255, 255, 0.45);
+          }
+          html[data-theme='dark'] .ant-picker-time-panel-column:not(:first-child) {
+            border-left-color: #333;
+          }
+          html[data-theme='dark'] .ant-picker-time-panel-column > li.ant-picker-time-panel-cell .ant-picker-time-panel-cell-inner {
+            color: rgba(255, 255, 255, 0.85);
+          }
+          html[data-theme='dark'] .ant-picker-time-panel-column > li.ant-picker-time-panel-cell-selected .ant-picker-time-panel-cell-inner {
+            background-color: var(--moeflow-primaryColor);
+            color: #fff;
           }
           html[data-theme='dark'] .ant-tooltip,
           html[data-theme='dark'] .ant-tooltip-inner {

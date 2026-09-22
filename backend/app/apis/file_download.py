@@ -9,11 +9,13 @@
 import io
 import threading
 
+from flask import g
 from flask_babel import gettext
 from werkzeug.datastructures import FileStorage
 
 from app.core.views import MoeAPIView
 from app.decorators.auth import token_required
+from app.decorators.log import log_action
 from app.decorators.url import fetch_model
 from app.exceptions import NoPermissionError
 from app.models.file import File
@@ -204,10 +206,12 @@ class ProjectFileFromURLAPI(MoeAPIView):
 
     @token_required
     @fetch_model(Project)
+    @log_action("file.import_from_url", resource_type="project")
     def post(self, project: Project):
         data = self.get_json()
         source = (data.get("source") or "external").strip()
         url = (data.get("url") or "").strip()
+        g.log_details = {"source": source, "url": url}
         if source not in (
             "twitter",
             "twitter_user",
