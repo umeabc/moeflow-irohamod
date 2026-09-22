@@ -14,10 +14,12 @@ import {
   TablePaginationConfig,
   Tabs,
   Tag,
+  Tooltip,
 } from 'antd';
 import dayjs from 'dayjs';
 import { api } from '@/apis';
 import { APIActionLog, APIErrorLog } from '@/apis/log';
+import { ACTION_LOG_TYPES, getActionTypeLabel } from '@/constants/actionLog';
 import { toLowerCamelCase } from '@/utils';
 import style from '@/style';
 
@@ -209,8 +211,12 @@ export const AdminLogList: FC<AdminLogListProps> = ({ className }) => {
       title: formatMessage({ id: 'admin.log.action' }),
       dataIndex: 'actionType',
       key: 'actionType',
-      width: 170,
-      render: (text: string) => <Tag color="blue">{text}</Tag>,
+      width: 150,
+      render: (text: string) => (
+        <Tooltip title={text}>
+          <Tag color="blue">{getActionTypeLabel(text)}</Tag>
+        </Tooltip>
+      ),
     },
     {
       title: formatMessage({ id: 'admin.log.resource' }),
@@ -355,12 +361,26 @@ export const AdminLogList: FC<AdminLogListProps> = ({ className }) => {
           )}
           {activeTab === 'actions' ? (
             <>
-              <Input
+              <Select
                 placeholder={formatMessage({ id: 'admin.log.filterAction' })}
                 value={action}
-                onChange={(e) => setAction(e.target.value)}
+                onChange={setAction}
                 style={{ width: 200 }}
-              />
+                allowClear
+                showSearch
+                filterOption={(input, option) =>
+                  String(option?.props?.children || '')
+                    .concat(String(option?.props?.value || ''))
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              >
+                {Object.entries(ACTION_LOG_TYPES).map(([code, label]) => (
+                  <Option key={code} value={code}>
+                    {label}
+                  </Option>
+                ))}
+              </Select>
               <Input
                 placeholder={formatMessage({ id: 'admin.log.filterResource' })}
                 value={resource}
