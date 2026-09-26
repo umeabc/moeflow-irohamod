@@ -5,6 +5,16 @@ from app.validators.custom_schema import DefaultSchema
 from app.validators.custom_validate import object_id
 
 
+class LlmPresetSchema(DefaultSchema):
+    """自动翻译模型预设单项"""
+
+    provider = fields.Str(missing="")
+    model = fields.Str(missing="")
+    base_url = fields.Str(missing="")
+    api_key = fields.Str(missing="")
+    use_admin_key = fields.Boolean(missing=False)
+
+
 class SiteSettingSchema(DefaultSchema):
     only_allow_admin_create_team = fields.Boolean(
         required=True, error_messages={**required_message}
@@ -27,6 +37,8 @@ class SiteSettingSchema(DefaultSchema):
     bluesky_anonymous = fields.Boolean(missing=True)
     bluesky_handle = fields.Str(missing="")
     bluesky_app_password = fields.Str(missing="")
+    # 自动翻译模型预设
+    llm_presets = fields.List(fields.Nested(LlmPresetSchema), missing=list)
 
 
 class CustomMessagesSchema(DefaultSchema):

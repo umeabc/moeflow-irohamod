@@ -213,10 +213,15 @@ export const BatchTranslateModalContent: FC<{
         return;
       }
 
-      const imgBlob = await fetch(resData.url!, { signal: abort.signal }).then(
-        (r) => r.blob(),
-        () => null,
-      );
+      // 通过同源代理读取图片字节，避免外置存储（R2 / imgstore）直链跨域被浏览器拦截
+      const contentRes = await api.file
+        .getFileContent({ fileID: f.id, configs: { cancelToken } })
+        .catch(() => null);
+      const imgBlob =
+        contentRes?.type === resultTypes.SUCCESS &&
+        contentRes.data instanceof Blob
+          ? contentRes.data
+          : null;
       if (!imgBlob) {
         setFileState(
           f,

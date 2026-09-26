@@ -12,7 +12,7 @@ from flask_babel import gettext
 from app import STORAGE_PATH, app_config, oss
 from app.constants.storage import StorageType
 from app.core.views import MoeAPIView
-from app.decorators.auth import admin_required
+from app.decorators.auth import admin_required, token_required
 from app.exceptions import UploadFileNotFoundError
 from app.models.site_setting import SiteSetting
 from app.utils.logging import logger
@@ -74,6 +74,7 @@ class SiteSettingAPI(MoeAPIView):
         site_setting.bluesky_anonymous = bool(data.get("bluesky_anonymous", True))
         site_setting.bluesky_handle = data.get("bluesky_handle", "")
         site_setting.bluesky_app_password = data.get("bluesky_app_password", "")
+        site_setting.llm_presets = data.get("llm_presets", [])
         site_setting.save()
         site_setting.reload()
         return site_setting.to_api()
@@ -92,6 +93,19 @@ class CustomMessagesAPI(MoeAPIView):
 
     def get(self):
         return SiteSetting.get().custom_messages or {}
+
+
+class LlmPresetsAPI(MoeAPIView):
+    """登录用户可读：自动翻译（LLM）模型预设。
+
+    管理员在站点设置中维护；普通用户在选择「自动翻译」模型时读取。
+    若预设开启 use_admin_key，则包含管理端配置的 base_url / api_key，
+    由前端直接使用且隐藏 API URL / API KEY 输入框。
+    """
+
+    @token_required
+    def get(self):
+        return {"presets": SiteSetting.get().llm_presets or []}
 
 
 class AdminCustomMessagesAPI(MoeAPIView):

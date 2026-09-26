@@ -1,7 +1,10 @@
 from app.exceptions.project import ProjectFinishedError
-from flask import request
+import mimetypes
+
+from flask import current_app, request, send_file
 from flask_babel import gettext
 
+from app import oss
 from app.core.responses import MoePagination
 from app.core.views import MoeAPIView
 from app.decorators.auth import admin_required, token_required
@@ -11,6 +14,7 @@ from app.exceptions import (
     FileDuplicateError,
     FileMoveError,
     NoPermissionError,
+    SourceFileNotExist,
     UploadFileNotFoundError,
 )
 from app.utils.filename import strip_filename_emoji
@@ -433,6 +437,35 @@ class FileAPI(MoeAPIView):
             raise NoPermissionError(gettext("您没有权限删除文件"))
         file.clear()
         return {"message": gettext("删除成功")}
+
+
+class FileContentAPI(MoeAPIView):
+    """同源代理：返回文件原始内容（字节流）。
+
+    外置存储（R2 / imgstore 等）的直链通常与站点不同源，且可能未配置 CORS，
+    浏览器端 `fetch` 会被拦截（例如「自动翻译」取图）。此接口由后端从存储读取
+    再以同源方式返回，避免跨域问题。
+    """
+
+    @token_required
+    @fetch_model(File)
+    def get(self, file: File):
+        # 检查用户权限
+        if not self.current_user.can(file.project, ProjectPermission.ACCESS):
+            raise NoPermissionError(gettext("您没有此项目的访问权限"))
+        if not file.save_name:
+            raise SourceFileNotExist(file.file_not_exist_reason)
+        stream = oss.download(
+            current_app.config["OSS_FILE_PREFIX"],
+            file.save_name,
+            bucket_name=file.storage_bucket or None,
+        )
+        mimetype, _ = mimetypes.guess_type(file.name or file.save_name)
+        return send_file(
+            stream,
+            mimetype=mimetype or "application/octet-stream",
+            max_age=3600,
+        )
 
 
 class FileOCRAPI(MoeAPIView):

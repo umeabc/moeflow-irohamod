@@ -12,6 +12,17 @@ export interface APISiteSetting {
   blueskyAnonymous?: boolean;
   blueskyHandle?: string;
   blueskyAppPassword?: string;
+  llmPresets?: APILlmPreset[];
+}
+
+/** 自动翻译（LLM）模型预设单项 */
+export interface APILlmPreset {
+  provider: string;
+  model: string;
+  baseUrl: string;
+  apiKey?: string;
+  /** 使用管理端提供的 API URL / API KEY，用户端隐藏这两栏 */
+  useAdminKey?: boolean;
 }
 
 const getSiteSetting = ({ configs }: { configs?: AxiosRequestConfig }) => {
@@ -181,6 +192,19 @@ const uploadBrandAsset = ({
   });
 };
 
+/** 登录用户可读：自动翻译模型预设（管理员在站点设置中维护） */
+const getLlmPresets = ({
+  configs,
+}: {
+  configs?: AxiosRequestConfig;
+} = {}) => {
+  return request<{ presets: APILlmPreset[] }>({
+    method: 'GET',
+    url: `/v1/site/llm-presets`,
+    ...configs,
+  });
+};
+
 export default {
   getSiteSetting,
   editSiteSetting,
@@ -193,4 +217,5 @@ export default {
   saveCustomMessages,
   getBrandAssets,
   uploadBrandAsset,
+  getLlmPresets,
 };

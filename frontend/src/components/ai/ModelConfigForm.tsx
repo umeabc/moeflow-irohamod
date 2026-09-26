@@ -12,6 +12,8 @@ export interface TranslateModeAvailability {
 
 interface ModelConfigFormProps {
   initialValue?: LlmService.LLMConf;
+  /** 可选预设（来自管理后台站点设置）；缺省时使用内置预设 */
+  presets?: readonly LlmService.LLMConf[];
   onChange?: (config: LlmService.LLMConf) => void;
   availability?: TranslateModeAvailability;
   defaultMode?: LlmService.TranslateMode;
@@ -20,6 +22,7 @@ interface ModelConfigFormProps {
 
 export const ModelConfigForm: React.FC<ModelConfigFormProps> = ({
   initialValue,
+  presets = LlmService.llmPresets,
   onChange,
   availability,
   defaultMode,
@@ -30,6 +33,7 @@ export const ModelConfigForm: React.FC<ModelConfigFormProps> = ({
   const [mode, setMode] = useState<LlmService.TranslateMode>(
     defaultMode ?? 'all',
   );
+  const [presetIndex, setPresetIndex] = useState<number>(-1);
 
   useEffect(() => {
     if (defaultMode) {
@@ -38,87 +42,109 @@ export const ModelConfigForm: React.FC<ModelConfigFormProps> = ({
   }, [defaultMode]);
 
   // Find matching preset index for initial value
-  const findPresetIndex = (config: LlmService.LLMConf): number => {
-    const index = LlmService.llmPresets.findIndex(
+  const findPresetIndex = (
+    config: LlmService.LLMConf | undefined,
+    list: readonly LlmService.LLMConf[],
+  ): number => {
+    if (!config) return -1;
+    // 优先精确匹配 model + baseUrl
+    let index = list.findIndex(
       (preset) =>
         preset.model === config.model && preset.baseUrl === config.baseUrl,
+    );
+    if (index >= 0) return index;
+    // admin-key 预设允许用户改模型：按 baseUrl 兜底匹配
+    index = list.findIndex(
+      (preset) => preset.useAdminKey && preset.baseUrl === config.baseUrl,
     );
     return index >= 0 ? index : -1; // -1 for custom
   };
 
+  const activePreset =
+    presetIndex >= 0 && presetIndex < presets.length
+      ? presets[presetIndex]
+      : undefined;
+  /** 选中「管理端密钥」预设时，隐藏 API URL / API KEY 两栏 */
+  const hideCredentials = !!activePreset?.useAdminKey;
+
   useEffect(() => {
     if (initialValue) {
-      const presetIndex = findPresetIndex(initialValue);
+      const index = findPresetIndex(initialValue, presets);
+      setPresetIndex(index);
       form.setFieldsValue({
-        preset: presetIndex,
         model: initialValue.model,
         baseUrl: initialValue.baseUrl,
         apiKey: initialValue.apiKey,
       });
       onChange?.(initialValue);
     }
-  }, [initialValue, form, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialValue, presets, form]);
+
+  /** 由表单值与预设下标构造最终配置（admin-key 预设强制使用预设的 URL/KEY） */
+  const buildConfig = (
+    values: any,
+    idx: number,
+  ): LlmService.LLMConf => {
+    const preset = idx >= 0 && idx < presets.length ? presets[idx] : undefined;
+    const useAdminKey = !!preset?.useAdminKey;
+    return {
+      provider: preset?.provider ?? '',
+      model: values.model ?? preset?.model ?? '',
+      baseUrl: useAdminKey ? preset!.baseUrl : values.baseUrl,
+      apiKey: useAdminKey ? preset!.apiKey : values.apiKey,
+      useAdminKey,
+    };
+  };
+
+  const emitConfig = (values: any, idx: number) => {
+    const config = buildConfig(values, idx);
+    if (config.useAdminKey) {
+      // 隐藏字段也填入预设值，便于用户切回自定义时可见
+      form.setFieldsValue({
+        baseUrl: config.baseUrl,
+        apiKey: config.apiKey ?? '',
+      });
+    }
+    onChange?.(config);
+  };
 
   // Handle preset selection change
-  const handlePresetChange = (presetIndex: number) => {
-    if (presetIndex >= 0 && presetIndex < LlmService.llmPresets.length) {
-      const preset = LlmService.llmPresets[presetIndex];
+  const handlePresetChange = (index: number) => {
+    setPresetIndex(index);
+    const preset =
+      index >= 0 && index < presets.length ? presets[index] : undefined;
+    if (preset) {
       const patch = {
         model: preset.model,
         baseUrl: preset.baseUrl,
         apiKey: preset.apiKey || '',
       };
       form.setFieldsValue(patch);
-      handleFormChange(patch, form.getFieldsValue());
+      emitConfig(patch, index);
+    } else {
+      // 自定义：保留现有输入
+      emitConfig(form.getFieldsValue(), index);
     }
-    // For custom preset (index -1), don't auto-fill fields
   };
 
   // Handle form values change
   const handleFormChange = (changedValues: any, allValues: any) => {
-    // Check if model or baseUrl was changed and update preset accordingly
-    if (
-      changedValues.model !== undefined ||
-      changedValues.baseUrl !== undefined
-    ) {
-      const currentModel = allValues.model || changedValues.model;
-      const currentBaseUrl = allValues.baseUrl || changedValues.baseUrl;
-
-      // Find matching preset
-      const matchingPresetIndex = LlmService.llmPresets.findIndex(
-        (preset) =>
-          preset.model === currentModel && preset.baseUrl === currentBaseUrl,
-      );
-
-      // Update preset to match the current values
-      if (matchingPresetIndex >= 0) {
-        // Found a matching preset, switch to it
-        if (allValues.preset !== matchingPresetIndex) {
-          form.setFieldValue('preset', matchingPresetIndex);
-        }
-      } else {
-        // No preset matches, set to custom (-1)
-        if (allValues.preset !== -1) {
-          form.setFieldValue('preset', -1);
-        }
-      }
-    }
-
     const values = form.getFieldsValue();
-    // Get provider from selected preset if available
-    let provider = '';
-    if (values.preset >= 0 && values.preset < LlmService.llmPresets.length) {
-      provider = LlmService.llmPresets[values.preset].provider;
+    let idx = presetIndex;
+    // 仅当用户手动修改 baseUrl 时重新判定预设（admin-key 预设允许改模型）
+    if (changedValues.baseUrl !== undefined) {
+      idx = presets.findIndex(
+        (preset) =>
+          preset.model === allValues.model &&
+          preset.baseUrl === allValues.baseUrl,
+      );
+      idx = idx >= 0 ? idx : -1;
+      setPresetIndex(idx);
     }
-
-    const config: LlmService.LLMConf = {
-      provider,
-      model: values.model,
-      baseUrl: values.baseUrl,
-      apiKey: values.apiKey,
-    };
-    onChange?.(config);
+    emitConfig({ ...values, ...allValues }, idx);
   };
+
   return (
     <div>
       <Typography.Title level={5}>
@@ -189,17 +215,22 @@ export const ModelConfigForm: React.FC<ModelConfigFormProps> = ({
           label={formatMessage({
             id: 'fileList.aiTranslate.configModal.presets.label',
           })}
-          name="preset"
         >
           <Select
+            value={presetIndex}
             placeholder={formatMessage({
               id: 'fileList.aiTranslate.configModal.presets.placeholder',
             })}
             onChange={handlePresetChange}
           >
-            {LlmService.llmPresets.map((preset, i) => (
+            {presets.map((preset, i) => (
               <Select.Option key={i} value={i}>
                 {preset.provider} / {preset.model}
+                {preset.useAdminKey
+                  ? ` · ${formatMessage({
+                      id: 'fileList.aiTranslate.configModal.presets.adminKey',
+                    })}`
+                  : ''}
               </Select.Option>
             ))}
             <Select.Option key={-1} value={-1}>
@@ -230,49 +261,69 @@ export const ModelConfigForm: React.FC<ModelConfigFormProps> = ({
           />
         </Form.Item>
 
-        <Form.Item
-          label={formatMessage({
-            id: 'fileList.aiTranslate.configModal.baseUrl.label',
-          })}
-          name="baseUrl"
-          rules={[
-            {
-              required: true,
-              message: formatMessage({
-                id: 'fileList.aiTranslate.configModal.baseUrl.required',
-              }),
-            },
-            {
-              type: 'url',
-              message: formatMessage({
-                id: 'fileList.aiTranslate.configModal.baseUrl.invalidUrl',
-              }),
-            },
-          ]}
-        >
-          <Input
-            placeholder="https://api.example.com/v1/"
-            maxLength={200}
-            autoComplete="llm-base-url"
-          />
-        </Form.Item>
+        {hideCredentials ? (
+          <p
+            style={{
+              color: 'var(--moeflow-textColorSecondary)',
+              marginTop: -8,
+              marginBottom: 12,
+              fontSize: 12,
+            }}
+          >
+            {formatMessage({
+              id: 'fileList.aiTranslate.configModal.presets.adminKeyHint',
+            })}
+          </p>
+        ) : (
+          <>
+            <Form.Item
+              label={formatMessage({
+                id: 'fileList.aiTranslate.configModal.baseUrl.label',
+              })}
+              name="baseUrl"
+              rules={[
+                {
+                  required: true,
+                  message: formatMessage({
+                    id: 'fileList.aiTranslate.configModal.baseUrl.required',
+                  }),
+                },
+                {
+                  type: 'url',
+                  message: formatMessage({
+                    id: 'fileList.aiTranslate.configModal.baseUrl.invalidUrl',
+                  }),
+                },
+              ]}
+            >
+              <Input
+                placeholder="https://api.example.com/v1/"
+                maxLength={200}
+                autoComplete="llm-base-url"
+              />
+            </Form.Item>
 
-        <Form.Item
-          label={formatMessage({
-            id: 'fileList.aiTranslate.configModal.apiKey.label',
-          })}
-          name="apiKey"
-          rules={[
-            {
-              required: true,
-              message: formatMessage({
-                id: 'fileList.aiTranslate.configModal.apiKey.required',
-              }),
-            },
-          ]}
-        >
-          <Input.Password placeholder="Enter your API key" autoComplete="off" />
-        </Form.Item>
+            <Form.Item
+              label={formatMessage({
+                id: 'fileList.aiTranslate.configModal.apiKey.label',
+              })}
+              name="apiKey"
+              rules={[
+                {
+                  required: true,
+                  message: formatMessage({
+                    id: 'fileList.aiTranslate.configModal.apiKey.required',
+                  }),
+                },
+              ]}
+            >
+              <Input.Password
+                placeholder="Enter your API key"
+                autoComplete="off"
+              />
+            </Form.Item>
+          </>
+        )}
       </Form>
 
       <Divider />

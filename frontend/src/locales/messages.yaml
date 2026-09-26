@@ -895,6 +895,12 @@ fileList.aiTranslate:
       custom:
         zhCn: 自定义
         en: Custom
+      adminKey:
+        zhCn: 本站密钥
+        en: Site key
+      adminKeyHint:
+        zhCn: 该预设使用本站提供的 API 地址与密钥，无需填写 API URL 与 API KEY。
+        en: This preset uses the API URL and key provided by the site; no need to fill in API URL / API KEY.
     model:
       label:
         zhCn: 模型ID
@@ -1891,3 +1897,152 @@ admin.teamDelete:
 admin.teamDeleteConfirm:
   zhCn: 确定删除该团队吗？将级联删除其下所有项目与文件，且不可恢复。
   en: Delete this team? This will cascade-delete all its projects and files permanently.
+admin.llmPresets:
+  zhCn: 自动翻译模型预设
+  en: Auto-translate Model Presets
+admin.llmPresetsDesc:
+  zhCn: 维护「自动翻译」可选模型。普通用户可直接选择；开启「使用管理端密钥」的预设会下发本站配置的 API 地址与密钥，并隐藏用户端的 API URL / API KEY 输入框。
+  en: "Models selectable in Auto Translate. Regular users can pick them directly; presets with \"Use site key\" deliver the site's API URL and key and hide the user's API URL / API KEY inputs."
+admin.llmPresetsProvider:
+  zhCn: 提供商
+  en: Provider
+admin.llmPresetsModel:
+  zhCn: 模型 ID
+  en: Model ID
+admin.llmPresetsBaseUrl:
+  zhCn: API URL
+  en: API URL
+admin.llmPresetsApiKey:
+  zhCn: API KEY
+  en: API KEY
+admin.llmPresetsApiKeyPlaceholder:
+  zhCn: 留空则由用户自行填写
+  en: Leave blank to let users enter their own
+admin.llmPresetsUseAdminKey:
+  zhCn: 使用管理端密钥（隐藏用户端 API URL / API KEY）
+  en: Use site key (hide user's API URL / API KEY)
+admin.llmPresetsUseAdminKeyTip:
+  zhCn: 提示：开启「使用管理端密钥」后，选择该预设的普通用户将直接使用上面的 API URL 与 API KEY（前端会隐藏这两栏）。此密钥会下发给登录用户，请勿填入不可共享的凭据。
+  en: "Note: When \"Use site key\" is on, users selecting this preset will use the API URL and API KEY above (the fields are hidden). The key is delivered to logged-in users, so avoid non-shareable credentials."
+admin.llmPresetsAdd:
+  zhCn: 添加预设
+  en: Add Preset
+admin.llmPresetsRemove:
+  zhCn: 删除
+  en: Delete
+admin.llmPresetsResetDefault:
+  zhCn: 恢复默认预设
+  en: Reset to Defaults
+
+# 日志管理（操作/错误日志）
+admin.pageDescription.logs:
+  zhCn: "查看用户操作日志与服务器错误日志。"
+  en: "View user action logs and server error logs."
+admin.logs:
+  zhCn: "日志管理"
+  en: "Logs"
+admin.log.actionLogs:
+  zhCn: "操作日志"
+  en: "Action Logs"
+admin.log.errorLogs:
+  zhCn: "错误日志"
+  en: "Error Logs"
+admin.log.time:
+  zhCn: "时间"
+  en: "Time"
+admin.log.username:
+  zhCn: "用户"
+  en: "User"
+admin.log.operateIp:
+  zhCn: "操作IP"
+  en: "IP"
+admin.log.action:
+  zhCn: "操作"
+  en: "Action"
+admin.log.resource:
+  zhCn: "资源类型"
+  en: "Resource"
+admin.log.resourceId:
+  zhCn: "资源ID"
+  en: "Resource ID"
+admin.log.resourceName:
+  zhCn: "资源名称"
+  en: "Resource Name"
+admin.log.detail:
+  zhCn: "详情"
+  en: "Detail"
+admin.log.ip:
+  zhCn: "IP地址"
+  en: "IP Address"
+admin.log.errorType:
+  zhCn: "错误类型"
+  en: "Error Type"
+admin.log.errorMessage:
+  zhCn: "错误信息"
+  en: "Error Message"
+admin.log.endpoint:
+  zhCn: "接口路径"
+  en: "Endpoint"
+admin.log.method:
+  zhCn: "请求方法"
+  en: "Method"
+admin.log.statusCode:
+  zhCn: "状态码"
+  en: "Status Code"
+admin.log.resolved:
+  zhCn: "已处理"
+  en: "Resolved"
+admin.log.unresolved:
+  zhCn: "待处理"
+  en: "Unresolved"
+admin.log.actions:
+  zhCn: "操作"
+  en: "Actions"
+admin.log.viewDetail:
+  zhCn: "查看详情"
+  en: "View Detail"
+admin.log.markResolved:
+  zhCn: "标记已处理"
+  en: "Mark Resolved"
+admin.log.markUnresolved:
+  zhCn: "标记待处理"
+  en: "Mark Unresolved"
+admin.log.filterUsername:
+  zhCn: "筛选用户名"
+  en: "Filter by username"
+admin.log.filterAction:
+  zhCn: "筛选操作"
+  en: "Filter by action"
+admin.log.filterResource:
+  zhCn: "筛选资源"
+  en: "Filter by resource"
+admin.log.filterErrorType:
+  zhCn: "筛选错误类型"
+  en: "Filter by error type"
+admin.log.filterResolved:
+  zhCn: "筛选处理状态"
+  en: "Filter by status"
+admin.log.search:
+  zhCn: "搜索"
+  en: "Search"
+admin.log.reset:
+  zhCn: "重置"
+  en: "Reset"
+admin.log.errorDetail:
+  zhCn: "错误详情"
+  en: "Error Detail"
+admin.log.userAgent:
+  zhCn: "用户代理"
+  en: "User Agent"
+admin.log.stackTrace:
+  zhCn: "堆栈追踪"
+  en: "Stack Trace"
+admin.log.errorClass:
+  zhCn: "错误类"
+  en: "Error Class"
+admin.log.requestData:
+  zhCn: "请求数据"
+  en: "Request Data"
+admin.log.resolvedBy:
+  zhCn: "处理人"
+  en: "Resolved By"

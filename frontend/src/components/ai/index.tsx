@@ -11,7 +11,9 @@ import {
   llmPresets,
   TranslateMode,
 } from '@/services/ai/llm_preprocess';
+import { api } from '@/apis';
 import { llmConfStorage } from '@/utils/storage';
+import { toLowerCamelCase } from '@/utils';
 import { IntlShape, useIntl } from 'react-intl';
 
 const debugLogger = createDebugLogger('components:project:FileListAiTranslate');
@@ -47,30 +49,50 @@ function bind(
     // testModel,
   };
   async function start(callbacks: TranslationCallbacks) {
+    // 预设由管理后台「站点设置」维护；拉取失败或无预设时回退到内置预设
+    let presets: LLMConf[] = [...llmPresets];
+    try {
+      const result = await api.siteSetting.getLlmPresets({});
+      const remote = result.data?.presets;
+      if (Array.isArray(remote) && remote.length > 0) {
+        // 后端返回 snake_case，需转为 camelCase（baseUrl / apiKey / useAdminKey）
+        presets = toLowerCamelCase(remote);
+      }
+    } catch (error) {
+      debugLogger('load llm presets failed, fallback to builtin', error);
+    }
+
     const llmConfAndMode = await new Promise<
       { config: LLMConf; mode: TranslateMode } | null
     >((resolve, reject) => {
       let confValue: LLMConf = llmConfStorage.load() ?? {
-        ...llmPresets.at(0)!,
+        ...presets.at(0)!,
       };
       let modeValue: TranslateMode = availability.allHasLabels
         ? 'translate-only'
         : 'all';
+      // modal.confirm 会同步挂载子组件并触发其 effect，effect 内会立刻调用 onChange，
+      // 因此 handle 必须先用 let 声明（避免 TDZ），且在赋值后再补一次按钮状态同步。
+      let handle: ModalHandle | null = null;
+      const syncOkButton = () => {
+        if (confValue.model && confValue.baseUrl && confValue.apiKey) {
+          handle?.update({ okButtonProps: {} });
+        }
+      };
       const onChange = (conf: LLMConf) => {
         debugLogger('model configured', conf);
         confValue = conf;
-        if (confValue.model && confValue.baseUrl && confValue.apiKey) {
-          handle.update({ okButtonProps: {} });
-        }
+        syncOkButton();
       };
       const onModeChange = (mode: TranslateMode) => {
         modeValue = mode;
       };
-      const handle = modal.confirm({
+      handle = modal.confirm({
         icon: null,
         content: (
           <ModelConfigForm
             initialValue={confValue}
+            presets={presets}
             onChange={onChange}
             availability={availability}
             defaultMode={modeValue}
@@ -86,6 +108,7 @@ function bind(
           resolve(null);
         },
       });
+      syncOkButton();
     });
     if (!llmConfAndMode) {
       return;
@@ -94,7 +117,8 @@ function bind(
     llmConfStorage.save(llmConf);
 
     await new Promise<boolean>((resolve) => {
-      const handle = modal.confirm({
+      let handle: ModalHandle | null = null;
+      handle = modal.confirm({
         icon: null,
         content: (
           <BatchTranslateModalContent

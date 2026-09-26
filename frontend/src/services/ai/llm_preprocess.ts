@@ -16,6 +16,8 @@ export interface LLMConf {
   baseUrl: string;
   apiKey?: string;
   extraPrompt?: string;
+  /** 是否使用管理端提供的 API URL / API KEY（为 true 时前端隐藏这两栏输入） */
+  useAdminKey?: boolean;
 }
 
 export const llmPresets: readonly Readonly<LLMConf>[] = [

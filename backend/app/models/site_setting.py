@@ -39,6 +39,10 @@ class SiteSetting(Document):
     bluesky_anonymous = BooleanField(db_field="bla", default=True)
     bluesky_handle = StringField(db_field="blh", default="")  # Bluesky Handle
     bluesky_app_password = StringField(db_field="blp", default="")  # Bluesky App Password
+    # 自动翻译（LLM）模型预设：管理员在后台维护，普通用户可在「自动翻译」中选择。
+    # 每项：{provider, model, base_url, api_key, use_admin_key}
+    # use_admin_key=True 表示使用管理端提供的 base_url + api_key，前端隐藏 API URL / API KEY 输入。
+    llm_presets = ListField(DictField(), db_field="lp", default=list)
 
     meta = {
         "indexes": [
@@ -74,4 +78,5 @@ class SiteSetting(Document):
             "bluesky_anonymous": bool(self.bluesky_anonymous),
             "bluesky_handle": self.bluesky_handle or "",
             "bluesky_app_password": self.bluesky_app_password or "",
+            "llm_presets": self.llm_presets or [],
         }

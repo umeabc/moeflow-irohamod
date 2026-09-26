@@ -4,6 +4,7 @@ from app.apis.application import ApplicationAPI, ApplicationListAPI
 from app.apis.file import (
     AdminFileListSafeCheckAPI,
     FileAPI,
+    FileContentAPI,
     FileOCRAPI,
     ProjectFileListAPI,
     ProjectFileMoveAPI,
@@ -37,6 +38,7 @@ from app.apis.site_setting import (
     CustomMessagesAPI,
     HomepageAPI,
     ImgstoreOverviewAPI,
+    LlmPresetsAPI,
     R2BucketsUsageAPI,
     SiteSettingAPI,
     StorageUsageAPI,
@@ -149,6 +151,11 @@ site.add_url_rule(
     "/brand-asset/<asset_type>",
     methods=["GET", "OPTIONS"],
     view_func=BrandAssetAPI.as_view("brand_asset"),
+)
+site.add_url_rule(
+    "/llm-presets",
+    methods=["GET", "OPTIONS"],
+    view_func=LlmPresetsAPI.as_view("llm_presets"),
 )
 # type模块
 type = Blueprint("type", __name__, url_prefix=v1_prefix + "/types")
@@ -403,6 +410,12 @@ file.add_url_rule(
     "/<file_id>",
     methods=["GET", "PUT", "DELETE", "OPTIONS"],
     view_func=FileAPI.as_view("file"),
+)
+# 同源代理读取文件内容（规避外置存储跨域，供前端 fetch 使用）
+file.add_url_rule(
+    "/<file_id>/content",
+    methods=["GET", "OPTIONS"],
+    view_func=FileContentAPI.as_view("file_content"),
 )
 file.add_url_rule(
     "/<file_id>/sources",

@@ -84,6 +84,15 @@
   - 操作 IP：优先 `CF-Connecting-IP`/`True-Client-IP` → `X-Forwarded-For` 首个非内网地址 → `X-Real-IP`；敏感字段（密码/验证码等）入库前脱敏。
 - 镜像 tag：`moeflow-frontend:1.1.7-iroha12` / `moeflow-backend:1.1.8-iroha12`。
 
+## 4.8 iroha13 新增（基于 iroha12）
+- **日志管理优化**：操作列显示中文动作名（如「上传文件」），鼠标悬停显示原始 code（`file.upload`）；「操作」筛选改为可搜索下拉（按中文名或 code 过滤）。
+- **自动翻译模型预设集成到管理后台**：站点设置新增「自动翻译模型预设」编辑区（提供商 / 模型 ID / API URL / API KEY / 使用管理端密钥）。普通用户在自动翻译弹窗中从后台下发的预设里选择（拉取失败或为空时回退内置预设）。
+- **管理端密钥预设**：管理员可配置由本站提供的 API URL + KEY 预设；普通用户选中该预设时前端隐藏 API URL / API KEY 两栏，直接使用后台配置（模型 ID 仍可改）。接口 `GET /v1/site/llm-presets`（登录用户可读）。注意：自动翻译在浏览器端直连模型 API，密钥会下发给登录用户，勿填不可共享凭据。
+- **修复自动翻译取图（外置存储跨域）**：新增同源代理接口 `GET /v1/files/<file_id>/content`（鉴权 + 权限校验，后端从 LOCAL/OSS/R2/imgstore 读取字节流返回），自动翻译改用该同源接口取图，修复 R2 / imgstore 直链无 CORS 导致的「获取图片失败」。
+- **修复自动翻译弹窗白屏**：`modal.confirm` 同步触发子组件 effect 时回调引用了尚未初始化的 modal handle（TDZ），改为先声明 + 空值保护。
+- **修复 i18n**：将日志管理文案（37 个 key）补回 `messages.yaml`，避免 `build:locale` 重新生成时被覆盖。
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha13` / `moeflow-backend:1.1.8-iroha13`。
+
 ## 5. 关键环境坑（务必牢记）
 1. **前端 build 在资源充足的开发机上做**，再上传远程 `docker build`；远程内存不足跑不动前端构建（OOM）。
 2. **Docker Hub 不稳定** → 用 daocloud `docker.m.daocloud.io` 拉基础镜像再 retag。

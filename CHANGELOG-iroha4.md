@@ -1,10 +1,31 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha12）
+# MoeFlow 自定义改动 CHANGELOG（iroha13）
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 镜像 tag：`moeflow-frontend:1.1.7-iroha12` / `moeflow-backend:1.1.8-iroha12`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6`/`iroha7`/`iroha8`/`iroha9`/`iroha10`/`iroha11` 镜像保留各自版本 tag）。
+> 镜像 tag：`moeflow-frontend:1.1.7-iroha13` / `moeflow-backend:1.1.8-iroha13`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6`/`iroha7`/`iroha8`/`iroha9`/`iroha10`/`iroha11`/`iroha12` 镜像保留各自版本 tag）。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：以 `docker save` 导出镜像 tar → 生产侧 `docker load` 导入（仅替换前端/后端镜像，勿改动 env / compose）。
+
+---
+
+## iroha13 新增特性（基于 iroha12）
+
+### 一、日志管理优化
+
+- 操作日志「操作」列显示中文动作名（如「上传文件」），鼠标悬停标签显示原始 code（如 `file.upload`）；「操作」筛选由文本输入改为可搜索下拉，支持按中文名或 code 过滤。动作 code → 中文名映射见前端 `src/constants/actionLog.ts`。
+
+### 二、自动翻译模型预设集成到管理后台
+
+- `SiteSetting` 新增 `llm_presets` 字段（每项：provider / model / base_url / api_key / use_admin_key）；后台「站点设置」新增「自动翻译模型预设」编辑区（增删预设、恢复默认、开启「使用管理端密钥」）。
+- 新增登录用户可读接口 `GET /v1/site/llm-presets`；自动翻译弹窗改为从后台读取预设（为空或拉取失败时回退内置预设）。
+- `use_admin_key=true` 的预设会下发本站配置的 API URL + KEY，普通用户选中后前端隐藏 API URL / API KEY 两栏（模型 ID 仍可改）。注意：自动翻译在浏览器端直连模型 API，该密钥会下发给登录用户，请勿填入不可共享的凭据。
+
+### 三、修复
+
+- **自动翻译取图（外置存储跨域）**：新增同源代理接口 `GET /v1/files/<file_id>/content`（`token_required` + 项目访问权限校验，后端从 LOCAL/OSS/R2/imgstore 读取原始字节流并用 `send_file` 返回）；前端自动翻译改用该同源接口取图，修复外置存储（R2 / imgstore）直链无 CORS 头导致的「获取图片失败」。
+- **自动翻译弹窗白屏**：`modal.confirm` 会同步挂载子组件并触发其初始 `useEffect`，effect 回调 `onChange` 引用了尚未初始化的 modal `handle`（TDZ：`ReferenceError: Cannot access ... before initialization`）；改为先 `let handle = null` + `handle?.update(...)`，赋值后再补一次按钮状态同步。
+- **i18n**：日志管理文案（37 个 key）补回 `messages.yaml`（此前只存在于生成的 locale JSON，运行 `build:locale` 时被覆盖，导致界面显示成 key 原名）。
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha13` / `moeflow-backend:1.1.8-iroha13`。
 
 ---
 

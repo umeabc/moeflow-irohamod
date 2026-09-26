@@ -7,9 +7,11 @@ import { useIntl } from 'react-intl';
 import { api } from '@/apis';
 import {
   APIBrandAssets,
+  APILlmPreset,
   APISiteSetting,
   BrandAssetType,
 } from '@/apis/siteSetting';
+import { llmPresets as builtinLlmPresets } from '@/services/ai/llm_preprocess';
 import { FC } from '@/interfaces';
 import { toLowerCamelCase } from '@/utils';
 import { Form } from '@/components/shared-form/Form';
@@ -45,6 +47,17 @@ function arrayToTextarea(array: string[]): string {
   return array.join('\n');
 }
 
+/** 内置的自动翻译预设（作为后台初始值 / 恢复默认用） */
+function defaultLlmPresets(): APILlmPreset[] {
+  return builtinLlmPresets.map((preset) => ({
+    provider: preset.provider,
+    model: preset.model,
+    baseUrl: preset.baseUrl,
+    apiKey: '',
+    useAdminKey: false,
+  }));
+}
+
 /** 站点设置的属性接口 */
 interface AdminSiteSettingProps {
   className?: string;
@@ -63,6 +76,24 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
   const [uploading, setUploading] = useState<BrandAssetType | null>(null);
   const [brandTexts, setBrandTexts] = useState<BrandTextDef[]>([]);
   const [brandTextSaving, setBrandTextSaving] = useState(false);
+  const [llmPresets, setLlmPresets] = useState<APILlmPreset[]>([]);
+
+  const updateLlmPreset = (index: number, patch: Partial<APILlmPreset>) => {
+    setLlmPresets((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+    );
+  };
+
+  const addLlmPreset = () => {
+    setLlmPresets((prev) => [
+      ...prev,
+      { provider: '', model: '', baseUrl: '', apiKey: '', useAdminKey: false },
+    ]);
+  };
+
+  const removeLlmPreset = (index: number) => {
+    setLlmPresets((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const refreshBrandAssets = () => {
     api.siteSetting
@@ -200,12 +231,14 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
         data: {
           ...values,
           autoJoinTeamIDs: textareaToArray(values.autoJoinTeamIDs),
+          llmPresets,
         },
       })
       .then((result) => {
         const data = toLowerCamelCase(result.data);
         data.autoJoinTeamIDs = data.autoJoinTeamIDs.join('\n');
         form.setFieldsValue(data);
+        setLlmPresets(Array.isArray(data.llmPresets) ? data.llmPresets : []);
         // 弹出提示
         message.success(formatMessage({ id: 'site.setting.editSuccess' }));
       })
@@ -238,6 +271,11 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
         data.autoJoinTeamIDs = arrayToTextarea(data.autoJoinTeamIDs);
         setSiteSetting(data);
         form.setFieldsValue(data);
+        setLlmPresets(
+          Array.isArray(data.llmPresets) && data.llmPresets.length > 0
+            ? data.llmPresets
+            : defaultLlmPresets(),
+        );
       })
       .finally(() => {
         setLoading(false);
@@ -339,6 +377,67 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
           justify-content: flex-end;
           gap: 8px;
         }
+        .LlmPresets {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          margin-bottom: 24px;
+          padding: 16px;
+          border: 1px solid ${style.borderColorLight};
+          border-radius: 10px;
+          background: var(--moeflow-surface);
+        }
+        .LlmPresets__Title {
+          font-size: 15px;
+          font-weight: 600;
+        }
+        .LlmPresets__Desc {
+          font-size: 12px;
+          color: ${style.textColorSecondary};
+          margin-top: -8px;
+        }
+        .LlmPresets__Item {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          padding: 12px;
+          border: 1px solid ${style.borderColorLight};
+          border-radius: 8px;
+          background: var(--moeflow-adminBackground);
+        }
+        .LlmPresets__Row {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .LlmPresets__Row--between {
+          align-items: center;
+          justify-content: space-between;
+        }
+        .LlmPresets__Field {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          flex: 1;
+          min-width: 160px;
+        }
+        .LlmPresets__FieldLabel {
+          font-size: 12px;
+          color: ${style.textColorSecondary};
+        }
+        .LlmPresets__Switch {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .LlmPresets__Actions {
+          display: flex;
+          gap: 8px;
+        }
+        .LlmPresets__Hint {
+          font-size: 12px;
+          color: ${style.textColorSecondary};
+        }
       `}
     >
       <div className="BrandAssetUploader">
@@ -438,6 +537,99 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
           >
             {formatMessage({ id: 'form.submit' })}
           </Button>
+        </div>
+      </div>
+
+      <div className="LlmPresets">
+        <span className="LlmPresets__Title">
+          {formatMessage({ id: 'admin.llmPresets' })}
+        </span>
+        <span className="LlmPresets__Desc">
+          {formatMessage({ id: 'admin.llmPresetsDesc' })}
+        </span>
+        {llmPresets.map((preset, index) => (
+          <div className="LlmPresets__Item" key={index}>
+            <div className="LlmPresets__Row">
+              <div className="LlmPresets__Field">
+                <span className="LlmPresets__FieldLabel">
+                  {formatMessage({ id: 'admin.llmPresetsProvider' })}
+                </span>
+                <Input
+                  value={preset.provider}
+                  onChange={(event) =>
+                    updateLlmPreset(index, { provider: event.target.value })
+                  }
+                  placeholder="OpenAI / Google / Deepseek"
+                />
+              </div>
+              <div className="LlmPresets__Field">
+                <span className="LlmPresets__FieldLabel">
+                  {formatMessage({ id: 'admin.llmPresetsModel' })}
+                </span>
+                <Input
+                  value={preset.model}
+                  onChange={(event) =>
+                    updateLlmPreset(index, { model: event.target.value })
+                  }
+                  placeholder="gpt-5.6-sol"
+                />
+              </div>
+            </div>
+            <div className="LlmPresets__Field">
+              <span className="LlmPresets__FieldLabel">
+                {formatMessage({ id: 'admin.llmPresetsBaseUrl' })}
+              </span>
+              <Input
+                value={preset.baseUrl}
+                onChange={(event) =>
+                  updateLlmPreset(index, { baseUrl: event.target.value })
+                }
+                placeholder="https://api.openai.com/v1/"
+              />
+            </div>
+            <div className="LlmPresets__Field">
+              <span className="LlmPresets__FieldLabel">
+                {formatMessage({ id: 'admin.llmPresetsApiKey' })}
+              </span>
+              <Input.Password
+                value={preset.apiKey}
+                onChange={(event) =>
+                  updateLlmPreset(index, { apiKey: event.target.value })
+                }
+                placeholder={formatMessage({
+                  id: 'admin.llmPresetsApiKeyPlaceholder',
+                })}
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="LlmPresets__Row LlmPresets__Row--between">
+              <span className="LlmPresets__Switch">
+                <Switch
+                  checked={!!preset.useAdminKey}
+                  onChange={(checked) =>
+                    updateLlmPreset(index, { useAdminKey: checked })
+                  }
+                />
+                <span className="LlmPresets__FieldLabel">
+                  {formatMessage({ id: 'admin.llmPresetsUseAdminKey' })}
+                </span>
+              </span>
+              <Button danger size="small" onClick={() => removeLlmPreset(index)}>
+                {formatMessage({ id: 'admin.llmPresetsRemove' })}
+              </Button>
+            </div>
+          </div>
+        ))}
+        <div className="LlmPresets__Actions">
+          <Button size="small" onClick={addLlmPreset}>
+            {formatMessage({ id: 'admin.llmPresetsAdd' })}
+          </Button>
+          <Button size="small" onClick={() => setLlmPresets(defaultLlmPresets())}>
+            {formatMessage({ id: 'admin.llmPresetsResetDefault' })}
+          </Button>
+        </div>
+        <div className="LlmPresets__Hint">
+          {formatMessage({ id: 'admin.llmPresetsUseAdminKeyTip' })}
         </div>
       </div>
 

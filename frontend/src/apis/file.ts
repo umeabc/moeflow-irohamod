@@ -269,9 +269,28 @@ const moveFiles = ({
   });
 };
 
+/** 同源代理获取文件原始内容（字节流）。
+ * 外置存储（R2 / imgstore）的直链可能跨域且无 CORS，浏览器 fetch 会被拦截，
+ * 故通过后端同源接口读取，用于「自动翻译」取图等场景。 */
+const getFileContent = ({
+  fileID,
+  configs,
+}: {
+  fileID: string;
+  configs?: AxiosRequestConfig;
+}) => {
+  return request<Blob>({
+    method: 'GET',
+    url: `/v1/files/${fileID}/content`,
+    responseType: 'blob',
+    ...configs,
+  });
+};
+
 export default {
   getProjectFiles,
   getFile,
+  getFileContent,
   deleteFile,
   editFile,
   importFileFromUrl,
