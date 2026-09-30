@@ -1079,8 +1079,9 @@ class Project(GroupMixin, Document):
             "with_proofread": bool(self.with_proofread),
             "has_output": bool(self.has_output),
             # 已嵌字（导出时写入 file.typesetter）图片数 / 图片总数，用于嵌字进度绿条
+            # 注意：老数据的 tyu 字段可能缺失(=null)，$ne:"" 会把 null 也算进来，故用 nin ["", None]
             "typeset_file_count": File.objects(
-                project=self.id, type=FileType.IMAGE, typesetter__ne=""
+                project=self.id, type=FileType.IMAGE, typesetter__nin=["", None]
             ).count(),
             "image_file_count": File.objects(
                 project=self.id, type=FileType.IMAGE
