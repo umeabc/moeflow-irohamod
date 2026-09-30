@@ -290,10 +290,18 @@ class MoveTargetProjectsAPI(MoeAPIView):
             project, ProjectPermission.MOVE_FILE
         ):
             raise NoPermissionError(gettext("您没有权限移动文件"))
+        # 类型隔离：仅翻嵌与翻校嵌项目之间不能互移。
+        # 注意：老项目的 with_proofread 字段并未写入 DB（缺省视为翻校嵌 True），
+        # 因此对「翻校嵌」源项目需用 ne=False（含缺失字段），否则直查 True 会匹配不到任何老项目。
+        type_filter = (
+            {"with_proofread__ne": False}
+            if project.with_proofread
+            else {"with_proofread": False}
+        )
         projects = Project.objects(
             project_set=project.project_set,
             id__ne=project.id,
-            with_proofread=project.with_proofread,
+            **type_filter,
         ).only("id", "name")
         return [{"id": str(p.id), "name": p.name} for p in projects]
 

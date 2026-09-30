@@ -45,6 +45,13 @@
 
 - 镜像 tag：`moeflow-frontend:1.1.7-iroha14-fix7` / `moeflow-backend:1.1.8-iroha14-fix7`（含绿条修复 fix5）。
 
+### 七、修复：移动图片在旧数据下目标列表为空（iroha14-fix8）
+
+- **问题**：`Project.with_proofread`（db_field `wp`）为 iroha14 新增、默认 `True`，但**旧项目从未写入该字段**；移动目标接口按 `with_proofread=<bool>` 精确查询，对「翻校嵌」源项目生成 `{wp: true}`，匹配不到任何缺字段的老项目 → 目标列表为空、图片移动不出数据（生产机 198 个项目中 197 个缺 `wp`）。
+- **修复（代码）**：`MoveTargetProjectsAPI` 对「翻校嵌」源改用 `with_proofread__ne=False`（`$ne` 同时命中缺失字段，缺失即视为翻校嵌）；「仅翻嵌」源仍用 `with_proofread=False`。
+- **修复（数据）**：将缺 `wp` 的老项目补齐为 `wp=true`（生产机 197 条、测试机 0 条）；补齐后当前旧代码亦可正常移动。
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha14-fix7` / `moeflow-backend:1.1.8-iroha14-fix8`。
+
 ---
 
 ## iroha13 新增特性（基于 iroha12）

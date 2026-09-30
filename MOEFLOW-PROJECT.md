@@ -102,7 +102,8 @@
 - **嵌字绿条**：进度条新增独立的绿色段表示嵌字（已导出）进度 = 已嵌字图片数 / 图片总数（导出时写入 `file.typesetter`）。校对仍为粉色段。三层叠加：翻译(黄) ⊃ 校对(粉) ⊃ 嵌字(绿)；仅翻嵌项目隐藏校对部分与粉条。
 - **移动图片类型隔离**：仅翻嵌与翻校嵌项目之间不能互移（目标项目列表过滤 + 移动接口校验）。
 - **用户管理「最后登录时间」（fix7）**：管理后台用户列表在邮箱右侧新增「最后登录时间」列，显示用户最后一次在站点操作的时间。后端 `User.last_active_time`（`la`，UTC），鉴权装饰器 `touch_last_active()` 节流记录（60s），登录接口也记录；仅管理员可见。修复绿条误判见 `typesetter__nin=["", None]`。
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha14-fix7` / `moeflow-backend:1.1.8-iroha14-fix7`。
+- **修复移动目标列表为空（fix8）**：老项目缺 `wp`（`with_proofread`）字段导致类型查询匹配不到；`MoveTargetProjectsAPI` 对翻校嵌源改用 `with_proofread__ne=False`（含缺失），并把缺字段的老项目补齐为 `wp=true`。
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha14-fix7` / `moeflow-backend:1.1.8-iroha14-fix8`。
 
 ## 5. 关键环境坑（务必牢记）
 1. **前端 build 在资源充足的开发机上做**，再上传远程 `docker build`；远程内存不足跑不动前端构建（OOM）。
