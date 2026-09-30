@@ -57,6 +57,7 @@ class User(Document):
     password_hash = StringField(db_field="p")  # 密码哈希
     admin = BooleanField(default=False)
     create_time = DateTimeField(db_field="c", default=datetime.datetime.utcnow)
+    last_active_time = DateTimeField(db_field="la")  # 最后一次操作时间（UTC，无记录为 None）
 
     @classmethod
     def create(cls, name: str, email: str, password: str) -> "User":
@@ -237,6 +238,20 @@ class User(Document):
     def has_avatar(self):
         return bool(self._avatar)
 
+    def touch_last_active(self, throttle_seconds: int = 60):
+        """
+        记录用户最后一次操作时间。
+
+        为避免每个请求都写库，做节流：距上次记录不足 ``throttle_seconds`` 秒则跳过。
+        """
+        now = datetime.datetime.utcnow()
+        last = self.last_active_time
+        if last is not None and (now - last).total_seconds() < throttle_seconds:
+            return
+        # 原子更新，避免整文档 save 覆盖其它并发字段
+        User.objects(id=self.id).update_one(set__last_active_time=now)
+        self.last_active_time = now
+
     def to_api(self):
         """
         @apiDefine UserInfoModel
@@ -258,7 +273,15 @@ class User(Document):
             "admin": self.admin,
         }
         if g.get("current_user") and g.get("current_user").admin:
-            data = {**data, **{"email": self.email}}
+            data = {
+                **data,
+                **{
+                    "email": self.email,
+                    "last_active_time": self.last_active_time.isoformat()
+                    if self.last_active_time
+                    else None,
+                },
+            }
         return data
 
     # =====团队操作=====

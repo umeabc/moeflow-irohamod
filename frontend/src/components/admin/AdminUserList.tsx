@@ -1,6 +1,7 @@
 import { css } from '@emotion/core';
 import React, { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
+import dayjs from 'dayjs';
 import { FC } from '@/interfaces';
 import classNames from 'classnames';
 import {
@@ -177,6 +178,13 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
       key: 'email',
     },
     {
+      title: formatMessage({ id: 'admin.lastLoginTime' }),
+      dataIndex: 'lastActiveTime',
+      key: 'lastActiveTime',
+      render: (text: string) =>
+        text ? dayjs.utc(text).local().format('lll') : '—',
+    },
+    {
       title: formatMessage({ id: 'admin.actions' }),
       key: 'action',
       render: (_: any, record: APIUser) => (
@@ -271,7 +279,7 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
           pagination={pagination}
           loading={loading}
           onChange={handleTableChange}
-          scroll={{ x: 680 }}
+          scroll={{ x: 820 }}
         />
       </div>
       <Modal

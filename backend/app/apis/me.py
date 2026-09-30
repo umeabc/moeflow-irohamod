@@ -63,6 +63,7 @@ class MeTokenAPI(MoeAPIView):
         data = self.get_json(LoginSchema())
         # 计算token
         user = User.by_email(data["email"])
+        user.touch_last_active()
         token = user.generate_token()
         return {"token": token}
 

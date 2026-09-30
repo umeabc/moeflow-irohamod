@@ -12,6 +12,8 @@ export interface APIUser {
   avatar: string;
   hasAvatar: boolean;
   admin: boolean;
+  /** 最后操作时间（ISO 字符串，仅管理员接口返回，无记录为 null） */
+  lastActiveTime?: string | null;
   locale: {
     id: string;
     name: string;

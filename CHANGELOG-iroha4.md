@@ -37,7 +37,13 @@
 - `GET /v1/projects/<id>/files` 放行归档状态（只读），修复归档项目看不到图片列表。
 - 导出完成后自动刷新项目数据（嵌字进度即时更新）。
 
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha14` / `moeflow-backend:1.1.8-iroha14`。
+### 六、用户管理：最后登录时间（iroha14-fix7）
+
+- 修复绿条误判（iroha14-fix5）：老数据 `typesetter` 为 `null`/缺失时被当作已嵌字，改用 `typesetter__nin=["", None]`。
+- 管理后台「用户管理」列表在**邮箱右侧**新增「**最后登录时间**」列：显示该用户**最后一次在站点进行操作的时间**。
+- 后端 `User` 新增 `last_active_time`（db_field `la`，UTC）；`token_required` / `admin_required` 鉴权成功后调用 `touch_last_active()`（60 秒节流 + 原子更新），登录 `POST /v1/user/token` 成功时也记录一次；仅在管理员请求时随 `to_api` 下发，普通接口不暴露；无记录显示「—」。
+
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha14-fix7` / `moeflow-backend:1.1.8-iroha14-fix7`（含绿条修复 fix5）。
 
 ---
 

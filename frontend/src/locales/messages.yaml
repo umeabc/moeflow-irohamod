@@ -1693,6 +1693,9 @@ admin.searchUser:
 admin.createUser:
   zhCn: 创建用户
   en: Create User
+admin.lastLoginTime:
+  zhCn: 最后登录时间
+  en: Last Login Time
 admin.setAdmin:
   zhCn: 设为管理员
   en: Set as Admin

@@ -554,6 +554,7 @@
   "admin.users": "用户管理",
   "admin.searchUser": "搜索用户",
   "admin.createUser": "创建用户",
+  "admin.lastLoginTime": "最后登录时间",
   "admin.setAdmin": "设为管理员",
   "admin.unsetAdmin": "取消管理员",
   "admin.actions": "操作",

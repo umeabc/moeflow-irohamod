@@ -554,6 +554,7 @@
   "admin.users": "User Management",
   "admin.searchUser": "Search User",
   "admin.createUser": "Create User",
+  "admin.lastLoginTime": "Last Login Time",
   "admin.setAdmin": "Set as Admin",
   "admin.unsetAdmin": "Unset as Admin",
   "admin.actions": "Actions",
