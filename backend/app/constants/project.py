@@ -7,10 +7,11 @@ class ProjectStatus(IntType):
     """项目状态"""
 
     WORKING = 0  # 进行中
-    FINISHED = 1  # 已完结
+    FINISHED = 1  # 已完结（删除项目：数据已清空）
     PLAN_FINISH = 2  # 处于完结计划（准备删除这个状态）
     PLAN_DELETE = 3  # 处于销毁计划（准备删除这个状态）
     DELETED = 4  # 已删除（标记删除功能还未实现）
+    ARCHIVED = 5  # 已归档（数据保留，只读，可取消归档）
 
     details = {
         "WORKING": {"name": lazy_gettext("进行中")},
@@ -18,6 +19,7 @@ class ProjectStatus(IntType):
         "PLAN_FINISH": {"name": lazy_gettext("等待完结")},
         "PLAN_DELETE": {"name": lazy_gettext("等待销毁")},
         "DELETED": {"name": lazy_gettext("已删除")},
+        "ARCHIVED": {"name": lazy_gettext("已归档")},
     }
 
 

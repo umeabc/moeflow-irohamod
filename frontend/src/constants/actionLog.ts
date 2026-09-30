@@ -13,6 +13,8 @@ export const ACTION_LOG_TYPES: Record<string, string> = {
   'project.create': '创建项目',
   'project.edit': '修改项目',
   'project.finish': '完结项目',
+  'project.archive': '归档项目',
+  'project.unarchive': '取消归档',
   'project.resume': '恢复项目',
   'project.add_target': '新增目标语言',
   'project.output': '导出项目',

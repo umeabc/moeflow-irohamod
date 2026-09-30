@@ -56,6 +56,7 @@
   --moeflow-errorColorLight: #ff4d4f;
   --moeflow-infoColorLight: #62a4ca;
   --moeflow-progressStatus: #ffb3bc;
+  --moeflow-progressTypeset: #52c41a;
   --moeflow-progressTrack: #efefef;
   --moeflow-sliderRail: #e1e1e1;
   --moeflow-sliderThumb: #666666;
@@ -115,6 +116,7 @@ html[data-theme='dark'] {
   --moeflow-errorColorLight: #cf3a3c;
   --moeflow-infoColorLight: #4b8bb0;
   --moeflow-progressStatus: #8a6f78;
+  --moeflow-progressTypeset: #3f9c3f;
   --moeflow-progressTrack: #2a2a2a;
   --moeflow-sliderRail: #3a3a3a;
   --moeflow-sliderThumb: #d0d0d0;

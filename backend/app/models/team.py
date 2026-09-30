@@ -31,6 +31,7 @@ from app.exceptions import (
 from app.models.application import Application
 from app.models.invitation import Invitation
 from app.models.project import Project, ProjectRole, ProjectSet
+from app.constants.project import ProjectStatus
 from app.models.term import TermBank
 from app.regexs import TEAM_NAME_REGEX
 from app.utils.mongo import mongo_order, mongo_slice
@@ -419,9 +420,21 @@ class Team(GroupMixin, Document):
             projects = projects.filter(name__icontains=word)
         # 查询何种进度的项目，空列表则忽略
         if isinstance(status, list) and len(status) > 0:
-            projects = projects.filter(status__in=status)
+            statuses = list(status)
+            # 「已完结」列表同时包含已归档项目
+            if (
+                ProjectStatus.FINISHED in statuses
+                and ProjectStatus.ARCHIVED not in statuses
+            ):
+                statuses.append(ProjectStatus.ARCHIVED)
+            projects = projects.filter(status__in=statuses)
         elif isinstance(status, int):
-            projects = projects.filter(status=status)
+            if status == ProjectStatus.FINISHED:
+                projects = projects.filter(
+                    status__in=[ProjectStatus.FINISHED, ProjectStatus.ARCHIVED]
+                )
+            else:
+                projects = projects.filter(status=status)
         # 排序处理
         projects = mongo_order(projects, order_by, ["-edit_time"])
         # 分页处理

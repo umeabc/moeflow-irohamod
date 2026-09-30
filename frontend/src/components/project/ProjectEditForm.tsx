@@ -163,6 +163,9 @@ export const ProjectEditForm: FC<ProjectEditFormProps> = ({ className }) => {
           <RoleRadioGroup
             groupType="project"
             disabled={!can(currentProject, PROJECT_PERMISSION.CHANGE)}
+            excludeSystemCodes={
+              currentProject.withProofread === false ? ['proofreader'] : []
+            }
           />
         </FormItem>
         {can(currentProject, PROJECT_PERMISSION.CHANGE) && (

@@ -54,6 +54,7 @@ from app.apis.user import (
 )
 from app.apis.project import (
     ProjectAPI,
+    ProjectArchiveAPI,
     ProjectDeletePlanAPI,
     ProjectFinishPlanAPI,
     ProjectOCRAPI,
@@ -61,6 +62,7 @@ from app.apis.project import (
     ProjectResumeAPI,
     ProjectTargetListAPI,
     ProjectTargetOutputListAPI,
+    ProjectUnarchiveAPI,
 )
 from app.apis.project_set import ProjectSetAPI
 
@@ -352,6 +354,16 @@ project.add_url_rule(
     "/<project_id>/resume",
     methods=["POST", "OPTIONS"],
     view_func=ProjectResumeAPI.as_view("project_resume"),
+)
+project.add_url_rule(
+    "/<project_id>/archive",
+    methods=["POST", "OPTIONS"],
+    view_func=ProjectArchiveAPI.as_view("project_archive"),
+)
+project.add_url_rule(
+    "/<project_id>/unarchive",
+    methods=["POST", "OPTIONS"],
+    view_func=ProjectUnarchiveAPI.as_view("project_unarchive"),
 )
 project.add_url_rule(
     "/<project_id>/files",

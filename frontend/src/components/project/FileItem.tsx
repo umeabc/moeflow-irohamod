@@ -27,6 +27,8 @@ interface FileItemProps {
   roleSystemCode?: string;
   isAdmin?: boolean;
   hasTarget: boolean;
+  /** 项目是否启用校对（仅翻嵌为 false）：隐藏校对负责人与校对/审核进度 */
+  withProofread?: boolean;
   onClick?: () => void;
   selectVisible?: boolean;
   selected?: boolean;
@@ -271,6 +273,7 @@ export const FileItem: FC<FileItemProps> = ({
   roleSystemCode,
   isAdmin = false,
   hasTarget,
+  withProofread = true,
   onClick,
   selectVisible = false,
   selected = false,
@@ -362,7 +365,9 @@ export const FileItem: FC<FileItemProps> = ({
 
         <div className="FileItem__Roles">
           <RoleEditField iconType="translation" label="翻译" value={file.translator} fileID={file.id} field="translator" canEdit={canEditTranslator} />
-          <RoleEditField iconType="proofread" label="校对" value={file.proofreader} fileID={file.id} field="proofreader" canEdit={canEditProofreader} />
+          {withProofread && (
+            <RoleEditField iconType="proofread" label="校对" value={file.proofreader} fileID={file.id} field="proofreader" canEdit={canEditProofreader} />
+          )}
           <RoleEditField iconType="typesetter" label="嵌字" value={file.typesetter} fileID={file.id} field="typesetter" canEdit={canEditTypesetter} />
         </div>
 
@@ -375,6 +380,7 @@ export const FileItem: FC<FileItemProps> = ({
               sourceCount={sourceCount}
               translatedSourceCount={translatedSourceCount}
               checkedSourceCount={checkedSourceCount}
+              hideChecked={!withProofread}
               type="text"
             />
             <TranslationProgress
@@ -382,6 +388,8 @@ export const FileItem: FC<FileItemProps> = ({
               sourceCount={sourceCount}
               translatedSourceCount={translatedSourceCount}
               checkedSourceCount={checkedSourceCount}
+              hideChecked={!withProofread}
+              typesetPercent={file.typesetter ? 100 : 0}
               type="line"
             />
           </>

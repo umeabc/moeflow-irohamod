@@ -82,8 +82,11 @@ class ProjectFileListAPI(MoeAPIView):
 
         }
         """
-        # 检查项目是否已完成
-        if project.status != ProjectStatus.WORKING:
+        # 检查项目是否已完成（归档项目允许读取，仅禁止修改）
+        if project.status not in (
+            ProjectStatus.WORKING,
+            ProjectStatus.ARCHIVED,
+        ):
             raise ProjectFinishedError
         # 检查用户权限
         # TODO: 当实现原图保护时，为团队用户显示有水印的图片。
@@ -222,6 +225,11 @@ class ProjectFileMoveAPI(MoeAPIView):
             raise FileMoveError(gettext("不能移动到当前项目"))
         if target.project_set != project.project_set:
             raise FileMoveError(gettext("只能移动到同一项目集下的其它项目"))
+        # 类型隔离：仅翻嵌与翻校嵌项目之间不能互移
+        if bool(target.with_proofread) != bool(project.with_proofread):
+            raise FileMoveError(
+                gettext("只能移动到相同类型的项目（仅翻嵌 / 翻校嵌）")
+            )
         if not self.current_user.admin_can() and not self.current_user.can(
             target, ProjectPermission.ACCESS
         ):
@@ -283,7 +291,9 @@ class MoveTargetProjectsAPI(MoeAPIView):
         ):
             raise NoPermissionError(gettext("您没有权限移动文件"))
         projects = Project.objects(
-            project_set=project.project_set, id__ne=project.id
+            project_set=project.project_set,
+            id__ne=project.id,
+            with_proofread=project.with_proofread,
         ).only("id", "name")
         return [{"id": str(p.id), "name": p.name} for p in projects]
 

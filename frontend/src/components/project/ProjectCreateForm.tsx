@@ -1,5 +1,5 @@
 import { css } from '@emotion/core';
-import { Button, Form as AntdForm, Input, message, Modal, Upload } from 'antd';
+import { Button, Form as AntdForm, Input, message, Modal, Radio, Upload } from 'antd';
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Form, FormItem, RoleRadioGroup, TypeRadioGroup } from '@/components';
@@ -35,6 +35,7 @@ export const ProjectCreateForm: FC<ProjectCreateFormProps> = ({
   const dispatch = useDispatch();
   const history = useHistory();
   const [isAllowApply, setIsAllowApply] = useState(true);
+  const [withProofread, setWithProofread] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const currentTeam = useSelector(
     (state: AppState) => state.team.currentTeam,
@@ -135,9 +136,14 @@ export const ProjectCreateForm: FC<ProjectCreateFormProps> = ({
           projectSet: currentProjectSet.id,
           sourceLanguage: configs.default.project.sourceLanugageCode,
           targetLanguages: configs.default.project.targetLanguageCodes,
+          withProofread: true,
         }}
         requiredMark={false}
         onValuesChange={(values) => {
+          // 项目类型：仅翻嵌时隐藏校对角色
+          if (values.withProofread !== undefined) {
+            setWithProofread(values.withProofread);
+          }
           // 关闭加入时，隐藏加入选项
           if (values.allowApplyType) {
             setIsAllowApply(
@@ -203,6 +209,26 @@ export const ProjectCreateForm: FC<ProjectCreateFormProps> = ({
           />
         </FormItem>
         <FormItem
+          name="withProofread"
+          label={formatMessage({ id: 'project.projectType' })}
+          tooltip={formatMessage({ id: 'project.projectTypeTip' })}
+          rules={[
+            {
+              required: true,
+              message: formatMessage({ id: 'form.selectRequired' }),
+            },
+          ]}
+        >
+          <Radio.Group>
+            <Radio value={true}>
+              {formatMessage({ id: 'project.typeProofread' })}
+            </Radio>
+            <Radio value={false}>
+              {formatMessage({ id: 'project.typeNoProofread' })}
+            </Radio>
+          </Radio.Group>
+        </FormItem>
+        <FormItem
           name="allowApplyType"
           label={formatMessage({ id: 'site.allowApplyTypeLabel' })}
           rules={[
@@ -250,7 +276,11 @@ export const ProjectCreateForm: FC<ProjectCreateFormProps> = ({
             },
           ]}
         >
-          <RoleRadioGroup groupType="project" useDefaultType={true} />
+          <RoleRadioGroup
+            groupType="project"
+            useDefaultType={true}
+            excludeSystemCodes={withProofread === false ? ['proofreader'] : []}
+          />
         </FormItem>
         <FormItem name="projectSet" style={{ display: 'none' }}>
           {/* 用于提交 project set id */}

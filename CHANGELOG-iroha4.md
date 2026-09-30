@@ -1,10 +1,43 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha13）
+# MoeFlow 自定义改动 CHANGELOG（iroha14）
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 镜像 tag：`moeflow-frontend:1.1.7-iroha13` / `moeflow-backend:1.1.8-iroha13`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`/`iroha5`/`iroha6`/`iroha7`/`iroha8`/`iroha9`/`iroha10`/`iroha11`/`iroha12` 镜像保留各自版本 tag）。
+> 镜像 tag：`moeflow-frontend:1.1.7-iroha14` / `moeflow-backend:1.1.8-iroha14`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`…`iroha13` 镜像保留各自版本 tag）。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：以 `docker save` 导出镜像 tar → 生产侧 `docker load` 导入（仅替换前端/后端镜像，勿改动 env / compose）。
+
+---
+
+## iroha14 新增特性（基于 iroha13）
+
+### 一、项目危险区：删除 / 归档
+
+- 项目设置「危险区域」改为两个按钮：
+  - **删除项目**：沿用原「完结项目」逻辑（清空文件与导出、进入已完结，数据不可恢复）。
+  - **归档项目**：保留全部数据，置为**已归档**（新增独立状态 `ProjectStatus.ARCHIVED=5`），进入「已完结」；任何人只读；设置页可「取消归档」。
+- 后端：`POST /v1/projects/<id>/archive`、`/unarchive`；「已完结」列表查询 `status=FINISHED` 时自动并入 `ARCHIVED`；文件修改类接口仍以 `status != WORKING` 拦截。
+- 前端：归档项目文件列表可见但禁用 移动/打开/上传/社媒导入/导出/删除/AI；设置页隐藏编辑项与其它设置页签，仅保留基础页（含取消归档）。
+
+### 二、仅翻嵌项目类型
+
+- 新建项目新增「项目类型」：翻校嵌（默认）/ 仅翻嵌；`Project.with_proofread`。
+- 仅翻嵌项目：创建/成员/邀请/默认角色等处均不出现「校对」角色；编辑器隐藏「校对模式」，仅保留翻译模式 + 全能模式。
+
+### 三、嵌字绿条
+
+- 进度条新增**独立绿色段**表示嵌字（已导出）进度 = 已嵌字图片数 / 图片总数（导出时写入 `file.typesetter`）；校对保持粉色段。
+- 叠加顺序：翻译(黄) ⊃ 校对(粉) ⊃ 嵌字(绿)。仅翻嵌项目隐藏校对部分与粉条。
+
+### 四、移动图片类型隔离
+
+- 目标项目列表接口只返回 `with_proofread` 相同的项目；移动接口对跨类型直接拒绝。
+
+### 五、其他修复
+
+- `GET /v1/projects/<id>/files` 放行归档状态（只读），修复归档项目看不到图片列表。
+- 导出完成后自动刷新项目数据（嵌字进度即时更新）。
+
+- 镜像 tag：`moeflow-frontend:1.1.7-iroha14` / `moeflow-backend:1.1.8-iroha14`。
 
 ---
 

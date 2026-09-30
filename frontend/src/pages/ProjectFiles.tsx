@@ -40,7 +40,7 @@ const ProjectFiles: FC<ProjectFilesProps> = ({ project }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project?.id]);
 
-  // 项目已完结返回提示
+  // 项目已删除完结（status=FINISHED）返回提示；归档（status=ARCHIVED）仍可查看文件
   if (project?.status === PROJECT_STATUS.FINISHED) {
     return <ProjectFinishedTip />;
   }

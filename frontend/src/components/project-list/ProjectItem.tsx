@@ -1,4 +1,5 @@
 import { css } from '@emotion/core';
+import { Tag } from 'antd';
 import classNames from 'classnames';
 import { useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
@@ -31,6 +32,15 @@ export const ProjectItem: FC<ProjectItemProps> = ({
   const history = useHistory();
   const dispatch = useDispatch();
 
+  const archived =
+    project.status === PROJECT_STATUS.ARCHIVED || !!project.archived;
+  // 嵌字（已导出）绿条：已嵌字图片数 / 图片总数
+  const imageFileCount = project.imageFileCount ?? 0;
+  const typesetPercent =
+    imageFileCount > 0
+      ? Math.min(100, ((project.typesetFileCount ?? 0) / imageFileCount) * 100)
+      : 0;
+
   // 点击后跳转路径前缀
   let urlPrefix = '';
   if (from === 'team') {
@@ -39,7 +49,7 @@ export const ProjectItem: FC<ProjectItemProps> = ({
 
   const handleClick = () => {
     dispatch(resetFilesState());
-    if (project.status === PROJECT_STATUS.FINISHED) {
+    if (project.status === PROJECT_STATUS.FINISHED && !archived) {
       history.push(`${url + urlPrefix}/${project.id}/setting`);
     } else {
       if (can(project, PROJECT_PERMISSION.ACCESS)) {
@@ -159,12 +169,21 @@ export const ProjectItem: FC<ProjectItemProps> = ({
           </div>
         </div>
       )}
-      <div className="ProjectItem__Name">{project.name}</div>
+      <div className="ProjectItem__Name">
+        {project.name}
+        {archived && (
+          <Tag style={{ marginLeft: 6, marginInlineEnd: 0 }}>
+            {formatMessage({ id: 'project.archived' })}
+          </Tag>
+        )}
+      </div>
       <TranslationProgress
         className="ProjectItem__TranslationProgressLine"
         sourceCount={project.sourceCount * project.targetCount}
         translatedSourceCount={project.translatedSourceCount}
         checkedSourceCount={project.checkedSourceCount}
+        typesetPercent={typesetPercent}
+        hideChecked={project.withProofread === false}
         type="line"
       />
       <div className="ProjectItem__Bottom">
@@ -173,10 +192,11 @@ export const ProjectItem: FC<ProjectItemProps> = ({
           sourceCount={project.sourceCount * project.targetCount}
           translatedSourceCount={project.translatedSourceCount}
           checkedSourceCount={project.checkedSourceCount}
+          hideChecked={project.withProofread === false}
           type="text"
         />
         <div className="ProjectItem__BottomButtonWrapper">
-          {project.status === PROJECT_STATUS.FINISHED ? (
+          {project.status === PROJECT_STATUS.FINISHED && !archived ? (
             <div className="ProjectItem__BottomButton ProjectItem__BottomButtonFinished">
               <Icon
                 className="ProjectItem__BottomButtonIcon"

@@ -32,6 +32,11 @@ export interface APIProject {
   sourceCount: number;
   translatedSourceCount: number;
   checkedSourceCount: number;
+  archived: boolean;
+  withProofread: boolean;
+  hasOutput: boolean;
+  typesetFileCount: number;
+  imageFileCount: number;
   team: Team;
   projectSet: ProjectSet;
   importFromLabelplusStatus: IMPORT_FROM_LABELPLUS_STATUS;
@@ -108,6 +113,7 @@ interface CreateProjectData {
   allowApplyType: number;
   applicationCheckType: number;
   defaultRole: string;
+  withProofread: boolean;
   labelplusTxt?: string;
 }
 /** 新建项目 */
@@ -233,6 +239,36 @@ const finishProject = ({
   });
 };
 
+/** 归档项目（保留数据，仅只读并进入已完结） */
+const archiveProject = ({
+  id,
+  configs,
+}: {
+  id: string;
+  configs?: AxiosRequestConfig;
+}) => {
+  return request({
+    method: 'POST',
+    url: `/v1/projects/${id}/archive`,
+    ...configs,
+  });
+};
+
+/** 取消归档 */
+const unarchiveProject = ({
+  id,
+  configs,
+}: {
+  id: string;
+  configs?: AxiosRequestConfig;
+}) => {
+  return request({
+    method: 'POST',
+    url: `/v1/projects/${id}/unarchive`,
+    ...configs,
+  });
+};
+
 /**
  * @deprecated being retired
  */
@@ -257,6 +293,8 @@ export default {
   createProject,
   editProject,
   finishProject,
+  archiveProject,
+  unarchiveProject,
   startProjectOCR,
   importProject,
   uploadFile,

@@ -47,6 +47,7 @@ export const ProjectSettingBase: FC<ProjectSettingBaseProps> = ({
   const dispatch = useDispatch();
   const [leaveLoading, setLeaveLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [archiveLoading, setArchiveLoading] = useState(false);
   const [adminJoining, setAdminJoining] = useState(false);
   const currentTeam = useSelector((state: AppState) => state.team.currentTeam);
   const currentProjectSet = useSelector(
@@ -125,7 +126,7 @@ export const ProjectSettingBase: FC<ProjectSettingBaseProps> = ({
     });
   };
 
-  /** 完结项目 */
+  /** 删除项目：沿用原完结逻辑（清空文件与导出后进入已完结，数据不可恢复） */
   const finishProject = () => {
     setDeleteLoading(true);
     api
@@ -144,6 +145,41 @@ export const ProjectSettingBase: FC<ProjectSettingBaseProps> = ({
       .catch((error) => {
         error.default();
         setDeleteLoading(false);
+      });
+  };
+
+  /** 是否已归档 */
+  const archived =
+    currentProject.status === PROJECT_STATUS.ARCHIVED ||
+    !!currentProject.archived;
+
+  /** 归档 / 取消归档（保留数据，仅置只读并进入已完结） */
+  const toggleArchive = () => {
+    setArchiveLoading(true);
+    const req = archived
+      ? api.unarchiveProject({ id: currentProject.id })
+      : api.archiveProject({ id: currentProject.id });
+    req
+      .then((result) => {
+        setArchiveLoading(false);
+        const data = toLowerCamelCase(result.data);
+        const nextProject = {
+          ...currentProject,
+          ...(data.project ?? {}),
+          status: archived ? PROJECT_STATUS.WORKING : PROJECT_STATUS.ARCHIVED,
+          archived: !archived,
+        };
+        dispatch(editProject(nextProject));
+        dispatch(setCurrentProject(nextProject));
+        if (!archived) {
+          // 归档后从「进行中」列表移除
+          dispatch(deleteProject(nextProject));
+        }
+        message.success(result.data.message);
+      })
+      .catch((error) => {
+        error.default();
+        setArchiveLoading(false);
       });
   };
 
@@ -192,18 +228,43 @@ export const ProjectSettingBase: FC<ProjectSettingBaseProps> = ({
     });
   };
 
-  /** 完结项目确认 */
+  /** 删除项目确认 */
   const confirmFinishProject = () => {
     Modal.confirm({
-      title: <div>{formatMessage({ id: 'project.finishTipTitle' })}</div>,
-      content: formatMessage(
-        { id: 'project.finishTip' },
-        { project: currentProject.name },
+      title: (
+        <div>
+          {formatMessage(
+            { id: 'project.deleteProjectTipTitle' },
+            { project: currentProject.name },
+          )}
+        </div>
       ),
-      okText: formatMessage({ id: 'project.finish' }),
+      content: formatMessage({ id: 'project.deleteProjectTip' }),
+      okText: formatMessage({ id: 'project.deleteProject' }),
+      okButtonProps: { danger: true },
       cancelText: formatMessage({ id: 'form.cancel' }),
       onOk() {
         finishProject();
+      },
+      onCancel() {},
+    });
+  };
+
+  /** 归档 / 取消归档确认 */
+  const confirmToggleArchive = () => {
+    Modal.confirm({
+      title: formatMessage({
+        id: archived ? 'project.unarchiveTipTitle' : 'project.archiveTipTitle',
+      }),
+      content: formatMessage({
+        id: archived ? 'project.unarchiveTip' : 'project.archiveTip',
+      }),
+      okText: formatMessage({
+        id: archived ? 'project.unarchive' : 'project.archive',
+      }),
+      cancelText: formatMessage({ id: 'form.cancel' }),
+      onOk() {
+        toggleArchive();
       },
       onCancel() {},
     });
@@ -245,6 +306,26 @@ export const ProjectSettingBase: FC<ProjectSettingBaseProps> = ({
         padding: ${style.paddingBase}px;
         .ProjectSettingBase__PermissionsToggleIcon {
           margin-left: 5px;
+        }
+        .ProjectSettingBase__Danger {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+        }
+        .ProjectSettingBase__DangerText {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          flex: auto;
+          min-width: 0;
+        }
+        .ProjectSettingBase__DangerDesc {
+          font-size: 12px;
+          color: ${style.textColorSecondary};
+        }
+        .ProjectSettingBase__DangerTitle--danger {
+          color: ${style.errorColor};
         }
       `}
     >
@@ -320,32 +401,38 @@ export const ProjectSettingBase: FC<ProjectSettingBaseProps> = ({
             {formatMessage({ id: 'group.copyJoinLink' })}
           </Button>
         </FormItem>
-        <ContentItem>
-          <ProjectEditForm />
-        </ContentItem>
-        <ContentItem>
-          <FormItem
-            label={formatMessage({
-              id: 'project.projectSet',
-              defaultMessage: '所属项目集',
-            })}
-          >
-            <Select
-              style={{ width: '100%' }}
-              value={currentProject.projectSet?.id}
-              loading={projectSetsLoading}
-              onChange={(value) => moveProjectToProjectSet(value)}
-              options={projectSetOptions}
-              disabled={
-                !['admin', 'creator'].includes(currentProject.role?.systemCode)
-              }
-              placeholder={formatMessage({
+        {!archived && (
+          <ContentItem>
+            <ProjectEditForm />
+          </ContentItem>
+        )}
+        {!archived && (
+          <ContentItem>
+            <FormItem
+              label={formatMessage({
                 id: 'project.projectSet',
                 defaultMessage: '所属项目集',
               })}
-            />
-          </FormItem>
-        </ContentItem>
+            >
+              <Select
+                style={{ width: '100%' }}
+                value={currentProject.projectSet?.id}
+                loading={projectSetsLoading}
+                onChange={(value) => moveProjectToProjectSet(value)}
+                options={projectSetOptions}
+                disabled={
+                  !['admin', 'creator'].includes(
+                    currentProject.role?.systemCode,
+                  )
+                }
+                placeholder={formatMessage({
+                  id: 'project.projectSet',
+                  defaultMessage: '所属项目集',
+                })}
+              />
+            </FormItem>
+          </ContentItem>
+        )}
       </Content>
       {/* <Content>
         <ContentTitle>{formatMessage({ id: 'site.aboutQuota' })}</ContentTitle>
@@ -363,13 +450,48 @@ export const ProjectSettingBase: FC<ProjectSettingBaseProps> = ({
         )}
         {can(currentProject, PROJECT_PERMISSION.FINISH) && (
           <ContentItem>
-            <Button
-              block
-              onClick={confirmFinishProject}
-              loading={deleteLoading}
-            >
-              {formatMessage({ id: 'project.finish' })}
-            </Button>
+            <div className="ProjectSettingBase__Danger">
+              <div className="ProjectSettingBase__DangerText">
+                <div>
+                  {formatMessage({
+                    id: archived ? 'project.unarchive' : 'project.archive',
+                  })}
+                </div>
+                <div className="ProjectSettingBase__DangerDesc">
+                  {formatMessage({
+                    id: archived
+                      ? 'project.archiveTipArchived'
+                      : 'project.archiveTip',
+                  })}
+                </div>
+              </div>
+              <Button onClick={confirmToggleArchive} loading={archiveLoading}>
+                {formatMessage({
+                  id: archived ? 'project.unarchive' : 'project.archive',
+                })}
+              </Button>
+            </div>
+          </ContentItem>
+        )}
+        {!archived && can(currentProject, PROJECT_PERMISSION.FINISH) && (
+          <ContentItem>
+            <div className="ProjectSettingBase__Danger">
+              <div className="ProjectSettingBase__DangerText">
+                <div className="ProjectSettingBase__DangerTitle--danger">
+                  {formatMessage({ id: 'project.deleteProject' })}
+                </div>
+                <div className="ProjectSettingBase__DangerDesc">
+                  {formatMessage({ id: 'project.deleteProjectTip' })}
+                </div>
+              </div>
+              <Button
+                danger
+                onClick={confirmFinishProject}
+                loading={deleteLoading}
+              >
+                {formatMessage({ id: 'project.deleteProject' })}
+              </Button>
+            </div>
           </ContentItem>
         )}
       </Content>

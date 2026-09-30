@@ -36,35 +36,42 @@ const ProjectSetting: FC<ProjectSettingProps> = ({ project }) => {
     (state: AppState) => state.project.currentProject,
   );
   const isMobile = platform === 'mobile';
+  const archived =
+    currentProject?.status === PROJECT_STATUS.ARCHIVED ||
+    !!currentProject?.archived;
 
   const nav = currentProject && (
     <NavTabs>
       <NavTab to={`${url}/base`}>
         {formatMessage({ id: 'site.baseSetting' })}
       </NavTab>
-      <NavTab to={`${url}/member`}>
-        {formatMessage({ id: 'site.memberSetting' })}
-      </NavTab>
-      {can(currentProject, PROJECT_PERMISSION.CHECK_USER) && (
+      {!archived && (
+        <NavTab to={`${url}/member`}>
+          {formatMessage({ id: 'site.memberSetting' })}
+        </NavTab>
+      )}
+      {!archived && can(currentProject, PROJECT_PERMISSION.CHECK_USER) && (
         <NavTab to={`${url}/application`}>
           {formatMessage({ id: 'site.applicationSetting' })}
         </NavTab>
       )}
-      {can(currentProject, PROJECT_PERMISSION.INVITE_USER) && (
+      {!archived && can(currentProject, PROJECT_PERMISSION.INVITE_USER) && (
         <NavTab to={`${url}/invitation`}>
           {formatMessage({ id: 'site.invitationSetting' })}
         </NavTab>
       )}
-      <NavTab to={`${url}/target`}>
-        {formatMessage({ id: 'project.targetSetting' })}
-      </NavTab>
+      {!archived && (
+        <NavTab to={`${url}/target`}>
+          {formatMessage({ id: 'project.targetSetting' })}
+        </NavTab>
+      )}
       {/* <NavTab to={`${url}/role`}>
         {formatMessage({ id: 'site.roleSetting' })}
       </NavTab> */}
     </NavTabs>
   );
 
-  // 项目已完结返回提示
+  // 项目已删除完结（status=FINISHED）返回提示；归档（status=ARCHIVED）仍可进入设置以取消归档
   if (currentProject?.status === PROJECT_STATUS.FINISHED) {
     return <ProjectFinishedTip />;
   }

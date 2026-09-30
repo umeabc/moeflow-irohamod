@@ -9,6 +9,10 @@ interface TranslationProgressProps {
   sourceCount: number;
   translatedSourceCount: number;
   checkedSourceCount: number;
+  /** 嵌字（已导出）进度百分比（0-100），独立绿色段；不传则不显示 */
+  typesetPercent?: number;
+  /** 隐藏校对/审核部分（仅翻嵌项目） */
+  hideChecked?: boolean;
   type?: 'all' | 'text' | 'line';
   className?: string;
 }
@@ -19,6 +23,8 @@ export const TranslationProgress: FC<TranslationProgressProps> = ({
   sourceCount,
   translatedSourceCount,
   checkedSourceCount,
+  typesetPercent,
+  hideChecked = false,
   type = 'all',
   className,
 }) => {
@@ -64,6 +70,9 @@ export const TranslationProgress: FC<TranslationProgressProps> = ({
         }
         .TranslationProgress__ProgressCheckedSourceCount {
           background: var(--moeflow-progressStatus);
+        }
+        .TranslationProgress__ProgressTypeset {
+          background: var(--moeflow-progressTypeset);
         }
         .TranslationProgress__Text {
           flex: none;
@@ -142,29 +151,31 @@ export const TranslationProgress: FC<TranslationProgressProps> = ({
                   {translatedSourceCount}
                 </span>
               </Tooltip>
-              <Tooltip
-                overlay={formatMessage({
-                  id: 'imageTranslator.checkUnfinished',
-                })}
-                disabled={checkedSourceCount >= sourceCount}
-              >
-                <span
-                  className={classNames(
-                    'TranslationProgress__TextItem',
-                    'TranslationProgress__TextItemChecked',
-                    {
-                      'TranslationProgress__TextItem--unfinished':
-                        checkedSourceCount < sourceCount,
-                    },
-                  )}
+              {!hideChecked && (
+                <Tooltip
+                  overlay={formatMessage({
+                    id: 'imageTranslator.checkUnfinished',
+                  })}
+                  disabled={checkedSourceCount >= sourceCount}
                 >
-                  <Icon
-                    icon="check-double"
-                    className="TranslationProgress__TextItemIcon"
-                  />
-                  {checkedSourceCount}
-                </span>
-              </Tooltip>
+                  <span
+                    className={classNames(
+                      'TranslationProgress__TextItem',
+                      'TranslationProgress__TextItemChecked',
+                      {
+                        'TranslationProgress__TextItem--unfinished':
+                          checkedSourceCount < sourceCount,
+                      },
+                    )}
+                  >
+                    <Icon
+                      icon="check-double"
+                      className="TranslationProgress__TextItemIcon"
+                    />
+                    {checkedSourceCount}
+                  </span>
+                </Tooltip>
+              )}
             </>
           ) : (
             <span className="TranslationProgress__TextItem">
@@ -179,10 +190,18 @@ export const TranslationProgress: FC<TranslationProgressProps> = ({
             className="TranslationProgress__Line TranslationProgress__ProgressTranslatedSourceCount"
             style={{ width: `${translatedSourcePercent}%` }}
           ></div>
-          <div
-            className="TranslationProgress__Line TranslationProgress__ProgressCheckedSourceCount"
-            style={{ width: `${checkedSourcePercent}%` }}
-          ></div>
+          {!hideChecked && (
+            <div
+              className="TranslationProgress__Line TranslationProgress__ProgressCheckedSourceCount"
+              style={{ width: `${checkedSourcePercent}%` }}
+            ></div>
+          )}
+          {typesetPercent !== undefined && typesetPercent > 0 && (
+            <div
+              className="TranslationProgress__Line TranslationProgress__ProgressTypeset"
+              style={{ width: `${typesetPercent}%` }}
+            ></div>
+          )}
         </div>
       )}
     </div>

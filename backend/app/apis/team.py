@@ -325,6 +325,7 @@ class TeamProjectListAPI(MoeAPIView):
             intro=data["intro"],
             source_language=data["source_language"],
             target_languages=data["target_languages"],
+            with_proofread=data["with_proofread"],
             labelplus_txt=data["labelplus_txt"],
         )
         return {

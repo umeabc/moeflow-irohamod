@@ -62,8 +62,15 @@ export const InviteUser: FC<InviteUserProps> = ({
         },
       })
       .then((result) => {
-        setTypes(result.data);
-        return result.data as Role[];
+        const data = (result.data || []) as Role[];
+        // 仅翻嵌项目隐藏「校对」角色
+        const filtered =
+          groupType === 'project' &&
+          (currentGroup as any)?.withProofread === false
+            ? data.filter((r: any) => r.system_code !== 'proofreader')
+            : data;
+        setTypes(filtered);
+        return filtered as Role[];
       })
       .catch((error) => {
         error.default();

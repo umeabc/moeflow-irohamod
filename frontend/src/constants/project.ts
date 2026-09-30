@@ -28,6 +28,7 @@ export const PROJECT_PERMISSION = {
 export enum PROJECT_STATUS {
   WORKING = 0,
   FINISHED = 1,
+  ARCHIVED = 5,
 }
 
 // 从 LP 导入状态

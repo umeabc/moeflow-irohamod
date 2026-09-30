@@ -69,8 +69,15 @@ export const MemberList: FC<MemberListProps> = ({
         },
       })
       .then((result) => {
-        setTypes(result.data);
-        return result.data as TypeData[];
+        const data = (result.data || []) as TypeData[];
+        // 仅翻嵌项目隐藏「校对」角色
+        const filtered =
+          groupType === 'project' &&
+          (currentGroup as any)?.withProofread === false
+            ? data.filter((r: any) => r.system_code !== 'proofreader')
+            : data;
+        setTypes(filtered as Role[]);
+        return filtered as Role[];
       })
       .catch((error) => {
         error.default();

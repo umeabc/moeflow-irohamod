@@ -39,6 +39,7 @@ from app.models.site_setting import SiteSetting
 from app.models.team import Team, TeamPermission, TeamUserRelation
 from app.regexs import EMAIL_REGEX, USER_NAME_REGEX
 from app.constants.locale import Locale
+from app.constants.project import ProjectStatus
 from app.utils.hash import md5
 from app.utils.mongo import mongo_order, mongo_slice
 
@@ -345,10 +346,22 @@ class User(Document):
             projects = projects.filter(project_set=project_set)
         # 查询何种进度的项目
         if isinstance(status, list):
-            if len(status) > 0:
-                projects = projects.filter(status__in=status)
+            statuses = list(status)
+            # 「已完结」列表同时包含已归档项目
+            if (
+                ProjectStatus.FINISHED in statuses
+                and ProjectStatus.ARCHIVED not in statuses
+            ):
+                statuses.append(ProjectStatus.ARCHIVED)
+            if len(statuses) > 0:
+                projects = projects.filter(status__in=statuses)
         elif isinstance(status, int):
-            projects = projects.filter(status=status)
+            if status == ProjectStatus.FINISHED:
+                projects = projects.filter(
+                    status__in=[ProjectStatus.FINISHED, ProjectStatus.ARCHIVED]
+                )
+            else:
+                projects = projects.filter(status=status)
         # 模糊搜索词
         if word:
             projects = projects.filter(name__icontains=word)

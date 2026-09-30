@@ -33,6 +33,7 @@ import {
 import { FC, File as MFile, Project, Target } from '@/interfaces';
 import { AppState } from '@/store';
 import { setFilesState } from '@/store/file/slice';
+import { editProject, setCurrentProject } from '@/store/project/slice';
 import style from '@/style';
 import { sanitizeFilename, toLowerCamelCase } from '@/utils';
 import { can } from '@/utils/user';
@@ -76,6 +77,8 @@ export const FileList: FC<FileListProps> = ({
   const user = useSelector((state: AppState) => state.user);
   const platform = useSelector((state: AppState) => state.site.platform);
   const isMobile = platform === 'mobile';
+  // 归档项目：仅可查看图片，禁止移动/打开/上传/社交媒体导入/导出/删除等修改操作
+  const archived = !!project.archived;
   const [outputDrawerVisible, setOutputDrawerVisible] = useState(false);
   const [moveModalVisible, setMoveModalVisible] = useState(false);
   const [importModalSource, setImportModalSource] = useState<
@@ -515,7 +518,7 @@ export const FileList: FC<FileListProps> = ({
         }}
       />
       <div className="FileList__Header">
-        {can(project, PROJECT_PERMISSION.MOVE_FILE) && (
+        {!archived && can(project, PROJECT_PERMISSION.MOVE_FILE) && (
           <Button
             icon="arrows-alt"
             disabled={selectedFileIds.length === 0}
@@ -537,7 +540,7 @@ export const FileList: FC<FileListProps> = ({
             ? formatMessage({ id: 'project.changeTarget' }) + ' - '
             : '') + target?.language.i18nName}
         </Button>
-        {aiEnabled && aiTranslateApi && (
+        {!archived && aiEnabled && aiTranslateApi && (
           <Button
             tooltipProps={{
               overlay: formatMessage({ id: 'fileList.aiTranslate.buttonTip' }),
@@ -567,13 +570,13 @@ export const FileList: FC<FileListProps> = ({
             setListMode(listMode === 'text' ? 'image' : 'text');
           }}
         ></Button> */}
-        {can(project, PROJECT_PERMISSION.OUTPUT_TRA) && (
+        {!archived && can(project, PROJECT_PERMISSION.OUTPUT_TRA) && (
           <Button icon="download" onClick={() => setOutputDrawerVisible(true)}>
             {!isMobile && formatMessage({ id: 'project.export' })}
             {selectedFileIds.length > 0 && ` (${selectedFileIds.length})`}
           </Button>
         )}
-        {can(project, PROJECT_PERMISSION.ADD_FILE) && (
+        {!archived && can(project, PROJECT_PERMISSION.ADD_FILE) && (
           <Button
             icon="plus"
             onClick={() => {
@@ -583,7 +586,7 @@ export const FileList: FC<FileListProps> = ({
             {!isMobile && formatMessage({ id: 'site.upload' })}
           </Button>
         )}
-        {can(project, PROJECT_PERMISSION.ADD_FILE) && (
+        {!archived && can(project, PROJECT_PERMISSION.ADD_FILE) && (
           <Dropdown
             menu={
               {
@@ -736,12 +739,18 @@ export const FileList: FC<FileListProps> = ({
                 roleSystemCode={project.role?.systemCode}
                 isAdmin={user.admin}
                 hasTarget={Boolean(target)}
+                withProofread={project.withProofread !== false}
                 onClick={() => {
+                  if (archived) {
+                    return;
+                  }
                   (file.uploadState === undefined ||
                     file.uploadState === 'success') &&
                     openInTranslator(file);
                 }}
-                selectVisible={can(project, PROJECT_PERMISSION.OUTPUT_TRA)}
+                selectVisible={
+                  !archived && can(project, PROJECT_PERMISSION.OUTPUT_TRA)
+                }
                 selected={selectedFileIds.includes(file.id)}
                 onSelect={(value) => {
                   if (value) {
@@ -761,6 +770,7 @@ export const FileList: FC<FileListProps> = ({
                   }
                 }}
                 deleteButtonVisible={
+                  !archived &&
                   can(project, PROJECT_PERMISSION.DELETE_FILE) &&
                   (file.uploadState === undefined ||
                     file.uploadState === 'success')
@@ -823,7 +833,18 @@ export const FileList: FC<FileListProps> = ({
           projectID={project.id}
           targetID={target.id}
           selectedFileIds={selectedFileIds}
-          onExported={() => loadPage(currentPageSpecRef.current)}
+          onExported={() => {
+            loadPage(currentPageSpecRef.current);
+            // 导出成功后刷新项目数据（has_output 等），使进度条绿条立即更新
+            api.project
+              .getProject({ id: project.id })
+              .then((res) => {
+                const data = toLowerCamelCase(res.data);
+                dispatch(editProject(data));
+                dispatch(setCurrentProject(data));
+              })
+              .catch(() => {});
+          }}
         />
       </Drawer>
       {aiModalHolder}

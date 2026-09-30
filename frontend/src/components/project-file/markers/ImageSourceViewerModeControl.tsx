@@ -84,20 +84,21 @@ export const ImageSourceViewerModeControl: FC<
       >
         {formatMessage({ id: 'imageTranslator.translatorMode' })}
       </button>
-      {can(currentProject, PROJECT_PERMISSION.PROOFREAD_TRA) && (
-        <button
-          type="button"
-          className={classNames('ImageSourceViewerModeControl__Button', {
-            'ImageSourceViewerModeControl__Button--active':
-              mode === 'proofreader',
-          })}
-          onClick={() => {
-            dispatch(setImageTranslatorMode('proofreader'));
-          }}
-        >
-          {formatMessage({ id: 'imageTranslator.proofreaderMode' })}
-        </button>
-      )}
+      {currentProject?.withProofread !== false &&
+        can(currentProject, PROJECT_PERMISSION.PROOFREAD_TRA) && (
+          <button
+            type="button"
+            className={classNames('ImageSourceViewerModeControl__Button', {
+              'ImageSourceViewerModeControl__Button--active':
+                mode === 'proofreader',
+            })}
+            onClick={() => {
+              dispatch(setImageTranslatorMode('proofreader'));
+            }}
+          >
+            {formatMessage({ id: 'imageTranslator.proofreaderMode' })}
+          </button>
+        )}
       <button
         type="button"
         className={classNames('ImageSourceViewerModeControl__Button', {

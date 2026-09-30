@@ -524,6 +524,51 @@ project.finishTipTitle:
 project.finish:
   zhCn: 完结项目
   en: Mark Project as complete
+project.deleteProject:
+  zhCn: 删除项目
+  en: Delete Project
+project.deleteProjectTipTitle:
+  zhCn: 您确认要删除项目『{project}』吗？
+  en: 'Delete project "{project}"?'
+project.deleteProjectTip:
+  zhCn: 删除项目会清空该项目的所有文件、图片与导出，并移入已完结，数据无法恢复。
+  en: Deleting erases all files, images and exports of this project, moves it to Completed, and cannot be undone.
+project.archive:
+  zhCn: 归档项目
+  en: Archive Project
+project.archived:
+  zhCn: 已归档
+  en: Archived
+project.unarchive:
+  zhCn: 取消归档
+  en: Unarchive
+project.archiveTipTitle:
+  zhCn: 您确认要归档该项目吗？
+  en: Archive this project?
+project.archiveTip:
+  zhCn: 归档后项目不再出现在工作台的默认列表中，数据原样保留，任何人仅可查看无法修改，可随时取消归档。
+  en: After archiving, the project leaves the default workbench list; data is kept intact, everyone gets read-only access, and it can be unarchived anytime.
+project.archiveTipArchived:
+  zhCn: 项目当前已归档。取消归档后会重新出现在工作台，并恢复可编辑。
+  en: This project is archived. Unarchive it to show it in the workbench again and restore editing.
+project.unarchiveTipTitle:
+  zhCn: 您确认要取消归档该项目吗？
+  en: Unarchive this project?
+project.unarchiveTip:
+  zhCn: 取消归档后该项目将重新出现在工作台的默认列表中，并可继续编辑。
+  en: After unarchiving, the project reappears in the default workbench list and becomes editable again.
+project.projectType:
+  zhCn: 项目类型
+  en: Project Type
+project.projectTypeTip:
+  zhCn: 「仅翻嵌」项目没有校对角色，编辑器中不显示校对模式，进度绿条按翻译+嵌字（导出）计算。
+  en: A Translate+Typeset project has no proofreader role, hides the proofreading mode, and its progress bar counts translate+typeset (export).
+project.typeProofread:
+  zhCn: 翻校嵌（翻译 + 校对 + 嵌字）
+  en: Translate + Proofread + Typeset
+project.typeNoProofread:
+  zhCn: 仅翻嵌（翻译 + 嵌字）
+  en: Translate + Typeset (no proofread)
 project.name:
   zhCn: 项目名称
   en: Project Name

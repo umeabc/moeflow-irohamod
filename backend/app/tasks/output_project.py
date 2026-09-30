@@ -219,6 +219,8 @@ def output_project_task(output_id):
         if os.path.exists(zip_tmp_folder_path):
             shutil.rmtree(zip_tmp_folder_path)
     output.update(status=OutputStatus.SUCCEEDED)
+    # 标记项目已导出过（供进度条计算）
+    project.update(has_output=True)
     return (
         f"成功：导出 Project<{str(project.id)}> "
         + f"Target<{str(target.id)}> Output<{str(output.id)}>"

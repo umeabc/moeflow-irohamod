@@ -24,6 +24,8 @@ export interface TypeRadioGroupProps extends Omit<RadioGroupProps, 'onChange'> {
   onTypeChange?: (value: any) => void;
   /* 自动从 Config 中获取并设置默认值 */
   useDefaultType?: boolean;
+  /** 需要隐藏的系统角色 system_code（仅 systemRole 生效） */
+  excludeSystemCodes?: string[];
   loading?: boolean;
   className?: string;
 }
@@ -37,6 +39,7 @@ export const TypeRadioGroup: FC<TypeRadioGroupProps> = ({
   onChange,
   onTypeChange,
   useDefaultType = false,
+  excludeSystemCodes = [],
   loading = false,
   className,
   children,
@@ -117,13 +120,19 @@ export const TypeRadioGroup: FC<TypeRadioGroupProps> = ({
       {...radioGroupProps}
     >
       {types && !loading ? (
-        types.map((type) => {
-          return (
-            <Radio.Button value={type.id} key={type.id}>
-              {type.name}
-            </Radio.Button>
-          );
-        })
+        types
+          .filter(
+            (type) =>
+              typeName !== 'systemRole' ||
+              !excludeSystemCodes.includes(type.system_code),
+          )
+          .map((type) => {
+            return (
+              <Radio.Button value={type.id} key={type.id}>
+                {type.name}
+              </Radio.Button>
+            );
+          })
       ) : (
         <Skeleton.Input active />
       )}

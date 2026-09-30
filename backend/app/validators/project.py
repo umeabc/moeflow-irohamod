@@ -104,6 +104,8 @@ class CreateProjectSchema(DefaultSchema):
         ),
         required=True,
     )
+    # 是否启用校对（「仅翻嵌」项目为 False）
+    with_proofread = fields.Boolean(missing=True)
     labelplus_txt = fields.Str(missing=None)
 
     @validates_schema

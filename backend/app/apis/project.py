@@ -134,7 +134,41 @@ class ProjectAPI(MoeAPIView):
         if not self.current_user.can(project, ProjectPermission.FINISH):
             raise NoPermissionError
         project.finish()
-        return {"message": gettext("完结项目成功")}
+        return {"message": gettext("删除项目成功")}
+
+
+class ProjectArchiveAPI(MoeAPIView):
+    @token_required
+    @fetch_model(Project)
+    @log_action("project.archive", resource_type="project")
+    def post(self, project: Project):
+        """归档项目：保留全部数据，置为已完结并只读，可取消归档"""
+        if project.status != ProjectStatus.WORKING:
+            raise ProjectFinishedError
+        if not self.current_user.can(project, ProjectPermission.FINISH):
+            raise NoPermissionError
+        project.archive()
+        return {
+            "message": gettext("归档项目成功"),
+            "project": project.to_api(user=self.current_user),
+        }
+
+
+class ProjectUnarchiveAPI(MoeAPIView):
+    @token_required
+    @fetch_model(Project)
+    @log_action("project.unarchive", resource_type="project")
+    def post(self, project: Project):
+        """取消归档：恢复到进行中"""
+        if not project.archived:
+            raise ProjectNotFinishedError(gettext("操作无效"))
+        if not self.current_user.can(project, ProjectPermission.FINISH):
+            raise NoPermissionError
+        project.unarchive()
+        return {
+            "message": gettext("取消归档成功"),
+            "project": project.to_api(user=self.current_user),
+        }
 
 
 class ProjectResumeAPI(MoeAPIView):

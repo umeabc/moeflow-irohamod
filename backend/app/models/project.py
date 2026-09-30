@@ -358,6 +358,12 @@ class Project(GroupMixin, Document):
     system_finish_time = DateTimeField(db_field="ft")  # 项目被系统正式完结时间
     plan_finish_time = DateTimeField(db_field="pft")  # 用户操作计划完结时间
     plan_delete_time = DateTimeField(db_field="pdt")  # 用户操作计划删除时间
+    # 归档：不清数据，仅置为已完结并只读（可取消归档）。与「删除项目」(清数据完结) 区分
+    archived = BooleanField(db_field="arch", default=False)
+    # 是否启用校对角色/校对模式；「仅翻嵌」项目为 False
+    with_proofread = BooleanField(db_field="wp", default=True)
+    # 是否已成功导出过（用于进度条计算「已导出」条件）
+    has_output = BooleanField(db_field="ho", default=False)
 
     # == 术语库 ==
     _term_banks = ListField(
@@ -409,6 +415,7 @@ class Project(GroupMixin, Document):
         source_language=None,
         target_languages=None,
         intro="",
+        with_proofread=True,
         labelplus_txt=None,
     ) -> "Project":
         """创建一个项目"""
@@ -462,6 +469,7 @@ class Project(GroupMixin, Document):
         if application_check_type:
             project.application_check_type = application_check_type
         project.intro = intro
+        project.with_proofread = bool(with_proofread)
         # 保存团队
         project.save()
         # 创建项目目标语言对象
@@ -853,6 +861,30 @@ class Project(GroupMixin, Document):
             raise ProjectNotFinishedError
         self.update(
             status=ProjectStatus.WORKING,
+            archived=False,
+            unset__system_finish_time=1,
+            unset__plan_finish_time=1,
+        )
+        self.reload()
+
+    def archive(self):
+        """归档项目：保留全部数据，置为已归档（任何人只读），可取消归档"""
+        if self.status not in [ProjectStatus.PLAN_FINISH, ProjectStatus.WORKING]:
+            raise ProjectNoFinishPlanError
+        self.update(
+            status=ProjectStatus.ARCHIVED,
+            archived=True,
+            system_finish_time=datetime.datetime.utcnow(),
+        )
+        self.reload()
+
+    def unarchive(self):
+        """取消归档：恢复到进行中状态（数据本就完整保留）"""
+        if not self.archived:
+            raise ProjectNotFinishedError
+        self.update(
+            status=ProjectStatus.WORKING,
+            archived=False,
             unset__system_finish_time=1,
             unset__plan_finish_time=1,
         )
@@ -1043,6 +1075,16 @@ class Project(GroupMixin, Document):
             "source_count": self.source_count,
             "translated_source_count": self.translated_source_count,
             "checked_source_count": self.checked_source_count,
+            "archived": bool(self.archived),
+            "with_proofread": bool(self.with_proofread),
+            "has_output": bool(self.has_output),
+            # 已嵌字（导出时写入 file.typesetter）图片数 / 图片总数，用于嵌字进度绿条
+            "typeset_file_count": File.objects(
+                project=self.id, type=FileType.IMAGE, typesetter__ne=""
+            ).count(),
+            "image_file_count": File.objects(
+                project=self.id, type=FileType.IMAGE
+            ).count(),
             "import_from_labelplus_status": self.import_from_labelplus_status,
             "import_from_labelplus_percent": self.import_from_labelplus_percent,
             "import_from_labelplus_error_type": self.import_from_labelplus_error_type,
