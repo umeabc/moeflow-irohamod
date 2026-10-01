@@ -1,6 +1,5 @@
 import { css } from '@emotion/core';
 import { Empty, Tag, Typography } from 'antd';
-import React from 'react';
 import { useIntl } from 'react-intl';
 import { APINotice } from '@/apis/notice';
 import { FC } from '@/interfaces';

@@ -1,6 +1,5 @@
 import { css } from '@emotion/core';
 import { Icon } from '@/components';
-import React from 'react';
 import { FC } from '@/interfaces';
 
 /** 用于拖动元素的三条线样的把手的属性接口 */

@@ -1,5 +1,4 @@
 import { css } from '@emotion/core';
-import React from 'react';
 import { FC } from '@/interfaces';
 
 /**

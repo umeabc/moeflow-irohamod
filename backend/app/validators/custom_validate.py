@@ -8,6 +8,14 @@ from app.models.user import User
 
 
 # ####共用部分####
+# 共享的校验器定义
+COMMON_VALIDATORS = {
+    'short_text': validate.Length(min=0, max=140, error=lazy_gettext("长度为{min}到{max}个字符")),
+    'name': validate.Length(min=1, max=40, error=lazy_gettext("长度为{min}到{max}个字符")),
+    'short_name': validate.Length(min=1, max=20, error=lazy_gettext("长度为{min}到{max}个字符")),
+    'password': validate.Length(min=6, max=60, error=lazy_gettext("长度为{min}到{max}个字符")),
+}
+
 def object_id(id):
     """只要不能通过ObjectID解析，就报错"""
     try:
@@ -72,12 +80,8 @@ def indexes_in(model=None, other_indexes: list = None):
 
 # #####用户部分#####
 class UserValidate:
-    signature_length = validate.Length(
-        min=0, max=140, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
-    password_length = validate.Length(
-        min=6, max=60, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
+    signature_length = COMMON_VALIDATORS['short_text']
+    password_length = COMMON_VALIDATORS['password']
 
     @staticmethod
     def valid_new_name(name, field_name=None):
@@ -105,9 +109,7 @@ class UserValidate:
 
 # #####团队部分#####
 class TeamValidate:
-    intro_length = validate.Length(
-        min=0, max=140, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
+    intro_length = COMMON_VALIDATORS['short_text']
 
     @staticmethod
     def valid_new_name(name, field_name=None):
@@ -120,36 +122,24 @@ class TeamValidate:
 
 # #####项目部分#####
 class ProjectValidate:
-    name_length = validate.Length(
-        min=1, max=40, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
-    intro_length = validate.Length(
-        min=0, max=140, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
+    name_length = COMMON_VALIDATORS['name']
+    intro_length = COMMON_VALIDATORS['short_text']
 
 
-# #####项目部分#####
+# #####项目集部分#####
 class ProjectSetValidate:
-    name_length = validate.Length(
-        min=1, max=40, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
+    name_length = COMMON_VALIDATORS['name']
 
 
 # #####加入流程部分#####
 class JoinValidate:
-    message_length = validate.Length(
-        min=0, max=140, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
+    message_length = COMMON_VALIDATORS['short_text']
 
 
 # #####角色部分#####
 class RoleValidate:
-    name_length = validate.Length(
-        min=1, max=20, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
-    intro_length = validate.Length(
-        min=0, max=140, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
+    name_length = COMMON_VALIDATORS['short_name']
+    intro_length = COMMON_VALIDATORS['short_text']
 
     @staticmethod
     def valid_level(level, min=0, max=500, field_name=None):
@@ -165,21 +155,11 @@ class RoleValidate:
 
 # ##### 术语库部分 #####
 class TermBankValidate:
-    name_length = validate.Length(
-        min=1, max=40, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
-    tip_length = validate.Length(
-        min=0, max=140, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
+    name_length = COMMON_VALIDATORS['name']
+    tip_length = COMMON_VALIDATORS['short_text']
 
 
 class TermValidate:
-    source_length = validate.Length(
-        min=1, max=40, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
-    target_length = validate.Length(
-        min=1, max=40, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
-    tip_length = validate.Length(
-        min=0, max=140, error=lazy_gettext("长度为{min}到{max}个字符")
-    )
+    source_length = COMMON_VALIDATORS['name']
+    target_length = COMMON_VALIDATORS['name']
+    tip_length = COMMON_VALIDATORS['short_text']

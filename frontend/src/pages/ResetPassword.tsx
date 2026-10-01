@@ -1,6 +1,5 @@
 import { css } from '@emotion/core';
 import { Typography } from 'antd';
-import React from 'react';
 import { useIntl } from 'react-intl';
 import { AuthFormWrapper, Header } from '@/components';
 import { useTitle } from '@/hooks';

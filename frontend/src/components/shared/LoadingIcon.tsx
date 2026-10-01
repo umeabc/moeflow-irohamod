@@ -1,5 +1,4 @@
 import { Loading3QuartersOutlined } from '@ant-design/icons';
-import React from 'react';
 import { FC } from '@/interfaces';
 
 /** 加载中 Icon 的属性接口 */

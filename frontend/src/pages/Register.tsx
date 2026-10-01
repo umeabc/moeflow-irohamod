@@ -1,6 +1,5 @@
 import { css } from '@emotion/core';
 import { Button, Form as AntdForm, Input, Modal } from 'antd';
-import React from 'react';
 import { useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import { api, FailureResults, resultTypes } from '../apis';

@@ -1,6 +1,5 @@
 import { css } from '@emotion/core';
 import { Icon, useHotKey } from '@/components';
-import React from 'react';
 import { useIntl } from 'react-intl';
 import { useHistory } from 'react-router-dom';
 import { Tooltip } from '@/components';

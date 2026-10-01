@@ -1,6 +1,5 @@
 import { css } from '@emotion/core';
 import classNames from 'classnames';
-import React from 'react';
 import { useIntl } from 'react-intl';
 import { Icon, Tooltip } from '@/components';
 import { FC } from '@/interfaces';

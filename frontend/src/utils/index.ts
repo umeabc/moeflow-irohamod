@@ -7,6 +7,33 @@ const abbrs = [
   ['CAPTCHA', 'Captcha', 'captcha'],
 ];
 
+/**
+ * 通用递归对象键转换函数
+ * @param value 要转换的值
+ * @param keyTransform 键转换函数
+ * @returns 转换后的值
+ */
+function transformObjectKeys(
+  value: any,
+  keyTransform: (key: string) => string,
+): any {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (isArray(value)) {
+    return value.map((v) => transformObjectKeys(v, keyTransform));
+  }
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  const newValue: { [key: string]: any } = {};
+  for (const key in value) {
+    newValue[keyTransform(key)] = transformObjectKeys(value[key], keyTransform);
+  }
+  return newValue;
+}
+
 // 将字符串从“小驼峰格式”转为“连字符格式”
 function stringToHyphenCase(value: string) {
   return value.replace(/([A-Z])/g, '-$1').toLowerCase();
@@ -37,7 +64,7 @@ function stringToUnderScoreCase(value: string) {
   return value.replace(/([A-Z])/g, '_$1').toLowerCase();
 }
 /**
- * 将字符串或对象的 key 从“小驼峰格式”转为“下划线格式”
+ * 将字符串或对象的 key 从”小驼峰格式”转为”下划线格式”
  */
 function toUnderScoreCase(value: string): string;
 function toUnderScoreCase<T>(value: T): T;
@@ -46,28 +73,8 @@ function toUnderScoreCase(
 ) {
   if (typeof value === 'string') {
     return stringToUnderScoreCase(value);
-  } else if (isArray(value)) {
-    return value.map((v: any) => toUnderScoreCase(v));
-  } else if (isPlainObject(value)) {
-    const newValue: { [key: string]: any } = {};
-    for (const key in value) {
-      if (isPlainObject(value[key])) {
-        // 递归处理所以子对象
-        newValue[stringToUnderScoreCase(key)] = toUnderScoreCase(value[key]);
-      } else if (isArray(value[key])) {
-        // 递归处理所以子数组
-        newValue[stringToUnderScoreCase(key)] = value[key].map((v: any) => {
-          if (isPlainObject(v)) return toUnderScoreCase(v);
-          else return v;
-        });
-      } else {
-        newValue[stringToUnderScoreCase(key)] = value[key];
-      }
-    }
-    return newValue;
-  } else {
-    return value;
   }
+  return transformObjectKeys(value, stringToUnderScoreCase);
 }
 
 // 将字符串从“下划线格式”转换为“小驼峰格式”
@@ -81,7 +88,7 @@ function stringToLowerCamelCase(value: string) {
   });
 }
 /**
- * 将字符串或对象的 key 从“下划线格式”转换为“小驼峰格式”
+ * 将字符串或对象的 key 从”下划线格式”转换为”小驼峰格式”
  */
 function toLowerCamelCase(value: string): string;
 function toLowerCamelCase<T>(value: T): T;
@@ -90,27 +97,8 @@ function toLowerCamelCase(
 ) {
   if (typeof value === 'string') {
     return stringToLowerCamelCase(value);
-  } else if (isArray(value)) {
-    return value.map((v: any) => toLowerCamelCase(v));
-  } else if (isPlainObject(value)) {
-    const newValue: { [key: string]: any } = {};
-    for (const key in value) {
-      if (isPlainObject(value[key])) {
-        // 递归处理所以子对象
-        newValue[stringToLowerCamelCase(key)] = toLowerCamelCase(value[key]);
-      } else if (isArray(value[key])) {
-        // 递归处理所以子数组
-        newValue[stringToLowerCamelCase(key)] = value[key].map((v: any) =>
-          toLowerCamelCase(v),
-        );
-      } else {
-        newValue[stringToLowerCamelCase(key)] = value[key];
-      }
-    }
-    return newValue;
-  } else {
-    return value;
   }
+  return transformObjectKeys(value, stringToLowerCamelCase);
 }
 
 interface FormError {

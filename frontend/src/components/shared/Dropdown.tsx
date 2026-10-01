@@ -1,7 +1,6 @@
 import { css } from '@emotion/core';
 import { Dropdown as AntdDropdown } from 'antd';
 import { DropDownProps as AntdDropdownProps } from 'antd/lib/dropdown';
-import React from 'react';
 import { FC } from '@/interfaces';
 
 /** 下拉菜单的属性接口 */

@@ -2,7 +2,6 @@ import { css } from '@emotion/core';
 import { Select } from 'antd';
 import { SelectValue } from 'antd/lib/select';
 import classNames from 'classnames';
-import React from 'react';
 import { TEAM_PERMISSION } from '@/constants';
 import { FC, Project, Role, UserTeam } from '@/interfaces';
 import { User } from '@/interfaces/user';

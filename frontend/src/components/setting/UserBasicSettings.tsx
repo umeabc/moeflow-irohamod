@@ -1,5 +1,4 @@
 import { css } from '@emotion/core';
-import React from 'react';
 import { useIntl } from 'react-intl';
 import { Content, ContentItem, ContentTitle } from '@/components';
 import { FC } from '@/interfaces';

@@ -1,7 +1,6 @@
 import { css } from '@emotion/core';
 import { Switch } from 'antd';
 import classNames from 'classnames';
-import React from 'react';
 import { useIntl } from 'react-intl';
 import { useDispatch, useSelector } from 'react-redux';
 import { Icon, Button } from '@/components';

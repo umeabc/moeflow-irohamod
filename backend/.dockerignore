@@ -118,3 +118,26 @@ gen
 
 # .dockerignore 专属
 /.git/
+
+# Exclude test files and dev dependencies
+tests/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+cov.xml
+
+# Exclude dev/CI configuration
+.github/
+.env.test.sample
+requirements-dev.txt
+
+# Exclude documentation
+README.md
+README_zh.md
+CHANGELOG.md
+CONTRIBUTION.md
+LICENSE.md
+apidoc.json
+apidoc_header.md

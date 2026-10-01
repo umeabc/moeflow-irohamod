@@ -1,5 +1,4 @@
 import { css } from '@emotion/core';
-import React from 'react';
 import { useIntl } from 'react-intl';
 import { FC } from '@/interfaces';
 import classNames from 'classnames';
