@@ -460,12 +460,15 @@ class GroupMixin:
         return self.users(role=roles_by_permission)
 
     def delete_uesr(self, user, operator=None):
+        is_super_admin = bool(
+            operator and operator.admin and operator.get_relation(self) is not None
+        )
         user_role = user.get_role(self)
         # 检查被删除用户是否存在于团队
         if user_role is None:
             raise UserNotExistError(gettext("用户不存在于团队"), replace=True)
         # 创建者不能删除
-        if user_role.system_code == "creator":
+        if not is_super_admin and user_role.system_code == "creator":
             raise CreatorCanNotLeaveError
         # 有操作人则检测权限
         if operator:
@@ -474,18 +477,23 @@ class GroupMixin:
                 user.leave(self)
                 self.reload()
                 return {"message": gettext("退出成功"), "group": self.to_api(user=user)}
-            operator_role = operator.get_role(self)
-            # 检查当前用户是否有删除权限
-            if not operator.can(self, self.permission_cls.DELETE_USER):
-                raise NoPermissionError(gettext("您没有删除用户权限"))
-            # 检查当前用户和被删除用户等级
-            if user_role.level >= operator_role.level:
-                raise NoPermissionError(gettext("只能删除角色等级比您低的用户"))
+            # 超级管理员跳过权限检查
+            if not is_super_admin:
+                operator_role = operator.get_role(self)
+                # 检查当前用户是否有删除权限
+                if not operator.can(self, self.permission_cls.DELETE_USER):
+                    raise NoPermissionError(gettext("您没有删除用户权限"))
+                # 检查当前用户和被删除用户等级
+                if user_role.level >= operator_role.level:
+                    raise NoPermissionError(gettext("只能删除角色等级比您低的用户"))
         user.leave(self)
         return {"message": gettext("删除成功")}
 
     def change_user_role(self, user, role, operator=None):
         """修改用户角色"""
+        is_super_admin = bool(
+            operator and operator.admin and operator.get_relation(self) is not None
+        )
         # 如果是字符串，则获取 Role 实例
         if isinstance(role, str):
             role = self.role_cls.by_id(role)
@@ -497,7 +505,7 @@ class GroupMixin:
         if user_role is None:
             raise UserNotExistError
         # 有操作人则检查权限
-        if operator:
+        if operator and not is_super_admin:
             # 不能修改自己的角色
             if operator == user:
                 raise NoPermissionError(gettext("您不能修改自己的角色"))

@@ -43,6 +43,10 @@ export const MemberList: FC<MemberListProps> = ({
   const platform = useSelector((state: AppState) => state.site.platform);
   const isMobile = platform === 'mobile';
   const userID = useSelector((state: AppState) => state.user.id);
+  const userIsAdmin = useSelector((state: AppState) => state.user.admin);
+  const isInherited =
+    currentGroup.groupType === 'project' && currentGroup.autoBecomeProjectAdmin;
+  const isSuperAdmin = userIsAdmin && Boolean(currentGroup.role) && !isInherited;
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0); // 元素总个数
   const [items, setItems] = useState<any[]>([]); // 元素
@@ -53,17 +57,22 @@ export const MemberList: FC<MemberListProps> = ({
   /** 挂载时获取用户角色 */
   useEffect(() => {
     const [cancelToken, cancel] = getCancelToken();
-    getTypes({ cancelToken });
+    getTypes({ cancelToken, withCreator: isSuperAdmin });
     return cancel;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** 获取系统角色 */
-  const getTypes = ({ cancelToken }: { cancelToken?: CancelToken } = {}) => {
+  const getTypes = ({
+    cancelToken,
+    withCreator,
+  }: { cancelToken?: CancelToken; withCreator?: boolean } = {}) => {
     return api
       .getTypes({
         typeName: 'systemRole',
         groupType,
+        // 站点管理员查看成员时需包含「创建人」角色（改角色/设创建人用）
+        params: withCreator ? { with_creator: true } : undefined,
         configs: {
           cancelToken,
         },
@@ -227,9 +236,10 @@ export const MemberList: FC<MemberListProps> = ({
               name={item.name}
               rightButton={
                 // 创建者无法删除/退出
-                item.role.systemCode !== 'creator' &&
-                can(currentGroup, TEAM_PERMISSION.DELETE_USER) &&
-                currentGroup.role.level > item.role.level && (
+                (isSuperAdmin ||
+                  (item.role.systemCode !== 'creator' &&
+                    can(currentGroup, TEAM_PERMISSION.DELETE_USER) &&
+                    currentGroup.role.level > item.role.level)) && (
                   <Icon icon="times" />
                 )
               }
