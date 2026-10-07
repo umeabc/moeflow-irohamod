@@ -1,5 +1,7 @@
 # PRODUCTION DEPENDENCIES ONLY
 # GENERATED: run make requirements.txt to recreate lock file
+# NOTE: python-dotenv 是运行时依赖（app/config.py import dotenv），此前仅经 pytest-dotenv 传递安装，refactor 拆分后须显式声明
+python-dotenv==1.0.1
 curl_cffi==0.14.0
 asgiref==3.7.2
 Flask-APIKit==0.0.7
