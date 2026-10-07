@@ -58,7 +58,7 @@
 - **放开（团队 / 项目均适用）**：`GroupMixin.change_user_role` / `delete_uesr`（团队 `Team` 与项目 `Project` 均继承自 `GroupMixin`）新增 `is_super_admin`（站点管理员且为该团体成员）；站点管理员跳过全部限制——可修改任意成员角色（含创建人、自己、任意等级，含设置为创建人），可删除任意成员（含创建人）；非站点管理员行为完全不变。
 - 前端：`MemberList.tsx` 删除按钮、`RoleSelect.tsx` 角色下拉对站点管理员放开（含创建人/自己的角色切换与删除入口）。
 - 前端（站点管理员）角色下拉**包含「创建人」选项**：`MemberList.getTypes` 对站点管理员传 `with_creator=true`，否则类型接口默认 `without_creator` 不含创建人，「设置为创建人」无从操作；`RoleSelect` 增加兜底——当前角色不在选项列表时自动补一项，避免受控 `Select` 的 `value` 无匹配 `Option` 而显示原始 id（站点管理员查看创建人行时原会触发）。
-- ⚠️ **副作用（有意放开）**：站点管理员可将**最后一个创建人**降级或删除，此后该团体**无创建人**——已核查全部创建人消费点无崩溃（`import_from_labelplus` 有 `creator is None` 分支、`project.move` 防 None、删除权限由 admin 共同持有、无 `group.creator` 悬空字段）；团体继续由 admin 正常管理。若需「至少保留一名创建人」守卫，属后续产品决策。
+- ⚠️ **副作用（有意放开）**：站点管理员可将**最后一个创建人**降级或删除，此后该团体**无创建人**——已核查全部创建人消费点无崩溃（`import_from_labelplus` 有 `creator is None` 分支、`project.move` 防 None、删除权限由 admin 共同持有、无 `group.creator` 悬空字段）；团体继续由 admin 正常管理。**下掉创建人后，可将其余任意 1 人设为创建人**（超管下拉已含创建人选项），避免团体长期无主。
 - 镜像 tag：`moeflow-frontend:1.1.7-iroha14-fix9` / `moeflow-backend:1.1.8-iroha14-fix9`。
 
 ---
