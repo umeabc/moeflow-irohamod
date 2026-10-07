@@ -1,4 +1,5 @@
-# syntax=docker/dockerfile:1
+# 不使用 # syntax=docker/dockerfile:1：该指令触发 BuildKit 从 Docker Hub 拉取语法镜像，
+# 在无法访问 auth.docker.io 的网络（如内网测试机）下构建直接超时；默认前端已支持多阶段构建。
 
 # ============================================================================
 # Stage 1: Builder - Install dependencies and compile translations
