@@ -19,7 +19,7 @@ from app.exceptions import (
 )
 from app.utils.filename import strip_filename_emoji
 from app.utils.hash import get_file_md5
-from app.models.file import File, FileTargetCache
+from app.models.file import File, FileTargetCache, Translation
 from app.models.user import User
 from app.models.project import Project, ProjectPermission
 from app.models.team import TeamPermission, TeamUserRelation
@@ -519,6 +519,65 @@ class FileOCRAPI(MoeAPIView):
             raise NoPermissionError(gettext("团队限额不足"))
         file.parse()
         return {"message": gettext("已加入队列"), "file": file.to_api()}
+
+
+class FileUndoCompletionAPI(MoeAPIView):
+    @token_required
+    @fetch_model(File)
+    @log_action("file.undo_completion", resource_type="file")
+    def post(self, file: File):
+        """
+        @api {post} /v1/files/<file_id>/undo-completion 撤回校对/嵌字完成
+        @apiVersion 1.0.0
+        @apiName postFileUndoCompletionAPI
+        @apiGroup File
+        @apiUse APIHeader
+        @apiUse TokenHeader
+
+        @apiParam {Boolean} [proofreader] 撤回校对完成（清空 proofreader 字段）
+        @apiParam {Boolean} [typesetter] 撤回嵌字完成（清空 typesetter 字段）
+
+        @apiSuccessExample {json} 返回示例
+        {
+            "message": "撤回成功"
+        }
+        """
+        # 检查用户权限：仅项目管理员可撤回
+        role = self.current_user.get_role(file.project)
+        role_sys = role.system_code if role else ""
+        if role_sys not in ("creator", "admin", "coordinator"):
+            raise NoPermissionError(gettext("仅项目管理员可撤回校对/嵌字完成"))
+
+        data = self.get_json()
+        updates = {}
+        cleared_fields = []
+
+        if data.get("proofreader"):
+            updates["proofreader"] = ""
+            cleared_fields.append(gettext("校对"))
+
+        if data.get("typesetter"):
+            updates["typesetter"] = ""
+            cleared_fields.append(gettext("嵌字"))
+
+        if not updates:
+            raise ValidateError(gettext("请至少选择一个要撤回的项"))
+
+        if data.get("proofreader"):
+            # 撤回编辑器里校对模式的「确认」（选定）与校对内容：
+            # 逐条走模型方法（unselect 内部会判断未选定时跳过），
+            # 以正确递减 checked_source_count（文件/父级文件夹/项目各级缓存同步）
+            for source in file.sources():
+                for tr in Translation.objects(source=source):
+                    tr.unselect()
+                    if tr.proofread_content or tr.proofreader:
+                        tr.update(proofread_content="", unset__proofreader=1)
+
+        file.update(**updates)
+        file.reload()  # update() 不刷新内存对象，reload 保证响应里的 file 是最新值
+
+        message = gettext("已撤回") + "：" + "、".join(cleared_fields)
+        return {"message": message, "file": file.to_api()}
 
 
 class AdminFileListAPI(MoeAPIView):

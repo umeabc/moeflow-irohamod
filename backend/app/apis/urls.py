@@ -6,6 +6,7 @@ from app.apis.file import (
     FileAPI,
     FileContentAPI,
     FileOCRAPI,
+    FileUndoCompletionAPI,
     ProjectFileListAPI,
     ProjectFileMoveAPI,
     MoveTargetProjectsAPI,
@@ -438,6 +439,11 @@ file.add_url_rule(
     "/<file_id>/ocr",
     methods=["POST", "OPTIONS"],
     view_func=FileOCRAPI.as_view("file_ocr"),
+)
+file.add_url_rule(
+    "/<file_id>/undo-completion",
+    methods=["POST", "OPTIONS"],
+    view_func=FileUndoCompletionAPI.as_view("file_undo_completion"),
 )
 # 原文模块
 source = Blueprint("source", __name__, url_prefix=v1_prefix + "/sources")

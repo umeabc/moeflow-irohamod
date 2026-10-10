@@ -287,6 +287,28 @@ const getFileContent = ({
   });
 };
 
+/** 撤回校对/嵌字完成 */
+interface UndoCompletionData {
+  proofreader?: boolean;
+  typesetter?: boolean;
+}
+const undoFileCompletion = ({
+  id,
+  data,
+  configs,
+}: {
+  id: string;
+  data: UndoCompletionData;
+  configs?: AxiosRequestConfig;
+}) => {
+  return request({
+    method: 'POST',
+    url: `/v1/files/${id}/undo-completion`,
+    data: toUnderScoreCase(data),
+    ...configs,
+  });
+};
+
 export default {
   getProjectFiles,
   getFile,
@@ -300,4 +322,5 @@ export default {
   searchFiles,
   getMoveTargetProjects,
   moveFiles,
+  undoFileCompletion,
 };

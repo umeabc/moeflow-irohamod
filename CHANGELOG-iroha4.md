@@ -562,6 +562,24 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 
 ---
 
+## 十一、撤回校对/嵌字完成（iroha15，2026-10-10）
+
+- **功能**：项目管理员（创建人/管理员/监理）可撤回单张图片的「校对完成」/「嵌字完成」标记，恢复到未校对/未嵌字状态，减少误点击后无法挽回的问题。翻译者不提供撤回（走角色行手动编辑即可）。
+- 后端：新增 `POST /v1/files/<file_id>/undo-completion`（`FileUndoCompletionAPI`，`app/apis/file.py` + 路由注册 `app/apis/urls.py`）：
+  - 权限：仅项目角色 `creator` / `admin` / `coordinator`，否则 403；`token_required` + `@log_action("file.undo_completion")` 埋点。
+  - 请求体 `{proofreader?: bool, typesetter?: bool}`（至少一项，否则 400），将 `File.proofreader` / `File.typesetter`（db_field `pr` / `tyu`）清空为 `""`。
+  - **撤回校对时同步清理编辑器校对模式里的确认状态**（初版只清 `File.proofreader` 导致校对确认残留，已修复）：遍历该文件所有原文的翻译，逐条 `Translation.unselect()`（选定确认状态，正确递减 `checked_source_count`，文件/父级文件夹/`FileTargetCache`/项目各级缓存同步）并清空 `proofread_content`（db_field `p`）与校对者引用；重复调用幂等。
+  - `file.update()` 后 `reload()` 再返回，保证响应里 `file` 为最新值（前端撤回后整页刷新，双保险）。
+  - 返回 `{"message": "已撤回：校对、嵌字", "file": <to_api>}`。
+  - 测试机 E2E 实测：BS测试1 某图撤回前 `csc=5 / selected=5 / FTC.cs=5` → 撤回后全部归 0，`FileTargetCache` 同步。
+- 前端（`FileItem.tsx` 角色行）：
+  - 校对/嵌字行在**有值**时显示「↶」小按钮（仅项目管理员可见）；点击 `confirm` 确认后调 `api.file.undoFileCompletion`（`apis/file.ts` 新增），成功后整页刷新即时生效。
+  - 进度条绿条（`typesetter`）与角色栏随字段清空自动消失；`FileItem--typeset` 绿框同步取消。
+- 部署：测试机 172.29.133.24 已部署（构建机与测试机同机，直接 `/opt/build/moeflow-irohamod` 整包同步后本地构建）。
+- 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha15` / `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha15`。
+
+---
+
 ## 备注
 
 - 本改动为定制版本，与上游 moeflow 官方代码存在差异；如需回退，可用官方 tag `v1.1.7` / `v1.1.8` 重新构建。

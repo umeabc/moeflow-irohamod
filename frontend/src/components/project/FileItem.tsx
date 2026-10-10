@@ -196,7 +196,8 @@ const RoleEditField: FC<{
   fileID: string;
   field: 'translator' | 'proofreader' | 'typesetter';
   canEdit: boolean;
-}> = ({ iconType, label, value, fileID, field, canEdit }) => {
+  canUndo: boolean; // 新增：是否显示撤回按钮（仅管理员）
+}> = ({ iconType, label, value, fileID, field, canEdit, canUndo }) => {
   const { formatMessage } = useIntl();
   const [editing, setEditing] = useState(false);
   const roleText = value || '';
@@ -221,6 +222,26 @@ const RoleEditField: FC<{
       });
   };
 
+  const undo = () => {
+    // 撤回操作：清空对应字段
+    const data: any = {};
+    if (field === 'proofreader') data.proofreader = true;
+    if (field === 'typesetter') data.typesetter = true;
+
+    api.file
+      .undoFileCompletion({ id: fileID, data })
+      .then(() => {
+        // 刷新页面（触发父组件重新加载）
+        window.location.reload();
+      })
+      .catch(() => {
+        // 忽略错误
+      });
+  };
+
+  // 仅校对与嵌字可撤回（翻译者不显示撤回按钮）
+  const showUndoButton = canUndo && roleText && ['proofreader', 'typesetter'].includes(field);
+
   return (
     <div
       onClick={(e) => e.stopPropagation()}
@@ -231,6 +252,16 @@ const RoleEditField: FC<{
         &:not(:last-child) { margin-bottom: -1px; }
         .RoleEditField__Value { cursor: pointer; color: ${style.primaryColor}; &:hover { text-decoration: underline; } }
         .RoleEditField__Input { flex: 1; min-width: 60px; font-size: 12px; border: 1px solid ${style.borderColorLight}; border-radius: 4px; padding: 1px 4px; outline: none; &:focus { border-color: ${style.primaryColor}; } }
+        .RoleEditField__UndoButton {
+          margin-left: 4px;
+          padding: 0 4px;
+          font-size: 11px;
+          color: ${style.textColorSecondary};
+          cursor: pointer;
+          border: 1px solid ${style.borderColorLight};
+          border-radius: 3px;
+          &:hover { color: ${style.errorColor}; border-color: ${style.errorColor}; background-color: rgba(255, 77, 79, 0.05); }
+        }
       `}>
       <TranslationUser iconType={iconType} name={label} />
       {editing ? (
@@ -248,17 +279,33 @@ const RoleEditField: FC<{
           onBlur={(e) => save(e.target.value)}
         />
       ) : (
-        <span
-          className="RoleEditField__Value"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (canEdit) {
-              setEditing(true);
-            }
-          }}
-        >
-          {roleText ? `: ${roleText}` : ': -'}
-        </span>
+        <>
+          <span
+            className="RoleEditField__Value"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (canEdit) {
+                setEditing(true);
+              }
+            }}
+          >
+            {roleText ? `: ${roleText}` : ': -'}
+          </span>
+          {showUndoButton && (
+            <span
+              className="RoleEditField__UndoButton"
+              title={`撤回${label}完成`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm(`确定要撤回${label}完成吗？`)) {
+                  undo();
+                }
+              }}
+            >
+              ↶
+            </span>
+          )}
+        </>
       )}
     </div>
   );
@@ -286,8 +333,10 @@ export const FileItem: FC<FileItemProps> = ({
   let canEditTranslator = false;
   let canEditProofreader = false;
   let canEditTypesetter = false;
+  let canUndo = false; // 新增：仅管理员可撤回
   if (isAdmin || ['creator', 'admin', 'coordinator'].includes(roleSystemCode || '')) {
     canEditTranslator = canEditProofreader = canEditTypesetter = true;
+    canUndo = true;
   } else if (['translator', 'proofreader'].includes(roleSystemCode || '')) {
     canEditTranslator = canEditProofreader = true;
   } else if (roleSystemCode === 'picture_editor') {
@@ -364,11 +413,11 @@ export const FileItem: FC<FileItemProps> = ({
         <div className="FileItem__Name">{file.name}</div>
 
         <div className="FileItem__Roles">
-          <RoleEditField iconType="translation" label="翻译" value={file.translator} fileID={file.id} field="translator" canEdit={canEditTranslator} />
+          <RoleEditField iconType="translation" label="翻译" value={file.translator} fileID={file.id} field="translator" canEdit={canEditTranslator} canUndo={canUndo} />
           {withProofread && (
-            <RoleEditField iconType="proofread" label="校对" value={file.proofreader} fileID={file.id} field="proofreader" canEdit={canEditProofreader} />
+            <RoleEditField iconType="proofread" label="校对" value={file.proofreader} fileID={file.id} field="proofreader" canEdit={canEditProofreader} canUndo={canUndo} />
           )}
-          <RoleEditField iconType="typesetter" label="嵌字" value={file.typesetter} fileID={file.id} field="typesetter" canEdit={canEditTypesetter} />
+          <RoleEditField iconType="typesetter" label="嵌字" value={file.typesetter} fileID={file.id} field="typesetter" canEdit={canEditTypesetter} canUndo={canUndo} />
         </div>
 
         {file.uploading ? (
