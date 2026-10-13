@@ -17,7 +17,7 @@ import { useIntl } from 'react-intl';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { useDebouncedCallback } from 'use-debounce';
-import { Button, EmptyTip, List } from '@/components';
+import { Button, EmptyTip, Icon, List } from '@/components';
 import { OutputList } from './OutputList';
 import { FileItem } from './FileItem';
 import { api, resultTypes } from '@/apis';
@@ -36,6 +36,7 @@ import { setFilesState } from '@/store/file/slice';
 import { editProject, setCurrentProject } from '@/store/project/slice';
 import style from '@/style';
 import { sanitizeFilename, toLowerCamelCase } from '@/utils';
+import { clickEffect } from '@/utils/style';
 import { can } from '@/utils/user';
 import { routes } from '@/pages/routes';
 import { ListPageSpec } from '@/components/shared/List';
@@ -327,6 +328,100 @@ export const FileList: FC<FileListProps> = ({
   // */
 
   debugLogger('items', items);
+
+  // ===== 移动端“更多”菜单 =====
+  // 顺序（设计裁决）：移动图片 → AI辅助翻译 → 导出 → 上传 → 分割线 → 社媒导入分组。
+  // 切换目标语言常驻顶栏，不进菜单；权限/归档/AI 条件与桌面按钮完全一致。
+  const mobileMenuItems: MenuProps['items'] = [];
+  if (!archived && can(project, PROJECT_PERMISSION.MOVE_FILE)) {
+    mobileMenuItems.push({
+      key: 'move',
+      label:
+        formatMessage({ id: 'file.moveImages' }) +
+        (selectedFileIds.length > 0 ? ` (${selectedFileIds.length})` : ''),
+      disabled: selectedFileIds.length === 0,
+      onClick: () => setMoveModalVisible(true),
+    });
+  }
+  if (!archived && aiEnabled && aiTranslateApi) {
+    mobileMenuItems.push({
+      key: 'ai-translate',
+      label: formatMessage({ id: 'fileList.aiTranslate.buttonText' }),
+      onClick: () =>
+        aiTranslateApi.start({
+          onFileSaved(f2) {
+            setItems((items) => items.map((f) => (f.id === f2.id ? f2 : f)));
+          },
+        }),
+    });
+  }
+  if (!archived && can(project, PROJECT_PERMISSION.OUTPUT_TRA)) {
+    mobileMenuItems.push({
+      key: 'export',
+      label:
+        formatMessage({ id: 'project.export' }) +
+        (selectedFileIds.length > 0 ? ` (${selectedFileIds.length})` : ''),
+      onClick: () => setOutputDrawerVisible(true),
+    });
+  }
+  if (!archived && can(project, PROJECT_PERMISSION.ADD_FILE)) {
+    mobileMenuItems.push({
+      key: 'upload',
+      label: formatMessage({ id: 'site.upload' }),
+      onClick: () => {
+        filePondRef.current?.browse();
+      },
+    });
+    mobileMenuItems.push({ type: 'divider', key: 'social-divider' });
+    mobileMenuItems.push({
+      key: 'social-import',
+      type: 'group',
+      label: formatMessage({ id: 'file.importFromSocial' }),
+      children: [
+        {
+          key: 'twitter',
+          label: formatMessage({ id: 'file.importFromTwitter' }),
+          onClick: () => setImportModalSource('twitter'),
+        },
+        {
+          key: 'twitter_user',
+          label: formatMessage({ id: 'file.importFromTwitterUser' }),
+          onClick: () => setImportModalSource('twitter_user'),
+        },
+        {
+          key: 'bluesky',
+          label: formatMessage({ id: 'file.importFromBluesky' }),
+          onClick: () => setImportModalSource('bluesky'),
+        },
+        {
+          key: 'bluesky_user',
+          label: formatMessage({ id: 'file.importFromBlueskyUser' }),
+          onClick: () => setImportModalSource('bluesky_user'),
+        },
+        {
+          key: 'pixiv',
+          label: formatMessage({ id: 'file.importFromPixiv' }),
+          onClick: () => setImportModalSource('pixiv'),
+        },
+        {
+          key: 'pixiv_user',
+          label: formatMessage({ id: 'file.importFromPixivUser' }),
+          onClick: () => setImportModalSource('pixiv_user'),
+        },
+        {
+          key: 'external',
+          label: formatMessage({ id: 'file.importFromExternal' }),
+          onClick: () => setImportModalSource('external'),
+        },
+      ],
+    });
+  }
+  // 尾随分割线（无社媒分组时上传是最后一项）不应保留
+  const lastItem = mobileMenuItems[mobileMenuItems.length - 1];
+  if (lastItem && 'type' in lastItem && lastItem.type === 'divider') {
+    mobileMenuItems.pop();
+  }
+
   return (
     <div
       className={classNames('FileList', className, {
@@ -375,6 +470,79 @@ export const FileList: FC<FileListProps> = ({
         styles={css`
           .ant-drawer-body {
             padding: 0 !important;
+          }
+          /* ===== 移动端 Header（设计裁决）：常驻切换目标语言药丸 + 右对齐更多按钮 ===== */
+          .FileList__Header--mobile {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 8px;
+            padding: 0 8px;
+          }
+          .FileList__ChangeTargetPill {
+            flex: 1 1 auto;
+            min-width: 0;
+            height: 34px;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background-color: var(--moeflow-surface);
+            border: 1px solid var(--moeflow-borderColorBase);
+            border-radius: 17px;
+            color: ${style.textColor};
+            font-size: 13px;
+            cursor: pointer;
+            ${clickEffect()};
+            .FileList__ChangeTargetPillIcon,
+            .FileList__ChangeTargetPillCaret {
+              flex: none;
+              color: ${style.textColorSecondary};
+            }
+            .FileList__ChangeTargetPillText {
+              flex: 1 1 auto;
+              min-width: 0;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              text-align: left;
+            }
+          }
+          .FileList__MoreButton {
+            flex: none;
+            width: 44px;
+            height: 44px;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            > span {
+              width: 34px;
+              height: 34px;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              background-color: var(--moeflow-surface);
+              border: 1px solid var(--moeflow-borderColorLight);
+              border-radius: 8px;
+              color: ${style.textColor};
+              font-size: 16px;
+            }
+            &:active > span {
+              background-color: var(--moeflow-activeColor);
+            }
+          }
+          /* 浮层菜单（portal 到 body）：唯一 overlayClassName，仅作用本组件 */
+          .FileList__MoreDropdown {
+            .ant-dropdown-menu {
+              max-height: 70vh;
+              overflow-y: auto;
+              -webkit-overflow-scrolling: touch;
+              overscroll-behavior: contain;
+            }
           }
           .FileList__Search {
             flex: none;
@@ -517,8 +685,48 @@ export const FileList: FC<FileListProps> = ({
           },
         }}
       />
-      <div className="FileList__Header">
-        {!archived && can(project, PROJECT_PERMISSION.MOVE_FILE) && (
+      <div
+        className={classNames('FileList__Header', {
+          'FileList__Header--mobile': isMobile,
+        })}
+      >
+        {isMobile ? (
+          <>
+            {/* 切换目标语言：常驻顶栏（不进菜单） */}
+            <button
+              type="button"
+              className="FileList__ChangeTargetPill"
+              aria-label={
+                formatMessage({ id: 'project.changeTarget' }) +
+                ' - ' +
+                target?.language.i18nName
+              }
+              onClick={onChangeTargetClick}
+            >
+              <Icon className="FileList__ChangeTargetPillIcon" icon="exchange-alt" />
+              <span className="FileList__ChangeTargetPillText">
+                {target?.language.i18nName}
+              </span>
+              <Icon className="FileList__ChangeTargetPillCaret" icon="caret-down" />
+            </button>
+            <Dropdown
+              trigger={['click']}
+              placement="bottomRight"
+              overlayClassName="FileList__MoreDropdown"
+              menu={{ items: mobileMenuItems }}
+            >
+              <button
+                type="button"
+                className="FileList__MoreButton"
+                aria-label="更多"
+              >
+                <Icon icon="ellipsis-h" />
+              </button>
+            </Dropdown>
+          </>
+        ) : (
+          <>
+            {!archived && can(project, PROJECT_PERMISSION.MOVE_FILE) && (
           <Button
             icon="arrows-alt"
             disabled={selectedFileIds.length === 0}
@@ -634,6 +842,8 @@ export const FileList: FC<FileListProps> = ({
               {!isMobile && formatMessage({ id: 'file.importFromSocial' })}
             </Button>
           </Dropdown>
+        )}
+          </>
         )}
       </div>
       <div className="FileList__Search">

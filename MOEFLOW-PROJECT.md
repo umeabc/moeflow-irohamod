@@ -1,7 +1,7 @@
 # MoeFlow 项目交接档案（iroha11 定制版）
 
 > 项目已稳定并正式上线。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
-> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。
+> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。当前版本 **iroha15-fix1**。
 > 注：本档案为**脱敏版**，不含具体主机 IP、域名、端口、代理与凭据；实际部署环境信息由部署方自理。
 
 ---
@@ -104,6 +104,17 @@
 - **用户管理「最后登录时间」（fix7）**：管理后台用户列表在邮箱右侧新增「最后登录时间」列，显示用户最后一次在站点操作的时间。后端 `User.last_active_time`（`la`，UTC），鉴权装饰器 `touch_last_active()` 节流记录（60s），登录接口也记录；仅管理员可见。修复绿条误判见 `typesetter__nin=["", None]`。
 - **修复移动目标列表为空（fix8）**：老项目缺 `wp`（`with_proofread`）字段导致类型查询匹配不到；`MoveTargetProjectsAPI` 对翻校嵌源改用 `with_proofread__ne=False`（含缺失），并把缺字段的老项目补齐为 `wp=true`。
 - 镜像 tag：`moeflow-frontend:1.1.7-iroha14-fix7` / `moeflow-backend:1.1.8-iroha14-fix8`。
+
+## 4.11 iroha15 / iroha15-fix1（基于 iroha14）
+- **iroha15**：撤回校对/嵌字完成（项目管理员可撤回单图「校对完成」「嵌字完成」标记；后端新增 `POST /v1/files/<file_id>/undo-completion`；详见 `CHANGELOG-iroha4.md` 第十一节）。镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha15` / `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha15`。
+- **iroha15-fix1**：移动端界面优化（纯前端）：
+  - 项目文件列表移动端顶栏操作收纳进右上角省略号更多菜单（桌面端不变）；
+  - 编辑器符号工具在移动端默认隐藏，按钮展开（桌面端不变）。
+  - 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha15-fix1` / 后端不变 `v1.1.8-iroha15`。
+- **iroha15-fix2（当前版本）**：移动端体验迭代（纯前端）：
+  - 删除 Dashboard 手机版导航栏右上角装饰性省略号（项目页右上角只剩 FileList 功能菜单一个省略号）；
+  - 手机端「我的」页重设计：信息卡（头像/昵称/签名/管理员徽章）+ 账号/协作/管理(admin only)/其他 分组列表 + 独立退出按钮；6 个新 i18n key。
+  - 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha15-fix2` / 后端不变 `v1.1.8-iroha15`。
 
 ## 5. 关键环境坑（务必牢记）
 1. **前端 build 在资源充足的开发机上做**，再上传远程 `docker build`；远程内存不足跑不动前端构建（OOM）。

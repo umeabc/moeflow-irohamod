@@ -154,8 +154,8 @@ export const ImageSourceViewerProofreader: FC<
     document.addEventListener('mouseup', onUp);
   };
 
-  /** 符号工具是否显示 */
-  const [symbolToolVisible, setSymbolToolVisible] = useState(true);
+  /** 符号工具是否显示（移动端初始收起，桌面端初始展开；挂载期间保留用户手动选择） */
+  const [symbolToolVisible, setSymbolToolVisible] = useState(!isMobile);
 
   /** 向当前活动输入框（无翻译时为翻译输入，否则为校对输入）光标处插入符号 */
   const insertSymbol = (symbol: string) => {
@@ -462,6 +462,36 @@ export const ImageSourceViewerProofreader: FC<
             background-color: ${style.hoverColor};
           }
         }
+        /* ===== 移动端符号工具紧凑化（仅 isMobile 时生效，桌面规则不变） ===== */
+        ${isMobile &&
+        css`
+          .SymbolTool__Toggle {
+            height: 28px;
+            padding: 0 10px;
+            border-radius: 14px;
+          }
+          .ImageSourceViewerProofreader__SymbolTool {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            gap: 6px;
+            padding: 3px 8px;
+            &::-webkit-scrollbar {
+              display: none;
+            }
+            .SymbolTool__Key {
+              flex: none;
+              min-width: 32px;
+              width: 32px;
+              height: 30px;
+              font-size: 14px;
+            }
+            .SymbolTool__Hide {
+              flex: none;
+            }
+          }
+        `}
         .ImageSourceViewerProofreader__TranslationUser {
           position: absolute;
           top: 6px;
@@ -598,6 +628,7 @@ export const ImageSourceViewerProofreader: FC<
                   type="button"
                   key={s}
                   className="SymbolTool__Key"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => insertSymbol(s)}
                 >
                   {s}

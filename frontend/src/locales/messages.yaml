@@ -449,6 +449,24 @@ me.invitation.asRole:
 me.application.new:
   zhCn: 新的申请
   en: New Application
+me.profile.section.account:
+  zhCn: 账号
+  en: Account
+me.profile.section.collaboration:
+  zhCn: 协作
+  en: Collaboration
+me.profile.section.other:
+  zhCn: 其他
+  en: Other
+me.profile.role.admin:
+  zhCn: 站点管理员
+  en: Site administrator
+me.profile.signature.empty:
+  zhCn: 还没有填写签名
+  en: No signature yet
+me.profile.name.fallback:
+  zhCn: 用户
+  en: User
 me.adminPage:
   zhCn: 站点设置
   en: Site Settings

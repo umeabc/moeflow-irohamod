@@ -1,8 +1,8 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha14）
+# MoeFlow 自定义改动 CHANGELOG（iroha15）
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 镜像 tag：`moeflow-frontend:1.1.7-iroha14` / `moeflow-backend:1.1.8-iroha14`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`…`iroha13` 镜像保留各自版本 tag）。
+> 镜像 tag：`moeflow-frontend:1.1.7-iroha14` / `moeflow-backend:1.1.8-iroha14`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`…`iroha13` 镜像保留各自版本 tag）。当前版本：**iroha15-fix1**（`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha15-fix1`，本次为纯前端改动，后端仍为 `v1.1.8-iroha15`）。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：以 `docker save` 导出镜像 tar → 生产侧 `docker load` 导入（仅替换前端/后端镜像，勿改动 env / compose）。
 
@@ -577,6 +577,28 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
   - 进度条绿条（`typesetter`）与角色栏随字段清空自动消失；`FileItem--typeset` 绿框同步取消。
 - 部署：测试机 172.29.133.24 已部署（构建机与测试机同机，直接 `/opt/build/moeflow-irohamod` 整包同步后本地构建）。
 - 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha15` / `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha15`。
+
+---
+
+## 十二、移动端界面优化（iroha15-fix1，2026-10-10）
+
+- **纯前端改动**，后端不变（仍为 `v1.1.8-iroha15`）。
+- **① 项目文件列表移动端顶栏收纳**（`FileList.tsx`）：手机端将顶栏的「移动图片 / AI翻译 / 导出 / 上传 / 社媒导入」等操作收进右上角「省略号」更多菜单（antd Dropdown，click 触发），社媒导入七个子源作为子菜单；桌面端交互完全不变。
+- **② 符号工具移动端默认隐藏**（`markers/translate/index.tsx`、`markers/proofread/index.tsx`）：检测到 `isMobile` 时 `symbolToolVisible` 初始为 `false`，点「显示符号工具」展开；桌面端保持默认显示。
+- 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha15-fix1` / `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha15`（不变）。
+
+---
+
+## 十三、移动端体验迭代（iroha15-fix2，2026-10-12）
+
+- **纯前端改动**，后端不变（仍为 `v1.1.8-iroha15`）。
+- **① 删除 Dashboard 手机版导航栏右上角装饰性省略号**（`Dashboard.tsx`）：该图标无任何点击行为，与文件列表的功能省略号菜单重复造成困扰；删除后项目页右上角只保留一个功能性省略号（FileList 收纳菜单）。
+- **② 手机端「我的」页重设计**（`MeM.tsx` 重写 + 6 个新 i18n key）：
+  - 信息卡：68px 头像 + 昵称 + 签名（空时占位文案）+ 站点管理员徽章（仅 `admin===true`），点击直达用户设置；
+  - 分组列表：账号（用户设置）/ 协作（新的邀请、新的申请，保留 Badge 计数）/ 管理区（仅管理员：管理员中心、邀请码、通知管理、用户管理、日志管理五个直达入口）/ 其他（首页）；
+  - 独立危险色退出登录按钮（无确认弹窗，行为不变）；
+  - 全部配色走 `--moeflow-*` CSS 变量（暗色模式自动适配），触控行高 ≥48px，焦点可见；修正旧 45px 底部魔法数为正确的 TabBar 50px 模型（不重复扣高）。
+- 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha15-fix2` / 后端不变。
 
 ---
 

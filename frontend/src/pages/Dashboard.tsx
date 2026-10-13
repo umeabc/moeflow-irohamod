@@ -268,7 +268,6 @@ const Dashboard: FC<DashboardProps> = () => {
             onLeftClick={() => {
               history.goBack();
             }}
-            rightContent={<Icon icon="ellipsis-h" />}
           >
             {formatMessage({ id: 'site.dashboard' })}
           </NavBarM>

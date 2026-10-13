@@ -147,8 +147,8 @@ export const ImageSourceViewerTranslator: FC<
     );
   };
 
-  /** 符号工具是否显示 */
-  const [symbolToolVisible, setSymbolToolVisible] = useState(true);
+  /** 符号工具是否显示（移动端初始收起，桌面端初始展开；挂载期间保留用户手动选择） */
+  const [symbolToolVisible, setSymbolToolVisible] = useState(!isMobile);
 
   /** 在光标处插入符号（无光标则追加到末尾），并重新派发翻译内容 */
   const insertSymbol = (symbol: string) => {
@@ -379,6 +379,36 @@ export const ImageSourceViewerTranslator: FC<
           cursor: pointer;
           ${clickEffect()};
         }
+        /* ===== 移动端符号工具紧凑化（仅 isMobile 时生效，桌面规则不变） ===== */
+        ${isMobile &&
+        css`
+          .SymbolTool__Toggle {
+            height: 28px;
+            padding: 0 10px;
+            border-radius: 14px;
+          }
+          .ImageSourceViewerTranslator__SymbolTool {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            gap: 6px;
+            padding: 3px 8px;
+            &::-webkit-scrollbar {
+              display: none;
+            }
+            .SymbolTool__Key {
+              flex: none;
+              min-width: 32px;
+              width: 32px;
+              height: 30px;
+              font-size: 14px;
+            }
+            .SymbolTool__Hide {
+              flex: none;
+            }
+          }
+        `}
       `}
     >
       <div className="ImageSourceViewerTranslator__Translations">
@@ -514,6 +544,7 @@ export const ImageSourceViewerTranslator: FC<
                   type="button"
                   key={s}
                   className="SymbolTool__Key"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => insertSymbol(s)}
                 >
                   {s}
