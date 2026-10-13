@@ -30,6 +30,7 @@ export const ACTION_LOG_TYPES: Record<string, string> = {
   'file.ocr': 'OCR 识别',
   'file.safe_check': '安全审核',
   'file.import_from_url': '社交媒体图片导入',
+  'file.undo_completion': '撤回校对/嵌字完成',
   'translation.create': '创建翻译',
   'translation.edit': '修改翻译',
   'translation.delete': '删除翻译',

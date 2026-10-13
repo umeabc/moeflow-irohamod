@@ -1,7 +1,7 @@
 from app.exceptions.project import ProjectFinishedError
 import mimetypes
 
-from flask import current_app, request, send_file
+from flask import current_app, g, request, send_file
 from flask_babel import gettext
 
 from app import oss
@@ -575,6 +575,16 @@ class FileUndoCompletionAPI(MoeAPIView):
 
         file.update(**updates)
         file.reload()  # update() 不刷新内存对象，reload 保证响应里的 file 是最新值
+
+        # 撤回详情写入审计日志（g.log_details 由 log_action 装饰器收集落库）
+        if not hasattr(g, "log_details"):
+            g.log_details = {}
+        g.log_details.update(
+            {
+                "file_name": file.name,
+                "cleared_fields": [str(f) for f in cleared_fields],
+            }
+        )
 
         message = gettext("已撤回") + "：" + "、".join(cleared_fields)
         return {"message": message, "file": file.to_api()}
