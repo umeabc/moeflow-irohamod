@@ -118,7 +118,9 @@
 
 ## 4.12 iroha16 / iroha16-fix1（基于 iroha15，当前版本）
 - **iroha16**：文件级原作者署名（`File.original_author` + 作者标号 Source(kind=author)、`with_author` 项目开关、导出含作者标号等）；测试机 nginx 502 修复（/api 走 Docker DNS 动态解析）。详见 `CHANGELOG-iroha4.md` 第十四节。镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16` / `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16`。
-- **iroha16-fix1（当前版本，进行中）**：①图片文件卡文件名行内重命名（后端能力已有，补前端入口）；②X/Bluesky/Pixiv 单点导入改批量（TextArea 一行一个 URL，逐行导入+汇总）。镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix1` / 后端视改动沿用 `v1.1.8-iroha16`。
+- **iroha16-fix1（当前版本，已上正式机）**：①图片文件卡文件名行内重命名（后端能力已有，补前端入口）；②X/Bluesky/Pixiv 单点导入改批量（TextArea 一行一个 URL，逐行导入+汇总）；③修复 `*_user` 导入轮询生命周期（in-flight guard / runId 隔离 / 提交持锁）。
+  - 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix1`（纯前端，后端沿用 `v1.1.8-iroha16`）。
+- **部署方式（2026-10-22 起）**：正式机 compose 跟踪 `:latest`（frontend/backend 均为 `ghcr.io/umeabc/moeflow-*:latest`）。发版流程：测试机构建 → `docker tag … :latest && docker push` → 正式机 `docker compose pull && docker compose up -d`。备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-latest-iroha16`。
 
 ## 5. 关键环境坑（务必牢记）
 1. **前端 build 在资源充足的开发机上做**，再上传远程 `docker build`；远程内存不足跑不动前端构建（OOM）。

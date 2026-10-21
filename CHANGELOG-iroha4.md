@@ -625,7 +625,12 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 
 - **① 所有图片可重命名**：后端 `PUT /v1/files/<file_id>` 已支持 `{"name": ...}`（RENAME_FILE 权限 + 同名/后缀校验），本次补齐前端入口：文件卡文件名行内编辑（点击进入 input，Enter/失焦保存、Esc 取消，与卡片打开图片点击隔离）；权限不足不显示；重名/校验错误展示后端 message。
 - **② X / Bluesky / Pixiv 单点导入改批量**：`ImportFromURLModal` 输入由单行 Input 改为多行 TextArea（一行一个 URL），前端逐行串行调用现有接口；逐行成功/重复/失败明细 + 汇总；`*_user` 进度式来源多行排队处理。
-- 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix1` / `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix1`（如后端无改动则沿用 `v1.1.8-iroha16`）。
+- 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix1`（本次纯前端，后端沿用 `v1.1.8-iroha16`）。
+- **部署方式变更（2026-10-22）**：正式机 compose 已改为跟踪 `:latest`
+  （`moeflow-frontend:latest` / `moeflow-backend:latest`），后续发版只需
+  `docker push …:latest` → 正式机 `docker compose pull && docker compose up -d`。
+  备份：`/var/dockers/moeflow/docker-compose.yml.bak-pre-latest-iroha16`。
+  当前 `latest` = 前端 `v1.1.7-iroha16-fix1` + 后端 `v1.1.8-iroha16`。
 
 ---
 
