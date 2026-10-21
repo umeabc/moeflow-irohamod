@@ -579,14 +579,35 @@ project.projectType:
   zhCn: 项目类型
   en: Project Type
 project.projectTypeTip:
-  zhCn: 「仅翻嵌」项目没有校对角色，编辑器中不显示校对模式，进度绿条按翻译+嵌字（导出）计算。
-  en: A Translate+Typeset project has no proofreader role, hides the proofreading mode, and its progress bar counts translate+typeset (export).
+  zhCn: 「翻嵌」项目没有校对角色，编辑器中不显示校对模式，进度绿条按翻译+嵌字（导出）计算。
+  en: A Translate+Typeset project has no proofreader role, hides the proofreading mode, and its progress bar counts translation+typesetting (export).
 project.typeProofread:
-  zhCn: 翻校嵌（翻译 + 校对 + 嵌字）
+  zhCn: 翻校嵌
   en: Translate + Proofread + Typeset
 project.typeNoProofread:
-  zhCn: 仅翻嵌（翻译 + 嵌字）
-  en: Translate + Typeset (no proofread)
+  zhCn: 翻嵌
+  en: Translate + Typeset
+project.withProofread:
+  zhCn: 启用校对
+  en: Enable proofreading
+project.withProofreadTip:
+  zhCn: 未勾选则无校对角色与校对进度
+  en: No proofreader role or progress
+project.withAuthor:
+  zhCn: 启用原作者
+  en: Enable original author
+project.withAuthorTip:
+  zhCn: 勾选后出现原作者栏与左上角标号
+  en: Adds author row + top-left marker
+project.typeAuthor:
+  zhCn: 翻嵌作
+  en: Translate + Typeset + Author
+project.typeProofreadAuthor:
+  zhCn: 翻校嵌作
+  en: Translate + Proofread + Typeset + Author
+project.modePreviewLabel:
+  zhCn: 当前模式：
+  en: 'Current mode: '
 project.name:
   zhCn: 项目名称
   en: Project Name
@@ -735,6 +756,30 @@ file.uploadFailure:
 file.uploadOverwrite:
   zhCn: 覆盖
   en: Overwrite
+file.originalAuthor:
+  zhCn: 原作者
+  en: Original Author
+file.editOriginalAuthor:
+  zhCn: 编辑原作者
+  en: Edit Original Author
+file.originalAuthorPlaceholder:
+  zhCn: 输入原作者署名
+  en: Enter the original author credit
+file.originalAuthorTooLong:
+  zhCn: 原作者最多 500 个字符
+  en: Original author must be at most 500 characters
+file.undoOriginalAuthorTitle:
+  zhCn: 撤回原作者
+  en: Undo Original Author
+file.undoOriginalAuthorConfirm:
+  zhCn: 确定要撤回原作者吗？
+  en: Remove the original author credit?
+file.authorMarkerReadOnly:
+  zhCn: 原作者标号只读
+  en: Original author marker is read-only
+file.originalAuthorSaveFailed:
+  zhCn: 保存原作者失败
+  en: Failed to save the original author
 project.selectTarget:
   zhCn: 请选择目标语言
   en: Please select the target language.
@@ -1133,6 +1178,9 @@ mouse.rightOnLabel:
 mouse.rightOnImage:
   zhCn: 右键点击图片
   en: Right-click the image
+translation.anonymous:
+  zhCn: 翻译（不记名）
+  en: Translation (anonymous)
 translation.proofread:
   zhCn: 校对
   en: Proofread
@@ -2112,3 +2160,73 @@ admin.log.requestData:
 admin.log.resolvedBy:
   zhCn: "处理人"
   en: "Resolved By"
+
+# ===== 文件重命名 =====
+file.renameAction:
+  zhCn: 重命名图片
+  en: Rename image
+file.renameHint:
+  zhCn: 点击编辑名称，回车或失焦保存，Esc 取消
+  en: Click to edit; Enter or blur saves, Esc cancels
+file.renameNameRequired:
+  zhCn: 文件名不能为空
+  en: File name is required
+file.renameFailed:
+  zhCn: 重命名失败，请重试
+  en: Rename failed. Please try again
+
+# ===== 批量 URL 导入 =====
+file.importBatchPlaceholder:
+  zhCn: 每行粘贴一个 URL
+  en: Paste one URL per line
+file.importBatchTip:
+  zhCn: 每行一个 URL，最多 {max} 行；空行将忽略
+  en: One URL per line, up to {max} lines; blank lines are ignored
+file.importBatchTooMany:
+  zhCn: 最多允许 {max} 行，当前为 {count} 行
+  en: Up to {max} lines are allowed; you entered {count}
+file.importBatchInvalidUrl:
+  zhCn: URL 格式无效，请使用 http:// 或 https:// 地址
+  en: Invalid URL. Use an http:// or https:// address
+file.importBatchPending:
+  zhCn: 待处理
+  en: Pending
+file.importBatchRunning:
+  zhCn: 正在处理
+  en: Processing
+file.importBatchProgress:
+  zhCn: 已处理 {done}/{total} 行
+  en: Processed {done}/{total} lines
+file.importBatchLineResult:
+  zhCn: 第 {line} 行：成功 {imported} 张，重复 {duplicated} 张
+  en: "Line {line}: {imported} imported, {duplicated} duplicates"
+file.importBatchLineFailed:
+  zhCn: 第 {line} 行：失败，{reason}
+  en: "Line {line}: failed — {reason}"
+file.importBatchSummary:
+  zhCn: 导入完成：成功 {imported} 张，重复 {duplicated} 张，失败 {failed} 行
+  en: "Import finished: {imported} images imported, {duplicated} duplicates, {failed} lines failed"
+file.importBatchFailureTitle:
+  zhCn: 失败明细（{count} 行）
+  en: "Failure details ({count} lines)"
+file.importBatchUnknownError:
+  zhCn: 请求失败，服务器可能已处理，请刷新核实后重试
+  en: Request failed; the server may have processed it. Refresh to verify before retrying
+file.importBatchEmptyResult:
+  zhCn: 未返回可导入图片
+  en: No importable images were returned
+file.importUserSingleOnly:
+  zhCn: 用户主页导入每次仅支持一个 URL
+  en: User-profile import supports one URL at a time
+file.importTaskStartInvalid:
+  zhCn: 未获得有效任务编号，请刷新核实后重试
+  en: No valid task ID was returned. Refresh to verify before retrying
+file.importTaskProgressUnavailable:
+  zhCn: 进度暂不可用，后台任务可能仍在执行
+  en: Progress is temporarily unavailable; the background task may still be running
+file.importTaskRetryProgress:
+  zhCn: 重新查询进度
+  en: Retry progress check
+file.importFinishedClose:
+  zhCn: 完成并关闭
+  en: Done and close

@@ -1,8 +1,8 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha15）
+# MoeFlow 自定义改动 CHANGELOG（iroha16）
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 镜像 tag：`moeflow-frontend:1.1.7-iroha14` / `moeflow-backend:1.1.8-iroha14`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`…`iroha13` 镜像保留各自版本 tag）。当前版本：**iroha15-fix1**（`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha15-fix1`，本次为纯前端改动，后端仍为 `v1.1.8-iroha15`）。
+> 镜像 tag：`moeflow-frontend:1.1.7-iroha14` / `moeflow-backend:1.1.8-iroha14`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`…`iroha13` 镜像保留各自版本 tag）。当前版本：**iroha16-fix1**（`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix1` / `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix1`，待部署后按实际 tag 更新）。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：以 `docker save` 导出镜像 tar → 生产侧 `docker load` 导入（仅替换前端/后端镜像，勿改动 env / compose）。
 
@@ -599,6 +599,33 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
   - 独立危险色退出登录按钮（无确认弹窗，行为不变）；
   - 全部配色走 `--moeflow-*` CSS 变量（暗色模式自动适配），触控行高 ≥48px，焦点可见；修正旧 45px 底部魔法数为正确的 TabBar 50px 模型（不重复扣高）。
 - 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha15-fix2` / 后端不变。
+
+---
+
+## 十四、原作者信息（v16，2026-10-20）
+
+- **项目模式扩展为 4 种**：保留 `Project.with_proofread`（`wp`），新增 `Project.with_author`（`wa`，默认 `False`，老项目缺省视为不启用）。创建项目页由单选「翻嵌 / 翻校嵌」改为「启用校对」「启用原作者」两个独立勾选，组合为：翻嵌、翻校嵌、翻嵌作、翻校嵌作；项目列表 / 项目设置显示同色模式 Tag（`getProjectModeColor`）。创建后不提供模式切换，避免关闭作者模式后遗留标号。
+- **文件级原作者署名**：`File.original_author`（`oa`，StringField，默认空串），`File.to_api` 输出；文件卡「翻译 / 校对 / 嵌字」下方新增「原作者」行（仅 `with_author` 项目显示），交互与既有角色行一致（Enter/失焦保存、Escape 取消、长署名单行省略），空串保存等同撤回。
+- **作者标号**：填写作者时创建唯一 `Source(kind="author")`（`Source.kind`=`k`、`Source.author_key`=`ak`，`ak` 建 unique sparse 索引），`content` 直接存署名，坐标固定 `x=0.01, y=0.01`、`rank=next_source_rank()`（追加末尾，不重排既有编号），不创建 `Translation`。修改作者只更新该 Source 的 `content`（id/rank 不变）；撤回删除该 Source。
+- **不参与统计**：作者 Source 不计入 `source_count` / 已翻译 / 已校对；`clear_all_sources`、`recompute_source_counts_for_target`、OCR 覆盖、AI 批量翻译、批量校对、找术语均跳过 `kind=author`。普通 Source/Translation 入口拒绝修改/删除作者标号。
+- **接口**：
+  - `PUT /v1/files/<file_id>` 新增 `original_author`（独立动作、不可与其它参数混传；空串清空；>500 字符 / 类型错误 400；返回 `{message, file, author_source_id}`）。
+  - `POST /v1/files/<file_id>/undo-completion` 新增 `original_author?: bool`（严格布尔、仅项目管理员/站点管理员、幂等；返回增加 `author_source_id`）。
+  - `POST /v1/teams/<team_id>/projects` 新增 `with_author`；项目移动按 `with_proofread + with_author` 四模式隔离。
+  - 权限：站点管理员与项目 creator/admin/coordinator 可编辑/撤回；translator/proofreader 可填写/修改/清空；picture_editor 及非成员不可编辑。
+- **前端**：文件卡高度 268→286（`FileList` `itemHeight` 250→290），四行角色 + 两条进度不遮挡；创建项目双勾选改为选项卡片并带模式预览 Tag；图片编辑器左上角作者标号只读（不可拖动/删除/右键），overview 显示「翻译（不记名）」+ 署名，translate/proofread 面板过滤作者；新增 i18n `file.originalAuthor*`、`project.withAuthor*`、`translation.anonymous` 等。
+- **导出**：`File.to_labelplus` 将作者标号按普通标号输出（内容取 `source.content`），不烧录进图片像素。
+- **修订版**：`create_revision` 复制 `original_author` 并重建作者 Source，`activate_revision` 兜底补建。
+- **运维（测试机 502 修复）**：测试机后端容器单独重建后 IP 变化，前端 nginx 仍缓存旧 upstream（`links`/静态 `proxy_pass`）导致全站 `/api` 502、无法登录。已在 `nginx/templates/default.conf.template` 的 `/api` 使用 Docker 内置 DNS 动态解析（`resolver 127.0.0.11 valid=10s` + 变量 `proxy_pass`），后续单独重建后端不再 502。
+- **镜像 tag**：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16` / `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16`；测试机 172.29.133.24 已部署并通过 API/UI 实测。
+
+---
+
+## 十五、图片重命名 + 社媒批量导入（iroha16-fix1，2026-10-21）
+
+- **① 所有图片可重命名**：后端 `PUT /v1/files/<file_id>` 已支持 `{"name": ...}`（RENAME_FILE 权限 + 同名/后缀校验），本次补齐前端入口：文件卡文件名行内编辑（点击进入 input，Enter/失焦保存、Esc 取消，与卡片打开图片点击隔离）；权限不足不显示；重名/校验错误展示后端 message。
+- **② X / Bluesky / Pixiv 单点导入改批量**：`ImportFromURLModal` 输入由单行 Input 改为多行 TextArea（一行一个 URL），前端逐行串行调用现有接口；逐行成功/重复/失败明细 + 汇总；`*_user` 进度式来源多行排队处理。
+- 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix1` / `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix1`（如后端无改动则沿用 `v1.1.8-iroha16`）。
 
 ---
 

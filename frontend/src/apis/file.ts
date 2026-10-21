@@ -115,6 +115,10 @@ export interface EditFileData {
   translator?: string;
   proofreader?: string;
   typesetter?: string;
+  /** 原作者署名；空串表示清空（等同撤回） */
+  originalAuthor?: string;
+  /** 文件重命名（含后缀）；后端权威校验重名/后缀 */
+  name?: string;
 }
 const editFile = ({
   id,
@@ -188,7 +192,7 @@ export interface APIFileImportFromUrl {
 }
 /** from-url 返回：导入成功的文件列表 + 因重复跳过的文件名列表 */
 export interface APIFileFromUrlResult {
-  files: File[];
+  files: string[];
   duplicated: string[];
 }
 const importFileFromUrl = ({
@@ -291,6 +295,7 @@ const getFileContent = ({
 interface UndoCompletionData {
   proofreader?: boolean;
   typesetter?: boolean;
+  originalAuthor?: boolean;
 }
 const undoFileCompletion = ({
   id,

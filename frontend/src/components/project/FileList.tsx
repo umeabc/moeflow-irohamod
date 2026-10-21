@@ -932,7 +932,7 @@ export const FileList: FC<FileListProps> = ({
         loading={loading}
         total={total}
         items={items}
-        itemHeight={250}
+        itemHeight={290}
         multiColumn
         columnWidth={200}
         paginationProps={{
@@ -950,6 +950,21 @@ export const FileList: FC<FileListProps> = ({
                 isAdmin={user.admin}
                 hasTarget={Boolean(target)}
                 withProofread={project.withProofread !== false}
+                withAuthor={project.withAuthor === true}
+                renameEnabled={
+                  !archived &&
+                  can(project, PROJECT_PERMISSION.RENAME_FILE) &&
+                  (file.uploadState === undefined || file.uploadState === 'success')
+                }
+                onFileChanged={(patch) => {
+                  setItems((prev) =>
+                    prev.map((item) =>
+                      item.id === patch.id
+                        ? { ...item, ...patch }
+                        : item,
+                    ),
+                  );
+                }}
                 onClick={() => {
                   if (archived) {
                     return;

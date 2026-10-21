@@ -1,8 +1,9 @@
 import { css } from '@emotion/core';
-import { Checkbox } from 'antd';
+import { Checkbox, message } from 'antd';
 import classNames from 'classnames';
 import { useIntl } from 'react-intl';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useSelector } from 'react-redux';
 import { Icon } from '@/components';
 import { FileUploadProgress } from './FileUploadProgress';
@@ -18,7 +19,12 @@ import {
 import { FC, File } from '@/interfaces';
 import style from '@/style';
 import { AppState } from '@/store';
+import { toLowerCamelCase } from '@/utils';
 import { cardClickEffect, clickEffect } from '@/utils/style';
+import { extractErrorMessage } from '@/components/file/importFromURLHelpers';
+
+/** patch 对象：只需 id 必填，其余字段可选（partial 更新防覆盖） */
+type FilePatch = Pick<File, 'id'> & Partial<File>;
 
 /** 文件条目的属性接口 */
 interface FileItemProps {
@@ -29,6 +35,10 @@ interface FileItemProps {
   hasTarget: boolean;
   /** 项目是否启用校对（仅翻嵌为 false）：隐藏校对负责人与校对/审核进度 */
   withProofread?: boolean;
+  /** 项目是否启用原作者栏 */
+  withAuthor?: boolean;
+  /** 保存/撤回成功后用文件 patch 更新列表（只传变化的字段） */
+  onFileChanged?: (file: FilePatch) => void;
   onClick?: () => void;
   selectVisible?: boolean;
   selected?: boolean;
@@ -36,10 +46,12 @@ interface FileItemProps {
   deleteButtonVisible?: boolean;
   onDeleteButtonClick?: () => void;
   className?: string;
+  /** 是否允许内联重命名文件（默认 false） */
+  renameEnabled?: boolean;
 }
 
 const width = IMAGE_COVER.WIDTH;
-const height = 268;
+const height = 286;
 const imageHeight = IMAGE_COVER.HEIGHT;
 
 const fileItemStyle = css`
@@ -143,12 +155,15 @@ const fileItemStyle = css`
     color: rgba(255, 255, 255, 0.8);
   }
   .FileItem__Info {
+    position: relative;
+    /* 建立层叠上下文，供角色行透明的点击热区伪元素使用（z-index: -1） */
+    z-index: 0;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     height: ${height - imageHeight - 2}px;
-    padding: 8px 10px;
-    gap: 7px;
+    padding: 6px 10px;
+    gap: 6px;
   }
   .FileItem__Name {
     height: 20px;
@@ -157,12 +172,67 @@ const fileItemStyle = css`
     white-space: nowrap;
     text-overflow: ellipsis;
   }
+  /* 重命名输入框 */
+  .FileItem__NameInput {
+    height: 20px;
+    line-height: 20px;
+    font-size: 14px;
+    width: 100%;
+    border: 1px solid ${style.primaryColor};
+    border-radius: 3px;
+    padding: 0 4px;
+    outline: none;
+    background: var(--moeflow-surface);
+    color: ${style.textColor};
+    box-sizing: border-box;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  /* 可点击的文件名（启用重命名时） */
+  .FileItem__NameButton {
+    display: block;
+    height: 20px;
+    line-height: 20px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    text-align: left;
+    font-size: 14px;
+    color: ${style.textColor};
+    cursor: text;
+    &:hover { color: ${style.primaryColor}; }
+    &:focus-visible {
+      outline: 2px solid ${style.primaryColor};
+      outline-offset: 1px;
+    }
+  }
+  .FileItem__NameError {
+    position: absolute;
+    top: 26px;
+    left: 10px;
+    right: 10px;
+    z-index: 10;
+    font-size: 11px;
+    color: ${style.errorColor};
+    background: var(--moeflow-surface);
+    border: 1px solid ${style.errorColor};
+    border-radius: 3px;
+    padding: 2px 6px;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
   .FileItem__Roles {
     display: flex;
     flex-direction: column;
     gap: 0;
     margin: 0;
     .TranslationUser {
+      flex: none;
       min-height: 15px;
       & .TranslationUser__TypeIcon {
         margin-right: 3px;
@@ -171,6 +241,9 @@ const fileItemStyle = css`
         margin-right: 4px;
       }
     }
+  }
+  .FileItem__Info > .FileItem__TranslationProgressText {
+    margin-top: auto;
   }
   ${cardClickEffect()};
   ${clickEffect(
@@ -190,35 +263,81 @@ const fileItemStyle = css`
 
 /** 单个角色的可选成员下拉 */
 const RoleEditField: FC<{
-  iconType: 'translation' | 'proofread' | 'typesetter';
+  iconType: 'translation' | 'proofread' | 'typesetter' | 'author';
   label: string;
   value?: string;
   fileID: string;
-  field: 'translator' | 'proofreader' | 'typesetter';
+  field: 'translator' | 'proofreader' | 'typesetter' | 'originalAuthor';
   canEdit: boolean;
-  canUndo: boolean; // 新增：是否显示撤回按钮（仅管理员）
-}> = ({ iconType, label, value, fileID, field, canEdit, canUndo }) => {
+  canUndo: boolean; // 是否显示撤回按钮（仅管理员）
+  onFileChanged?: (file: FilePatch) => void;
+}> = ({ iconType, label, value, fileID, field, canEdit, canUndo, onFileChanged }) => {
   const { formatMessage } = useIntl();
   const [editing, setEditing] = useState(false);
-  const roleText = value || '';
+  const [currentValue, setCurrentValue] = useState(value || '');
+  const savingRef = useRef(false);
+  const cancelRef = useRef(false);
+  const requestSeqRef = useRef(0);
+  const draftRef = useRef(value || '');
+
+  useEffect(() => {
+    // 服务端数据更新时同步显示值；编辑中保留用户草稿
+    if (!editing) {
+      setCurrentValue(value || '');
+      draftRef.current = value || '';
+    }
+  }, [value, editing]);
 
   const save = (text: string) => {
+    if (cancelRef.current) {
+      cancelRef.current = false;
+      setEditing(false);
+      return;
+    }
     setEditing(false);
     const finalText = text.trim();
-    if (finalText === (value || '')) {
+    if (finalText === (currentValue || '')) {
       return; // 未变化
     }
-    api.file
-      .editFile({
-        id: fileID,
-        // 手动编辑翻译者视为「直接设置」，不走自动累积
-        data: {
-          [field]: finalText || undefined,
-          ...(field === 'translator' ? { replaceTranslator: true } : {}),
-        } as any,
+    if (savingRef.current) {
+      return; // 防止 Enter 与 blur 重复提交
+    }
+    savingRef.current = true;
+    draftRef.current = finalText;
+    const seq = ++requestSeqRef.current;
+    const isAuthor = field === 'originalAuthor';
+    const request = api.file.editFile({
+      id: fileID,
+      // 原作者空串表示清空；其它负责人字段保持原有「空串不提交」语义
+      data: isAuthor
+        ? { originalAuthor: finalText }
+        : ({
+            [field]: finalText || undefined,
+            ...(field === 'translator' ? { replaceTranslator: true } : {}),
+          } as any),
+    });
+    request
+      .then((result: any) => {
+        if (seq !== requestSeqRef.current) {
+          return;
+        }
+        setCurrentValue(finalText);
+        const updated = result?.data?.file;
+        if (updated && onFileChanged) {
+          onFileChanged(toLowerCamelCase(updated) as File);
+        }
       })
       .catch(() => {
-        // 忽略
+        if (isAuthor) {
+          message.error(formatMessage({ id: 'file.originalAuthorSaveFailed' }));
+          // 失败时保留草稿，便于用户直接重试
+          setEditing(true);
+        }
+      })
+      .finally(() => {
+        if (seq === requestSeqRef.current) {
+          savingRef.current = false;
+        }
       });
   };
 
@@ -227,40 +346,96 @@ const RoleEditField: FC<{
     const data: any = {};
     if (field === 'proofreader') data.proofreader = true;
     if (field === 'typesetter') data.typesetter = true;
+    if (field === 'originalAuthor') data.originalAuthor = true;
 
     api.file
       .undoFileCompletion({ id: fileID, data })
-      .then(() => {
-        // 刷新页面（触发父组件重新加载）
-        window.location.reload();
+      .then((result: any) => {
+        if (field !== 'originalAuthor') {
+          // 保持现有校对/嵌字撤回行为：整页刷新以同步项目级进度
+          window.location.reload();
+          return;
+        }
+        const updated = result?.data?.file;
+        if (updated && onFileChanged) {
+          onFileChanged(toLowerCamelCase(updated) as File);
+        }
       })
       .catch(() => {
-        // 忽略错误
+        if (field === 'originalAuthor') {
+          message.error(formatMessage({ id: 'file.originalAuthorSaveFailed' }));
+        }
       });
   };
 
-  // 仅校对与嵌字可撤回（翻译者不显示撤回按钮）
-  const showUndoButton = canUndo && roleText && ['proofreader', 'typesetter'].includes(field);
+  // 仅校对、嵌字与原作者可撤回（翻译者不显示撤回按钮）
+  const showUndoButton =
+    canUndo &&
+    Boolean(currentValue) &&
+    ['proofreader', 'typesetter', 'originalAuthor'].includes(field);
 
   return (
     <div
       onClick={(e) => e.stopPropagation()}
       css={css`
-        display: flex; align-items: center; min-height: 16px; flex-wrap: wrap; font-size: 12px; line-height: 1.2;
+        display: flex; align-items: center; min-height: 17px; flex-wrap: nowrap; font-size: 12px; line-height: 1.2;
         color: ${style.textColorSecondary};
-        margin: -1px 0;
-        &:not(:last-child) { margin-bottom: -1px; }
-        .RoleEditField__Value { cursor: pointer; color: ${style.primaryColor}; &:hover { text-decoration: underline; } }
-        .RoleEditField__Input { flex: 1; min-width: 60px; font-size: 12px; border: 1px solid ${style.borderColorLight}; border-radius: 4px; padding: 1px 4px; outline: none; &:focus { border-color: ${style.primaryColor}; } }
+        margin: 0;
+        gap: 2px;
+        /* 行本身不拦截点击：角色值/撤回按钮用透明伪元素扩大热区 */
+        pointer-events: none;
+        .TranslationUser {
+          align-self: stretch;
+        }
+        .TranslationUser,
+        .RoleEditField__Input,
+        .RoleEditField__Value,
         .RoleEditField__UndoButton {
+          pointer-events: auto;
+        }
+        .RoleEditField__Value {
+          position: relative;
+          flex: 1;
+          min-width: 0;
+          cursor: pointer;
+          color: ${style.primaryColor};
+          &:hover { text-decoration: underline; }
+          /* 上下各扩 8px、左右各扩 6px；z-index: -1 保证文字/按钮仍优先响应 */
+          &::after {
+            content: '';
+            position: absolute;
+            z-index: -1;
+            inset: -8px -6px;
+          }
+        }
+        .RoleEditField__ValueText {
+          display: block;
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+        }
+        .RoleEditField__Input { flex: 1; min-width: 0; width: 100%; font-size: 12px; border: 1px solid ${style.borderColorLight}; border-radius: 4px; padding: 1px 4px; outline: none; &:focus { border-color: ${style.primaryColor}; } }
+        .RoleEditField__UndoButton {
+          position: relative;
+          flex: none;
           margin-left: 4px;
           padding: 0 4px;
+          min-width: 24px;
+          min-height: 20px;
+          line-height: 18px;
+          text-align: center;
           font-size: 11px;
           color: ${style.textColorSecondary};
           cursor: pointer;
           border: 1px solid ${style.borderColorLight};
           border-radius: 3px;
           &:hover { color: ${style.errorColor}; border-color: ${style.errorColor}; background-color: rgba(255, 77, 79, 0.05); }
+          &::after {
+            content: '';
+            position: absolute;
+            z-index: -2;
+            inset: -8px -6px;
+          }
         }
       `}>
       <TranslationUser iconType={iconType} name={label} />
@@ -268,13 +443,16 @@ const RoleEditField: FC<{
         <input
           className="RoleEditField__Input"
           autoFocus
-          defaultValue={roleText}
+          defaultValue={draftRef.current}
           placeholder={label}
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => {
             e.stopPropagation();
             if (e.key === 'Enter') save((e.target as HTMLInputElement).value);
-            if (e.key === 'Escape') setEditing(false);
+            if (e.key === 'Escape') {
+              cancelRef.current = true;
+              setEditing(false);
+            }
           }}
           onBlur={(e) => save(e.target.value)}
         />
@@ -282,14 +460,19 @@ const RoleEditField: FC<{
         <>
           <span
             className="RoleEditField__Value"
+            title={currentValue || undefined}
             onClick={(e) => {
               e.stopPropagation();
               if (canEdit) {
+                cancelRef.current = false;
+                draftRef.current = currentValue;
                 setEditing(true);
               }
             }}
           >
-            {roleText ? `: ${roleText}` : ': -'}
+            <span className="RoleEditField__ValueText">
+              {currentValue ? `: ${currentValue}` : ': -'}
+            </span>
           </span>
           {showUndoButton && (
             <span
@@ -297,7 +480,11 @@ const RoleEditField: FC<{
               title={`撤回${label}完成`}
               onClick={(e) => {
                 e.stopPropagation();
-                if (window.confirm(`确定要撤回${label}完成吗？`)) {
+                const confirmText =
+                  field === 'originalAuthor'
+                    ? formatMessage({ id: 'file.undoOriginalAuthorConfirm' })
+                    : `确定要撤回${label}完成吗？`;
+                if (window.confirm(confirmText)) {
                   undo();
                 }
               }}
@@ -321,6 +508,8 @@ export const FileItem: FC<FileItemProps> = ({
   isAdmin = false,
   hasTarget,
   withProofread = true,
+  withAuthor = false,
+  onFileChanged,
   onClick,
   selectVisible = false,
   selected = false,
@@ -328,17 +517,25 @@ export const FileItem: FC<FileItemProps> = ({
   deleteButtonVisible = false,
   onDeleteButtonClick,
   className,
+  renameEnabled = false,
 }) => {
   // 角色权限矩阵:根据项目角色确定可编辑字段
   let canEditTranslator = false;
   let canEditProofreader = false;
   let canEditTypesetter = false;
-  let canUndo = false; // 新增：仅管理员可撤回
-  if (isAdmin || ['creator', 'admin', 'coordinator'].includes(roleSystemCode || '')) {
+  let canEditAuthor = false;
+  let canUndo = false; // 仅管理员可撤回校对/嵌字
+  let canUndoAuthor = false; // 原作者撤回仅管理员
+  const isProjectAdmin =
+    isAdmin || ['creator', 'admin', 'coordinator'].includes(roleSystemCode || '');
+  if (isProjectAdmin) {
     canEditTranslator = canEditProofreader = canEditTypesetter = true;
+    canEditAuthor = true;
     canUndo = true;
+    canUndoAuthor = true;
   } else if (['translator', 'proofreader'].includes(roleSystemCode || '')) {
     canEditTranslator = canEditProofreader = true;
+    canEditAuthor = true;
   } else if (roleSystemCode === 'picture_editor') {
     canEditTypesetter = true;
   }
@@ -351,6 +548,71 @@ export const FileItem: FC<FileItemProps> = ({
   const checkedSourceCount = hasTarget
     ? file.fileTargetCache!.checkedSourceCount
     : file.checkedSourceCount;
+
+  // ===== 文件名内联重命名 =====
+  const [nameEditing, setNameEditing] = useState(false);
+  const [nameDraft, setNameDraft] = useState(file.name);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const nameSavingRef = useRef(false);
+  const nameCancelRef = useRef(false);
+
+  // 非编辑态跟随 prop；编辑中保留草稿
+  useEffect(() => {
+    if (!nameEditing) {
+      setNameDraft(file.name);
+    }
+  }, [file.name, nameEditing]);
+
+  const enterNameEdit = (e: ReactMouseEvent | ReactKeyboardEvent) => {
+    e.stopPropagation();
+    nameCancelRef.current = false;
+    setNameError(null);
+    setNameDraft(file.name);
+    setNameEditing(true);
+  };
+
+  const cancelNameEdit = () => {
+    nameCancelRef.current = true;
+    setNameEditing(false);
+    setNameError(null);
+    setNameDraft(file.name);
+  };
+
+  const saveNameEdit = async (draft: string) => {
+    if (nameCancelRef.current) {
+      nameCancelRef.current = false;
+      setNameEditing(false);
+      setNameError(null);
+      return;
+    }
+    const trimmed = draft.trim();
+    if (!trimmed) {
+      setNameError(formatMessage({ id: 'file.renameNameRequired' }));
+      return; // 保留编辑态
+    }
+    if (trimmed === file.name) {
+      setNameEditing(false);
+      setNameError(null);
+      return; // 未变化，静默退出
+    }
+    if (nameSavingRef.current) {
+      return; // 防 Enter + blur 重复触发
+    }
+    nameSavingRef.current = true;
+    try {
+      await api.file.editFile({ id: file.id, data: { name: trimmed } });
+      // 成功：本地 patch，不依赖后端返回的 file 对象
+      setNameEditing(false);
+      setNameError(null);
+      onFileChanged?.({ id: file.id, name: trimmed });
+    } catch (e: unknown) {
+      // 失败：保留编辑态草稿，展示错误
+      const msg = extractErrorMessage(e, formatMessage({ id: 'file.renameFailed' }));
+      setNameError(msg);
+    } finally {
+      nameSavingRef.current = false;
+    }
+  };
 
   return (
     <div
@@ -410,14 +672,71 @@ export const FileItem: FC<FileItemProps> = ({
         </div>
       )}
       <div className="FileItem__Info">
-        <div className="FileItem__Name">{file.name}</div>
+        {/* ===== 文件名行 ===== */}
+        {renameEnabled && nameEditing ? (
+          <div style={{ position: 'relative' }}>
+            <input
+              className="FileItem__NameInput"
+              autoFocus
+              value={nameDraft}
+              title={formatMessage({ id: 'file.renameHint' })}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                setNameDraft(e.target.value);
+                if (nameError) setNameError(null); // 清除已有错误
+              }}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                  saveNameEdit(nameDraft);
+                }
+                if (e.key === 'Escape') {
+                  cancelNameEdit();
+                }
+              }}
+              onBlur={() => saveNameEdit(nameDraft)}
+            />
+            {nameError && (
+              <div className="FileItem__NameError">{nameError}</div>
+            )}
+          </div>
+        ) : renameEnabled ? (
+          <button
+            type="button"
+            className="FileItem__NameButton"
+            title={`${file.name} — ${formatMessage({ id: 'file.renameHint' })}`}
+            onClick={enterNameEdit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                enterNameEdit(e);
+              }
+            }}
+          >
+            {/* 显示最新名称（外部 prop 或本地 patch） */}
+            {file.name}
+          </button>
+        ) : (
+          <div className="FileItem__Name">{file.name}</div>
+        )}
 
         <div className="FileItem__Roles">
-          <RoleEditField iconType="translation" label="翻译" value={file.translator} fileID={file.id} field="translator" canEdit={canEditTranslator} canUndo={canUndo} />
+          <RoleEditField iconType="translation" label="翻译" value={file.translator} fileID={file.id} field="translator" canEdit={canEditTranslator} canUndo={canUndo} onFileChanged={onFileChanged} />
           {withProofread && (
-            <RoleEditField iconType="proofread" label="校对" value={file.proofreader} fileID={file.id} field="proofreader" canEdit={canEditProofreader} canUndo={canUndo} />
+            <RoleEditField iconType="proofread" label="校对" value={file.proofreader} fileID={file.id} field="proofreader" canEdit={canEditProofreader} canUndo={canUndo} onFileChanged={onFileChanged} />
           )}
-          <RoleEditField iconType="typesetter" label="嵌字" value={file.typesetter} fileID={file.id} field="typesetter" canEdit={canEditTypesetter} canUndo={canUndo} />
+          <RoleEditField iconType="typesetter" label="嵌字" value={file.typesetter} fileID={file.id} field="typesetter" canEdit={canEditTypesetter} canUndo={canUndo} onFileChanged={onFileChanged} />
+          {withAuthor && (
+            <RoleEditField
+              iconType="author"
+              label={formatMessage({ id: 'file.originalAuthor' })}
+              value={file.originalAuthor}
+              fileID={file.id}
+              field="originalAuthor"
+              canEdit={canEditAuthor}
+              canUndo={canUndoAuthor}
+              onFileChanged={onFileChanged}
+            />
+          )}
         </div>
 
         {file.uploading ? (
