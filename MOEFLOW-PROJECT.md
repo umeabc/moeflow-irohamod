@@ -122,6 +122,17 @@
   - 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix1`（纯前端，后端沿用 `v1.1.8-iroha16`）。
 - **部署方式（2026-10-22 起）**：正式机 compose 跟踪 `:latest`（frontend/backend 均为 `ghcr.io/umeabc/moeflow-*:latest`）。发版流程：测试机构建 → `docker tag … :latest && docker push` → 正式机 `docker compose pull && docker compose up -d`。备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-latest-iroha16`。
 
+## 4.13 正式机运维变更（2026-10-22）
+
+- **主机 nginx 升级**：`1.31.0-1~trixie` → **`1.31.8-1~trixie`**（nginx.org mainline 源），`nginx -t` 通过、`systemctl restart` 后主进程运行新二进制。
+  - 配置文件零改动（升级前后 `/etc/nginx/nginx.conf`、`conf.d/*.conf` md5 完全一致）。
+  - 备份：`/root/nginx-backup-20261022-130528/`（`etc-nginx.tar.gz` 配置快照、`nginx-full-config.txt` 完整生效配置 246 行、`packages.txt`、`nginx-1.31.8.bin`、`nginx_1.31.8-…deb`）。
+  - 回退：配置 `tar -xzf etc-nginx.tar.gz -C /`；二进制源里已无 1.31.0，如需降级装 `nginx=1.31.7-1~trixie`。
+- **CVE 影响面评估（当次）**：
+  - `CVE-2026-109618` / `CVE-2026-109619`（PHP RCE，8.2.35/8.3.36/8.4.27/8.5.12 修复）：**不适用**——正式机无 PHP（无 php 二进制、无 php-fpm、无 PHP 容器镜像），MoeFlow 后端为 Python 3.11。
+  - `CVE-2026-111497`（Node.js Brotli 解码器 OOB 写 → RCE，24.22.1 修复）：**已修复**——正式机唯一 Node 运行时是 `bili-dyn-publisher` 容器，`node -v` = `v24.22.1`（即 2026-10-21 安全版），业务页面 200、日志无报错；MoeFlow 自身不使用 Node（前端为 nginx 静态、后端 Python）。
+  - 容器内 nginx 为 `1.26.3`（`nginx:1.26` 基础镜像）：按 Debian 记录受 `CVE-2026-42055`（HTTP/2 头长度）与 `CVE-2026-48142`（charset 越界读）影响，但该容器仅 `listen 80`、无 `http2`、无 `charset` 指令，且只经主机 nginx 以 HTTP/1.1 反代，**当前拓扑不可达**；建议下次重建前端镜像时把 `FROM nginx:1.26` 提到 `nginx:1.31.8`。
+
 ## 5. 关键环境坑（务必牢记）
 1. **前端 build 在资源充足的开发机上做**，再上传远程 `docker build`；远程内存不足跑不动前端构建（OOM）。
 2. **Docker Hub 不稳定** → 用 daocloud `docker.m.daocloud.io` 拉基础镜像再 retag。
