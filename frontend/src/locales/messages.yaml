@@ -1411,6 +1411,21 @@ output.outputPartialExclude:
 output.invert:
   zhCn: 反选
   en: Invert selection
+output.typesetterTitle:
+  zhCn: 导出前标记嵌字者
+  en: Mark typesetter before export
+output.typesetterTip:
+  zhCn: 导出会先给本次涉及的图片标记嵌字者，作者信息里的「嵌字」才会显示名字。留空则不改动现有标记。
+  en: 'The exported images get this typesetter before the export runs, so the author info shows a typesetter name. Leave empty to keep the existing marks.'
+output.typesetterPlaceholder:
+  zhCn: 嵌字者名字（留空=不修改）
+  en: Typesetter name (empty = keep existing)
+output.onlyFillEmpty:
+  zhCn: 仅填充未标记的图片（保留已标记的嵌字者）
+  en: Only fill images without a typesetter (keep existing ones)
+output.startExport:
+  zhCn: 开始导出
+  en: Start export
 project.createViaLabelplus:
   zhCn: (可选) 通过 LabalPlus “翻译数据.txt”创建：
   en: '(Optional) Import marks from LabelPlus txt:'

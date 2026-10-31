@@ -46,6 +46,10 @@ export interface CreateOutputData {
   type: OUTPUT_TYPE;
   fileIdsInclude?: string[];
   fileIdsExclude?: string[];
+  /** 导出前先标记的嵌字者（写入作者信息的 {嵌字}）；空串=不修改 */
+  typesetter?: string;
+  /** 仅填充尚未标记嵌字者的图片（默认 true，保留已标记） */
+  onlyFillEmptyTypesetter?: boolean;
 }
 const createOutput = ({
   projectID,

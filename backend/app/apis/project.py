@@ -390,20 +390,41 @@ class ProjectTargetOutputListAPI(MoeAPIView):
             file_ids_include=data["file_ids_include"],
             file_ids_exclude=data["file_ids_exclude"],
         )
-        # 自动记录本次导出涉及的图片文件的嵌字者为当前用户
+        # 先标记嵌字者，再开始导出：
+        # 导出的 LabelPlus 文本由后台任务按「项目模板 + 文件负责人」实时渲染，
+        # 因此必须先把 typesetter 写库，否则作者信息里的「嵌字」会是空的/旧值。
+        typesetter = data.get("typesetter")
+        if typesetter is None:
+            # 兼容旧前端：未传时沿用「当前操作者即嵌字者」
+            typesetter = self.current_user.name or ""
+        typesetter = (typesetter or "").strip()
+        only_fill_empty = bool(data.get("only_fill_empty_typesetter", True))
         files = project.files(
             type_only=FileType.IMAGE,
             file_ids_include=data.get("file_ids_include") or [],
             file_ids_exclude=data.get("file_ids_exclude") or [],
         )
+        marked = 0
         for f in files:
-            f.update(typesetter=self.current_user.name)
-            f.reload()  # update() 不刷新内存对象，作者信息渲染需要最新嵌字者
-            # 嵌字者可能出现在作者信息模板里，导出后同步作者标号文案
+            if typesetter and (
+                not only_fill_empty or not (f.typesetter or "").strip()
+            ):
+                f.update(typesetter=typesetter)
+                f.reload()  # update() 不刷新内存对象，作者信息渲染需要最新嵌字者
+                marked += 1
+            # 嵌字者可能出现在作者信息模板里，导出前同步作者标号文案
             if bool(project.with_author):
                 apply_author_label(f, project=project)
+        current_app.logger.info(
+            "导出前标记嵌字者：%s（%s 张，仅填空白=%s）",
+            typesetter or "<不修改>",
+            marked,
+            only_fill_empty,
+        )
         output_project(str(output.id))
-        return output.to_api()
+        result = output.to_api()
+        result["typesetter_marked_count"] = marked
+        return result
 
 
 # 暂未启用此接口

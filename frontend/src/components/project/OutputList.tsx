@@ -1,14 +1,16 @@
 import { css } from '@emotion/core';
-import { Switch } from 'antd';
+import { Input, Modal, Switch } from 'antd';
 import { Canceler } from 'axios';
 import classNames from 'classnames';
 import { useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
+import { useSelector } from 'react-redux';
 import apis from '@/apis';
 import { APIOutput, CreateOutputData } from '@/apis/output';
 import { OUTPUT_STATUS, OUTPUT_TYPE } from '@/constants/output';
 import { FC } from '@/interfaces';
 import style from '@/style';
+import { AppState } from '@/store';
 import { toLowerCamelCase } from '@/utils';
 import { getCancelToken } from '@/utils/api';
 import { useStateRef } from '@/hooks';
@@ -38,6 +40,11 @@ export const OutputList: FC<OutputListProps> = ({
   const [outputing, setOutputing] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [isExclude, setIsExclude] = useState(false);
+  const currentUserName = useSelector((state: AppState) => state.user.name);
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportType, setExportType] = useState<OUTPUT_TYPE>(OUTPUT_TYPE.ALL);
+  const [typesetterName, setTypesetterName] = useState('');
+  const [onlyFillEmpty, setOnlyFillEmpty] = useState(true);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -95,10 +102,21 @@ export const OutputList: FC<OutputListProps> = ({
       });
   };
 
+  const openExportModal = (type: OUTPUT_TYPE) => {
+    setExportType(type);
+    // 默认沿用旧行为：当前操作者即嵌字者；用户可改或清空（清空=不修改）
+    setTypesetterName(currentUserName || '');
+    setOnlyFillEmpty(true);
+    setExportModalVisible(true);
+  };
+
   const createOutputs = ({ type }: { type: OUTPUT_TYPE }) => {
     setOutputing(true);
     const data: CreateOutputData = {
       type,
+      // 先标记嵌字者，再开始导出：作者信息里的 {嵌字} 才会有名字
+      typesetter: typesetterName.trim(),
+      onlyFillEmptyTypesetter: onlyFillEmpty,
     };
     if (selectedFileIds.length > 0) {
       if (isExclude) {
@@ -202,7 +220,7 @@ export const OutputList: FC<OutputListProps> = ({
           className="OutputList__Button"
           icon="download"
           onClick={() => {
-            createOutputs({ type: OUTPUT_TYPE.ALL });
+            openExportModal(OUTPUT_TYPE.ALL);
           }}
           loading={outputing}
         >
@@ -212,7 +230,7 @@ export const OutputList: FC<OutputListProps> = ({
           className="OutputList__Button"
           icon="download"
           onClick={() => {
-            createOutputs({ type: OUTPUT_TYPE.ONLY_TEXT });
+            openExportModal(OUTPUT_TYPE.ONLY_TEXT);
           }}
           loading={outputing}
         >
@@ -237,6 +255,46 @@ export const OutputList: FC<OutputListProps> = ({
           下载 PS 脚本
         </Button>
       </div>
+      <Modal
+        className="OutputList__TypesetterModal"
+        visible={exportModalVisible}
+        title={formatMessage({ id: 'output.typesetterTitle' })}
+        okText={formatMessage({ id: 'output.startExport' })}
+        cancelText={formatMessage({ id: 'site.cancel' })}
+        confirmLoading={outputing}
+        onCancel={() => setExportModalVisible(false)}
+        onOk={() => {
+          setExportModalVisible(false);
+          createOutputs({ type: exportType });
+        }}
+        destroyOnClose
+      >
+        <div style={{ fontSize: 12, lineHeight: '18px', opacity: 0.75, marginBottom: 8 }}>
+          {formatMessage({ id: 'output.typesetterTip' })}
+        </div>
+        <Input
+          value={typesetterName}
+          maxLength={100}
+          placeholder={formatMessage({ id: 'output.typesetterPlaceholder' })}
+          onChange={(e) => setTypesetterName(e.target.value)}
+        />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            marginTop: 12,
+            fontSize: 12,
+          }}
+        >
+          <Switch
+            size="small"
+            checked={onlyFillEmpty}
+            onChange={(value) => setOnlyFillEmpty(value)}
+          />
+          <span>{formatMessage({ id: 'output.onlyFillEmpty' })}</span>
+        </div>
+      </Modal>
       <div className="OutputList__Tip">
         {fetching
           ? formatMessage({ id: 'site.loading' }) + '...'

@@ -323,6 +323,10 @@ class CreateOutputSchema(DefaultSchema):
     )
     file_ids_include = fields.List(fields.Str(validate=[object_id]), missing=None)
     file_ids_exclude = fields.List(fields.Str(validate=[object_id]), missing=None)
+    # 导出前先标记的嵌字者：不传=沿用当前操作者；空串=不修改
+    typesetter = fields.Str(validate=[validate.Length(max=100)], missing=None)
+    # 只填充尚未标记嵌字者的图片（默认 True，避免覆盖已经标记好的嵌字者）
+    only_fill_empty_typesetter = fields.Bool(missing=True)
 
 
 class TeamInsightUserListSchema(DefaultSchema):
