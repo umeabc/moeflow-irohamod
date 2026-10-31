@@ -31,6 +31,8 @@ export interface LabelProps {
   originDirection?: Direction;
   originWritingMode?: WritingMode;
   className?: string;
+  /** author=原作者署名标号，数字圆点改为向内展开，避免贴边被裁 */
+  kind?: 'text' | 'author';
 }
 /**
  * 标签
@@ -64,6 +66,7 @@ export const Label: FC<LabelProps> = ({
   originDirection = 'ltr',
   originWritingMode = 'vertical-rl',
   className,
+  kind = 'text',
   children,
 }) => {
   const platform = useSelector((state: AppState) => state.site.platform);
@@ -90,6 +93,11 @@ export const Label: FC<LabelProps> = ({
   }
   let numberLeft = 0;
   let arrowTransform = 'translate(-50%, -100%)'; // 小箭头的偏移
+  if (kind === 'author') {
+    // 作者标号默认在左上角，数字圆点改为向右下展开，避免被图片容器裁切
+    numberTop = 2;
+    numberLeft = 2;
+  }
   if (writingMode === 'horizontal-tb') {
     if (direction === 'ltr') {
       arrowTransform = 'translate(-100%, -50%)';
@@ -256,6 +264,14 @@ export const Label: FC<LabelProps> = ({
             display: block;
           }
         }
+        &.Label--author {
+          .Label__Number {
+            transform: translate(0, 0);
+          }
+          .Label__Arrow {
+            display: none;
+          }
+        }
       `}
       style={{
         transition: styleTransition,
@@ -265,6 +281,7 @@ export const Label: FC<LabelProps> = ({
         'Label--focus': focus,
         'Label--active': active,
         'Label--saving': saving,
+        'Label--author': kind === 'author',
       })}
     >
       <div className="Label__FocusRing"></div>

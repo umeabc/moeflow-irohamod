@@ -30,6 +30,7 @@ import {
 import style from '../../style';
 import { toLowerCamelCase } from '@/utils';
 import { can } from '@/utils/user';
+import { getProjectModeColor, getProjectModeLabel } from '@/utils/project';
 import { ProjectEditForm } from './ProjectEditForm';
 
 /** 项目基础设置的属性接口 */
@@ -387,6 +388,22 @@ export const ProjectSettingBase: FC<ProjectSettingBaseProps> = ({
       </Content>
       <Content>
         <ContentTitle>{formatMessage({ id: 'project.info' })}</ContentTitle>
+        <FormItem label={formatMessage({ id: 'project.projectType' })}>
+          <Tag
+            className="ProjectSettingBase__ModeTag"
+            color={getProjectModeColor(
+              currentProject.withProofread !== false,
+              currentProject.withAuthor === true,
+            )}
+            style={{ marginInlineEnd: 0 }}
+          >
+            {getProjectModeLabel(
+              formatMessage,
+              currentProject.withProofread !== false,
+              currentProject.withAuthor === true,
+            )}
+          </Tag>
+        </FormItem>
         <FormItem label={formatMessage({ id: 'project.id' })}>
           {currentProject.id}{' '}
           <Button

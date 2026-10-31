@@ -16,6 +16,7 @@ from flask import json
 from app import celery
 from app import oss
 from app.models import connect_db
+from app.constants.source import SourceKind
 from app.constants.file import (
     FileNotExistReason,
     FileSafeStatus,
@@ -346,7 +347,9 @@ def find_terms_task(file_id):
         find_terms_status=FindTermsStatus.FINDING,
         find_terms_start_time=datetime.datetime.utcnow(),
     )
-    for source in file.sources()():
+    for source in file.sources():
+        if source.kind == SourceKind.AUTHOR:
+            continue
         source.find_terms()
     # 将File设置成处理成功，并清理task_id/开始时间/解析次数
     file.update(

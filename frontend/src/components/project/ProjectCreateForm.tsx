@@ -1,5 +1,5 @@
 import { css } from '@emotion/core';
-import { Button, Form as AntdForm, Input, message, Modal, Radio, Upload } from 'antd';
+import { Button, Checkbox, Form as AntdForm, Input, message, Modal, Tag, Upload } from 'antd';
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Form, FormItem, RoleRadioGroup, TypeRadioGroup } from '@/components';
@@ -15,6 +15,7 @@ import { GROUP_ALLOW_APPLY_TYPE } from '@/constants';
 import { configs } from '@/configs';
 import style from '@/style';
 import { resetFilesState } from '@/store/file/slice';
+import { getProjectModeColor, getProjectModeLabel } from '@/utils/project';
 
 /** 创建项目表单的属性接口 */
 interface ProjectCreateFormProps {
@@ -36,6 +37,7 @@ export const ProjectCreateForm: FC<ProjectCreateFormProps> = ({
   const history = useHistory();
   const [isAllowApply, setIsAllowApply] = useState(true);
   const [withProofread, setWithProofread] = useState(true);
+  const [withAuthor, setWithAuthor] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const currentTeam = useSelector(
     (state: AppState) => state.team.currentTeam,
@@ -114,6 +116,88 @@ export const ProjectCreateForm: FC<ProjectCreateFormProps> = ({
         .ProjectCreateForm__Tip {
           color: ${style.textColorSecondary};
         }
+        .ProjectCreateForm__TypeChecks {
+          display: flex;
+          align-items: stretch;
+          gap: 8px;
+          width: 100%;
+        }
+        .ProjectCreateForm__TypeChecks .ProjectCreateForm__TypeCard {
+          flex: 1 1 0;
+          min-width: 0;
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          margin: 0;
+          margin-left: 0 !important;
+          padding: 9px 10px;
+          border: 1px solid var(--moeflow-borderColorLight);
+          border-radius: 6px;
+          background-color: var(--moeflow-surface);
+          color: var(--moeflow-textColor);
+          line-height: 1.4;
+          white-space: normal;
+          transition:
+            border-color 120ms,
+            background-color 120ms,
+            box-shadow 120ms;
+          .ant-checkbox {
+            flex: none;
+            top: 2px;
+          }
+          .ant-checkbox + span {
+            flex: 1;
+            min-width: 0;
+            display: block;
+            padding-left: 0;
+          }
+          &:hover {
+            border-color: var(--moeflow-primaryColorLighter);
+          }
+          &.ant-checkbox-wrapper-checked {
+            border-color: var(--moeflow-primaryColor);
+            background-color: var(--moeflow-primaryColorBg);
+          }
+          &:focus-within {
+            border-color: var(--moeflow-primaryColor);
+            box-shadow: 0 0 0 2px var(--moeflow-primaryColorBg);
+          }
+        }
+        .ProjectCreateForm__TypeCardTitle {
+          display: block;
+          font-size: 14px;
+          line-height: 20px;
+          color: var(--moeflow-textColor);
+        }
+        .ProjectCreateForm__TypeCardDesc {
+          display: block;
+          margin-top: 2px;
+          font-size: 12px;
+          line-height: 16px;
+          color: var(--moeflow-textColorSecondary);
+        }
+        .ProjectCreateForm__ModePreview {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 8px;
+          color: var(--moeflow-textColorSecondary);
+          font-size: 12px;
+          line-height: 20px;
+        }
+        .ProjectCreateForm__ModePreview .ant-tag {
+          margin: 0;
+          line-height: 18px;
+        }
+        @media (max-width: 480px) {
+          .ProjectCreateForm__TypeChecks {
+            flex-wrap: wrap;
+          }
+          .ProjectCreateForm__TypeChecks .ProjectCreateForm__TypeCard {
+            flex: 1 1 100%;
+          }
+        }
         .ProjectCreateForm__TXT {
           margin-bottom: 24px;
         }
@@ -137,12 +221,16 @@ export const ProjectCreateForm: FC<ProjectCreateFormProps> = ({
           sourceLanguage: configs.default.project.sourceLanugageCode,
           targetLanguages: configs.default.project.targetLanguageCodes,
           withProofread: true,
+          withAuthor: false,
         }}
         requiredMark={false}
         onValuesChange={(values) => {
           // 项目类型：仅翻嵌时隐藏校对角色
           if (values.withProofread !== undefined) {
             setWithProofread(values.withProofread);
+          }
+          if (values.withAuthor !== undefined) {
+            setWithAuthor(values.withAuthor);
           }
           // 关闭加入时，隐藏加入选项
           if (values.allowApplyType) {
@@ -209,24 +297,40 @@ export const ProjectCreateForm: FC<ProjectCreateFormProps> = ({
           />
         </FormItem>
         <FormItem
-          name="withProofread"
           label={formatMessage({ id: 'project.projectType' })}
           tooltip={formatMessage({ id: 'project.projectTypeTip' })}
-          rules={[
-            {
-              required: true,
-              message: formatMessage({ id: 'form.selectRequired' }),
-            },
-          ]}
         >
-          <Radio.Group>
-            <Radio value={true}>
-              {formatMessage({ id: 'project.typeProofread' })}
-            </Radio>
-            <Radio value={false}>
-              {formatMessage({ id: 'project.typeNoProofread' })}
-            </Radio>
-          </Radio.Group>
+          <div className="ProjectCreateForm__TypeChecks">
+            <FormItem name="withProofread" valuePropName="checked" noStyle>
+              <Checkbox className="ProjectCreateForm__TypeCard">
+                <span className="ProjectCreateForm__TypeCardTitle">
+                  {formatMessage({ id: 'project.withProofread' })}
+                </span>
+                <span className="ProjectCreateForm__TypeCardDesc">
+                  {formatMessage({ id: 'project.withProofreadTip' })}
+                </span>
+              </Checkbox>
+            </FormItem>
+            <FormItem name="withAuthor" valuePropName="checked" noStyle>
+              <Checkbox className="ProjectCreateForm__TypeCard">
+                <span className="ProjectCreateForm__TypeCardTitle">
+                  {formatMessage({ id: 'project.withAuthor' })}
+                </span>
+                <span className="ProjectCreateForm__TypeCardDesc">
+                  {formatMessage({ id: 'project.withAuthorTip' })}
+                </span>
+              </Checkbox>
+            </FormItem>
+          </div>
+          <div className="ProjectCreateForm__ModePreview">
+            <span>{formatMessage({ id: 'project.modePreviewLabel' })}</span>
+            <Tag
+              className="ProjectCreateForm__ModeTag"
+              color={getProjectModeColor(withProofread, withAuthor)}
+            >
+              {getProjectModeLabel(formatMessage, withProofread, withAuthor)}
+            </Tag>
+          </div>
         </FormItem>
         <FormItem
           name="allowApplyType"

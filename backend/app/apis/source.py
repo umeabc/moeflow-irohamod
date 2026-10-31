@@ -7,6 +7,7 @@ from app.exceptions import FileTypeNotSupportError, NoPermissionError
 from app.models.file import File, Source
 from app.models.project import ProjectPermission
 from app.constants.file import FileType
+from app.constants.source import SourceKind
 from flask_apikit.exceptions import ValidateError
 from app.validators.source import (
     CreateImageSourceSchema,
@@ -72,7 +73,8 @@ class FileSourceListAPI(MoeAPIView):
             source_id = source_translation_id_map["source_id"]
             translation_id = source_translation_id_map["translation_id"]
             source = file.sources().filter(id=source_id).first()
-            if source:
+            # 原作者标号不参与批量校对
+            if source and source.kind != SourceKind.AUTHOR:
                 translation = source.translations().filter(id=translation_id).first()
                 if translation:
                     translation.select(user=self.current_user)
@@ -138,6 +140,8 @@ class SourceAPI(MoeAPIView):
 
         }
         """
+        if source.kind == SourceKind.AUTHOR:
+            raise NoPermissionError(gettext("原作者标号只能在原作者栏修改"))
         if source.file.type != FileType.IMAGE:
             raise FileTypeNotSupportError(gettext("只有图片文件能修改原文"))
         if not self.current_user.can(source.file.project, ProjectPermission.MOVE_LABEL):
@@ -164,6 +168,8 @@ class SourceAPI(MoeAPIView):
 
         }
         """
+        if source.kind == SourceKind.AUTHOR:
+            raise NoPermissionError(gettext("原作者标号不能通过普通标号入口删除"))
         if source.file.type != FileType.IMAGE:
             raise FileTypeNotSupportError(gettext("只有图片文件能删除原文"))
         if not self.current_user.can(
@@ -193,6 +199,8 @@ class SourceRankAPI(MoeAPIView):
 
         }
         """
+        if source.kind == SourceKind.AUTHOR:
+            raise NoPermissionError(gettext("原作者标号不参与普通标号排序"))
         if source.file.type != FileType.IMAGE:
             raise FileTypeNotSupportError(gettext("只有图片文件能修改原文顺序"))
         if not self.current_user.can(source.file.project, ProjectPermission.ADD_LABEL):

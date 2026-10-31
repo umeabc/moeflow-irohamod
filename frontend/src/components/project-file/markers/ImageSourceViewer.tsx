@@ -34,6 +34,10 @@ export const ImageSourceViewer: FC<ImageSourceViewerProps> = ({
   const isMobile = platform === 'mobile';
   const mode = useSelector((state: AppState) => state.imageTranslator.mode);
   const { formatMessage } = useIntl();
+  // 原作者标号不参与普通标号编辑/翻译/校对，仅在全能模式（overview）只读展示
+  const countableSources = sources.filter((source) => source.kind !== 'author');
+  const hasVisibleSources =
+    mode === 'god' ? sources.length > 0 : countableSources.length > 0;
 
   return (
     <div
@@ -60,25 +64,25 @@ export const ImageSourceViewer: FC<ImageSourceViewerProps> = ({
       {!loading && (
         <>
           <TranslationSaveFailed sources={sources} targetID={targetID} />
-          {sources.length > 0 ? (
+          {hasVisibleSources ? (
             <div className="ImageSourceViewer__List">
               <ImageSourceViewerModeControl />
               {mode === 'source' && (
                 <ImageSourceViewerSource
-                  sources={sources}
+                  sources={countableSources}
                   targetID={targetID}
                 />
               )}
               {mode === 'translator' && (
                 <ImageSourceViewerTranslator
-                  sources={sources}
+                  sources={countableSources}
                   targetID={targetID}
                 />
               )}
               {mode === 'proofreader' && (
                 <ImageSourceViewerProofreader
                   file={file}
-                  sources={sources}
+                  sources={countableSources}
                   targetID={targetID}
                 />
               )}

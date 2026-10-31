@@ -10,6 +10,8 @@ export interface APISource {
   y: number;
   rank: number;
   content: string;
+  /** text=普通标号；author=原作者署名标号（文件级唯一，只读） */
+  kind?: 'text' | 'author';
   myTranslation?: APITranslation;
   positionType: number;
   translations: APITranslation[]; // 不含我的翻译数据

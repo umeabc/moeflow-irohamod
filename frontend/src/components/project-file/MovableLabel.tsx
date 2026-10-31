@@ -48,6 +48,8 @@ export interface OnMove {
 interface MovableLabelProps {
   x: number;
   y: number;
+  /** author=原作者署名标号，只读、不可移动/删除 */
+  kind?: 'text' | 'author';
 }
 /**
  * 可移动标签
@@ -60,6 +62,7 @@ export const MovableLabel: FC<MovableLabelProps & LabelProps> = ({
   y,
   positionType,
   content,
+  kind = 'text',
   styleTransition = '',
   children,
   ...movableItemProps
@@ -75,6 +78,10 @@ export const MovableLabel: FC<MovableLabelProps & LabelProps> = ({
   );
 
   const handleMoveEnd: OnMoveEnd = ({ x: newX, y: newY, reset }) => {
+    if (kind === 'author') {
+      reset();
+      return;
+    }
     // 发生了移动
     if (newX !== x || newY !== y) {
       dispatch(
@@ -89,6 +96,9 @@ export const MovableLabel: FC<MovableLabelProps & LabelProps> = ({
   };
 
   const handleTap: OnTap = ({ button }) => {
+    if (kind === 'author') {
+      return;
+    }
     // 右键单击
     if (button === 2 && !saving) {
       dispatch(deleteSourceSaga({ id }));
@@ -112,6 +122,9 @@ export const MovableLabel: FC<MovableLabelProps & LabelProps> = ({
   };
 
   const handleLongPress: OnLongPress = ({ button }) => {
+    if (kind === 'author') {
+      return;
+    }
     // 左键长按
     if (button === 0 && !saving) {
       dispatch(deleteSourceSaga({ id }));
@@ -131,6 +144,7 @@ export const MovableLabel: FC<MovableLabelProps & LabelProps> = ({
         writingMode="vertical-rl"
         originDirection="ltr"
         originWritingMode="vertical-rl"
+        kind={kind}
       >
         {children}
       </LabelWithContext>
@@ -146,7 +160,7 @@ export const MovableLabel: FC<MovableLabelProps & LabelProps> = ({
       onMoveEnd={handleMoveEnd}
       onTap={handleTap}
       onLongPress={isMobile || isIPad ? handleLongPress : undefined}
-      allowMove={!['creating', 'deleting'].includes(status)}
+      allowMove={kind !== 'author' && !['creating', 'deleting'].includes(status)}
       {...movableItemProps}
     >
       {label}

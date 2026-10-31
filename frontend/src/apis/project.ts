@@ -34,6 +34,7 @@ export interface APIProject {
   checkedSourceCount: number;
   archived: boolean;
   withProofread: boolean;
+  withAuthor: boolean;
   hasOutput: boolean;
   typesetFileCount: number;
   imageFileCount: number;
@@ -114,6 +115,7 @@ interface CreateProjectData {
   applicationCheckType: number;
   defaultRole: string;
   withProofread: boolean;
+  withAuthor: boolean;
   labelplusTxt?: string;
 }
 /** 新建项目 */

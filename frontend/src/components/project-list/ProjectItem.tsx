@@ -11,6 +11,7 @@ import { resetFilesState } from '@/store/file/slice';
 import style from '@/style';
 import { cardActiveEffect, cardClickEffect, clickEffect } from '@/utils/style';
 import { can } from '@/utils/user';
+import { getProjectModeColor, getProjectModeLabel } from '@/utils/project';
 
 /** 项目列表元素的属性接口 */
 interface ProjectItemProps {
@@ -116,13 +117,51 @@ export const ProjectItem: FC<ProjectItemProps> = ({
           text-overflow: ellipsis;
         }
         .ProjectItem__Name {
-          max-height: 60px;
+          display: flex;
+          align-items: flex-start;
+          gap: 4px 6px;
+          max-height: 112px;
+          overflow: hidden;
+          box-sizing: content-box;
+          margin: 5px 0;
+        }
+        .ProjectItem__NameText {
+          flex: 0 1 auto;
+          min-width: 0;
+          max-width: max-content;
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 3;
           overflow: hidden;
           word-break: break-all;
           font-size: 14px;
           line-height: 20px;
-          box-sizing: content-box;
-          margin: 5px 0;
+        }
+        .ProjectItem__NameTags {
+          flex: none;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 4px;
+          max-width: 100%;
+          min-height: 20px;
+          white-space: nowrap;
+        }
+        .ProjectItem__NameTags .ant-tag {
+          flex: none;
+          margin: 0;
+          font-weight: normal;
+          line-height: 18px;
+          white-space: nowrap;
+        }
+        @media (max-width: 480px) {
+          /* 窄屏：名称占满可用宽度；标签放不下时整体换到下一行，避免被裁切 */
+          .ProjectItem__Name {
+            flex-wrap: wrap;
+          }
+          .ProjectItem__NameText {
+            flex: 1 1 120px;
+          }
         }
         .ProjectItem__Bottom {
           display: flex;
@@ -170,12 +209,29 @@ export const ProjectItem: FC<ProjectItemProps> = ({
         </div>
       )}
       <div className="ProjectItem__Name">
-        {project.name}
-        {archived && (
-          <Tag style={{ marginLeft: 6, marginInlineEnd: 0 }}>
-            {formatMessage({ id: 'project.archived' })}
+        <span className="ProjectItem__NameText" title={project.name}>
+          {project.name}
+        </span>
+        <span className="ProjectItem__NameTags">
+          <Tag
+            className="ProjectItem__ModeTag"
+            color={getProjectModeColor(
+              project.withProofread !== false,
+              project.withAuthor === true,
+            )}
+          >
+            {getProjectModeLabel(
+              formatMessage,
+              project.withProofread !== false,
+              project.withAuthor === true,
+            )}
           </Tag>
-        )}
+          {archived && (
+            <Tag className="ProjectItem__ArchivedTag">
+              {formatMessage({ id: 'project.archived' })}
+            </Tag>
+          )}
+        </span>
       </div>
       <TranslationProgress
         className="ProjectItem__TranslationProgressLine"

@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     from app.models.project import Project
 from app.tasks.file_parse import parse_text, safe
 from app.tasks.ocr import ocr
-from app.constants.source import SourcePositionType
+from app.constants.source import SourceKind, SourcePositionType
 from app.constants.file import (
     FileNotExistReason,
     FileSafeStatus,
@@ -208,6 +208,8 @@ class File(Document):
     translator = StringField(db_field="tl", default="")  # 翻译负责人
     proofreader = StringField(db_field="pr", default="")  # 校对负责人
     typesetter = StringField(db_field="tyu", default="")  # 嵌字负责人
+    # 原作者署名（文件级单一值；仅在项目启用原作者时使用）
+    original_author = StringField(db_field="oa", default="")
     activated = BooleanField(db_field="ac", required=True, default=True)  # 激活的修订版
 
     # == 安全（涉政涉黄）检测数据 ==
@@ -244,6 +246,7 @@ class File(Document):
 
     # == 锁 ==
     source_moving = BooleanField(db_field="sm", default=False)  # 原文的rank是否正在修改
+    author_updating = BooleanField(db_field="au", default=False)  # 原作者署名是否正在保存
 
     meta = {
         "indexes": [
@@ -325,10 +328,25 @@ class File(Document):
             activated=False,
             old_revision=self,
             revision=self.revisions.count() + 1,
+            original_author=self.original_author or "",
         ).save()
         # 创建FileTargetCache
         for target in self.project.targets():
             file.create_target_cache(target)
+        # 复制原作者标号（图片修订版；文本文件不会出现作者标号）
+        author_source = Source.objects(file=self, kind=SourceKind.AUTHOR).first()
+        if author_source:
+            Source(
+                file=file,
+                kind=SourceKind.AUTHOR,
+                author_key=str(file.id),
+                content=author_source.content,
+                x=author_source.x,
+                y=author_source.y,
+                position_type=author_source.position_type,
+                machine=False,
+                rank=file.next_source_rank(),
+            ).save()
         return file
 
     def activate_revision(self):
@@ -356,6 +374,20 @@ class File(Document):
             update_self=False,
         )
         self.update_cache("edit_time", datetime.datetime.utcnow())
+        # 修订版切换后确保原作者标号仍存在（作者标号不参与计数）
+        if self.type == FileType.IMAGE and (self.original_author or "").strip():
+            if not Source.objects(file=self, kind=SourceKind.AUTHOR).first():
+                Source(
+                    file=self,
+                    kind=SourceKind.AUTHOR,
+                    author_key=str(self.id),
+                    content=self.original_author,
+                    x=0.01,
+                    y=0.01,
+                    position_type=SourcePositionType.IN,
+                    machine=False,
+                    rank=self.next_source_rank(),
+                ).save()
         # 更新项目翻译计数缓存
         for target in self.project.targets():
             self.inc_cache(
@@ -593,7 +625,7 @@ class File(Document):
         translated = 0
         checked = 0
         for source in Source.objects(file=self):
-            if source.blank:
+            if source.kind == SourceKind.AUTHOR or source.blank:
                 continue
             translations = Translation.objects(source=source, target=target)
             if translations.count() > 0:
@@ -1091,8 +1123,8 @@ class File(Document):
     @only_file
     @need_activated
     def clear_all_sources(self):
-        """清空所有Source，并更新缓存"""
-        self.sources().delete()
+        """清空所有普通Source（保留原作者标号），并更新缓存"""
+        self.sources().filter(kind__ne=SourceKind.AUTHOR).delete()
         for target in self.project.targets():
             self.inc_cache(
                 "translated_source_count",
@@ -1217,16 +1249,20 @@ class File(Document):
                 + str(group_id)
                 + "]\r\n"
             )
-            translation = source.best_translation(target=target)
-            # 有翻译
-            if translation:
-                # 优先使用校对的内容
-                if translation.proofread_content:
-                    content = translation.proofread_content
-                else:
-                    content = translation.content
+            if source.kind == SourceKind.AUTHOR:
+                # 原作者标号直接导出文件级署名
+                content = source.content
             else:
-                content = ""
+                translation = source.best_translation(target=target)
+                # 有翻译
+                if translation:
+                    # 优先使用校对的内容
+                    if translation.proofread_content:
+                        content = translation.proofread_content
+                    else:
+                        content = translation.content
+                else:
+                    content = ""
             # 统一使用 Windows 换行符
             content = content.replace("\n", "\r\n")
             # 再换行
@@ -1254,6 +1290,7 @@ class File(Document):
             "translator": self.translator or "",
             "proofreader": self.proofreader or "",
             "typesetter": self.typesetter or "",
+            "original_author": self.original_author or "",
         }
         if self.type == FileType.IMAGE:
             data["parse_status_detail_name"] = ImageParseStatus.get_detail_by_value(
@@ -1305,6 +1342,14 @@ class Source(Document):
     file: "File" = ReferenceField("File", db_field="f", reverse_delete_rule=CASCADE)
     rank = IntField(db_field="r", required=True)  # 排序
     content = StringField(db_field="c", default="")  # 内容
+    # 标号类型：text=普通标号；author=原作者署名标号（每文件最多一个）
+    kind = StringField(
+        db_field="k",
+        choices=SourceKind.ids(),
+        default=SourceKind.TEXT,
+    )
+    # 作者标号唯一键（仅作者标号写入 str(file.id)，普通标号不写）
+    author_key = StringField(db_field="ak")
     # === 图片独有的参数 ===
     x = FloatField(db_field="x", min_value=0, max_value=1, default=0)  # 翻译标记位置
     y = FloatField(db_field="y", min_value=0, max_value=1, default=0)
@@ -1326,7 +1371,21 @@ class Source(Document):
     create_time = DateTimeField(db_field="ct", default=datetime.datetime.utcnow)
     edit_time = DateTimeField(db_field="e", default=datetime.datetime.utcnow)
 
-    meta = {"indexes": ["file", "blank", "rank"]}
+    meta = {
+        "indexes": [
+            "file",
+            "blank",
+            "rank",
+            # 普通标号不写 ak，作者标号写 str(file.id)；
+            # sparse unique 同时兼容 mongomock（测试）与 MongoDB。
+            {"fields": ["author_key"], "unique": True, "sparse": True},
+        ]
+    }
+
+    @property
+    def is_countable(self) -> bool:
+        """是否计入原文/翻译/校对统计（原作者标号与空白标号不计入）"""
+        return self.kind != SourceKind.AUTHOR and not self.blank
 
     @classmethod
     def by_id(cls, id_: str | ObjectId) -> "Source":
@@ -1347,6 +1406,8 @@ class Source(Document):
 
     def copy(self, source: "Source"):
         """将其他Source的Translation和Tip复制到此Source，必须是空Source才能使用"""
+        if source.kind == SourceKind.AUTHOR or self.kind == SourceKind.AUTHOR:
+            return
         if self.translations().count() > 0:
             return  # 如果已有翻译，则不复制
         if self.blank:
@@ -1523,6 +1584,11 @@ class Source(Document):
 
     def clear(self):
         """删除原文，并更新缓存"""
+        # 原作者标号不参与计数，也不应通过普通入口删除；此处兜底清理文件级署名
+        if self.kind == SourceKind.AUTHOR:
+            self.file.update(original_author="")
+            self.delete()
+            return
         # 使用Translation的delete，修改计数
         for translation in self.translations():
             translation.clear()
@@ -1538,6 +1604,7 @@ class Source(Document):
             "rank": self.rank,
             "position_type": self.position_type,
             "machine": self.machine,
+            "kind": self.kind or SourceKind.TEXT,
         }
 
 

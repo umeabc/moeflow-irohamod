@@ -20,11 +20,19 @@ from app.exceptions import (
 from app.utils.filename import strip_filename_emoji
 from app.utils.hash import get_file_md5
 from app.models.file import File, FileTargetCache, Translation
-from app.models.user import User
 from app.models.project import Project, ProjectPermission
+from app.services.file_author import (
+    clear_original_author,
+    ensure_original_author_editable,
+    get_author_source,
+    require_edit_original_author,
+    require_undo_original_author,
+    set_original_author,
+)
 from app.models.team import TeamPermission, TeamUserRelation
 from app.constants.project import ProjectStatus
 from app.constants.file import FileNotExistReason, FileType
+from app.constants.source import SourceKind
 from app.validators.file import (
     AdminFileSearchSchema,
     FileMoveSchema,
@@ -225,10 +233,12 @@ class ProjectFileMoveAPI(MoeAPIView):
             raise FileMoveError(gettext("不能移动到当前项目"))
         if target.project_set != project.project_set:
             raise FileMoveError(gettext("只能移动到同一项目集下的其它项目"))
-        # 类型隔离：仅翻嵌与翻校嵌项目之间不能互移
-        if bool(target.with_proofread) != bool(project.with_proofread):
+        # 类型隔离：校对模式与原作者模式必须一致，四类项目严格隔离
+        if bool(target.with_proofread) != bool(project.with_proofread) or bool(
+            target.with_author
+        ) != bool(project.with_author):
             raise FileMoveError(
-                gettext("只能移动到相同类型的项目（仅翻嵌 / 翻校嵌）")
+                gettext("只能移动到相同类型的项目（校对/原作者模式需一致）")
             )
         if not self.current_user.admin_can() and not self.current_user.can(
             target, ProjectPermission.ACCESS
@@ -298,6 +308,11 @@ class MoveTargetProjectsAPI(MoeAPIView):
             if project.with_proofread
             else {"with_proofread": False}
         )
+        # 原作者模式同样隔离：启用=精确 True；未启用=ne True（含缺失字段的老项目）
+        if project.with_author:
+            type_filter["with_author"] = True
+        else:
+            type_filter["with_author__ne"] = True
         projects = Project.objects(
             project_set=project.project_set,
             id__ne=project.id,
@@ -378,14 +393,28 @@ class FileAPI(MoeAPIView):
 
         @apiParam {String} [parent_id] 移动文件，需要提供父级文件夹地址，设为'root'为移动到根目录
         @apiParam {String} [name] 修改文件名，需要提供文件名
+        @apiParam {String} [original_author] 原作者署名；仅图片且项目启用原作者时可用，空串表示清空
 
         @apiSuccessExample {json} 返回示例
         {
 
         }
         """
-        # 检查用户权限
         data = self.get_json()
+        role_fields = ("translator", "proofreader", "typesetter")
+        # 原作者：独立动作，不允许与其它参数混传
+        if "original_author" in data:
+            if set(data.keys()) != {"original_author"}:
+                raise ValidateError(
+                    gettext("original_author 不能与其它参数同时提交")
+                )
+            require_edit_original_author(self.current_user, file)
+            author_source = set_original_author(file, data["original_author"])
+            return {
+                "message": gettext("保存成功"),
+                "file": file.to_api(),
+                "author_source_id": str(author_source.id) if author_source else None,
+            }
         if data.get("parent_id"):
             if not self.current_user.can(file.project, ProjectPermission.MOVE_FILE):
                 raise NoPermissionError(gettext("您没有权限移动文件"))
@@ -399,36 +428,48 @@ class FileAPI(MoeAPIView):
                 raise NoPermissionError(gettext("您没有权限修改文件名"))
             file.rename(data["name"])
             return {"message": gettext("改名成功")}
-        elif any(data.get(f) for f in ("translator", "proofreader", "typesetter")):
-            # 根据项目角色控制可编辑的字段
+        elif any(field in data for field in role_fields):
+            # 根据项目角色控制可编辑的字段（站点管理员显式放行）
             role = self.current_user.get_role(file.project)
             role_sys = role.system_code if role else ""
             allowed: set = set()
-            if role_sys in ("creator", "admin", "coordinator"):
-                allowed = {"translator", "proofreader", "typesetter"}
+            if self.current_user.admin:
+                allowed = set(role_fields)
+            elif role_sys in ("creator", "admin", "coordinator"):
+                allowed = set(role_fields)
             elif role_sys in ("translator", "proofreader"):
                 allowed = {"translator", "proofreader"}
             elif role_sys == "picture_editor":
                 allowed = {"typesetter"}
-            for field in ("translator", "proofreader", "typesetter"):
-                if data.get(field) and field not in allowed:
-                    raise NoPermissionError(gettext("您没有权限修改该字段"))
             editable = {}
             # 手动编辑标记：覆盖翻译者（默认 false=自动累积，true=手动设置/清空）
             replace_translator = bool(data.get("replace_translator"))
-            for field in ("translator", "proofreader", "typesetter"):
-                user_str = data.get(field)
-                if user_str:
-                    if field == "translator" and not replace_translator:
-                        # 自动累积：与已有值按顿号分隔去重合并（支持顿号/逗号输入）
-                        editable[field] = merge_role_names(
-                            getattr(file, field, "") or "", user_str
-                        )
-                    else:
-                        editable[field] = user_str
+            for field in role_fields:
+                if field not in data:
+                    continue
+                if field not in allowed:
+                    raise NoPermissionError(gettext("您没有权限修改该字段"))
+                value = data.get(field)
+                if not isinstance(value, str):
+                    raise ValidateError(gettext("负责人必须为字符串"))
+                if not value:
+                    # 保持原有语义：非原作者负责人字段的空串不提交（不能通过该入口清空）
+                    continue
+                if field == "translator" and not replace_translator:
+                    # 自动累积：与已有值按顿号分隔去重合并（支持顿号/逗号输入）
+                    editable[field] = merge_role_names(
+                        getattr(file, field, "") or "", value
+                    )
+                else:
+                    # 逐字段判权后直接设置（原作者清空走独立分支）
+                    editable[field] = value
             if editable:
                 file.update(**editable)
-                return {"message": gettext("保存成功")}
+                file.reload()
+                return {
+                    "message": gettext("保存成功"),
+                    "file": file.to_api(),
+                }
             raise ValidateError(gettext("缺少负责人参数"))
         else:
             raise ValidateError(gettext("需要提供parent_id或name参数"))
@@ -536,19 +577,27 @@ class FileUndoCompletionAPI(MoeAPIView):
 
         @apiParam {Boolean} [proofreader] 撤回校对完成（清空 proofreader 字段）
         @apiParam {Boolean} [typesetter] 撤回嵌字完成（清空 typesetter 字段）
+        @apiParam {Boolean} [original_author] 撤回原作者（仅项目管理员/站点管理员）
 
         @apiSuccessExample {json} 返回示例
         {
             "message": "撤回成功"
         }
         """
-        # 检查用户权限：仅项目管理员可撤回
+        # 检查用户权限：仅项目管理员/站点管理员可撤回
         role = self.current_user.get_role(file.project)
         role_sys = role.system_code if role else ""
-        if role_sys not in ("creator", "admin", "coordinator"):
-            raise NoPermissionError(gettext("仅项目管理员可撤回校对/嵌字完成"))
+        if not self.current_user.admin and role_sys not in (
+            "creator",
+            "admin",
+            "coordinator",
+        ):
+            raise NoPermissionError(gettext("仅项目管理员可撤回校对/嵌字/原作者"))
 
         data = self.get_json()
+        for key in ("proofreader", "typesetter", "original_author"):
+            if key in data and not isinstance(data[key], bool):
+                raise ValidateError(gettext("撤回参数必须为布尔值"))
         updates = {}
         cleared_fields = []
 
@@ -560,7 +609,13 @@ class FileUndoCompletionAPI(MoeAPIView):
             updates["typesetter"] = ""
             cleared_fields.append(gettext("嵌字"))
 
-        if not updates:
+        if data.get("original_author"):
+            # 先校验权限与状态，再执行任何清空动作（作者栏清空属于撤回，仅管理员）
+            require_undo_original_author(self.current_user, file)
+            ensure_original_author_editable(file)
+            cleared_fields.append(gettext("原作者"))
+
+        if not updates and not data.get("original_author"):
             raise ValidateError(gettext("请至少选择一个要撤回的项"))
 
         if data.get("proofreader"):
@@ -568,13 +623,20 @@ class FileUndoCompletionAPI(MoeAPIView):
             # 逐条走模型方法（unselect 内部会判断未选定时跳过），
             # 以正确递减 checked_source_count（文件/父级文件夹/项目各级缓存同步）
             for source in file.sources():
+                if source.kind == SourceKind.AUTHOR:
+                    continue
                 for tr in Translation.objects(source=source):
                     tr.unselect()
                     if tr.proofread_content or tr.proofreader:
                         tr.update(proofread_content="", unset__proofreader=1)
 
-        file.update(**updates)
+        if data.get("original_author"):
+            clear_original_author(file)
+
+        if updates:
+            file.update(**updates)
         file.reload()  # update() 不刷新内存对象，reload 保证响应里的 file 是最新值
+        author_source = get_author_source(file)
 
         # 撤回详情写入审计日志（g.log_details 由 log_action 装饰器收集落库）
         if not hasattr(g, "log_details"):
@@ -587,7 +649,11 @@ class FileUndoCompletionAPI(MoeAPIView):
         )
 
         message = gettext("已撤回") + "：" + "、".join(cleared_fields)
-        return {"message": message, "file": file.to_api()}
+        return {
+            "message": message,
+            "file": file.to_api(),
+            "author_source_id": str(author_source.id) if author_source else None,
+        }
 
 
 class AdminFileListAPI(MoeAPIView):

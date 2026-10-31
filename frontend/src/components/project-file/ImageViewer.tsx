@@ -468,9 +468,11 @@ export const ImageViewer: FC<ImageViewerProps> = ({
 
   // 标签
   const movableLabels = labels.map((label: Label, index) => {
+    const isAuthor = label.kind === 'author';
     const bestTranslation = getBestTranslation(label);
-    const content =
-      bestTranslation === undefined
+    const content = isAuthor
+      ? label.content
+      : bestTranslation === undefined
         ? undefined
         : bestTranslation.proofreadContent
           ? bestTranslation.proofreadContent
@@ -486,6 +488,7 @@ export const ImageViewer: FC<ImageViewerProps> = ({
         positionType={label.positionType}
         status={label.labelStatus}
         content={content}
+        kind={isAuthor ? 'author' : 'text'}
         styleTransition={imageTransition}
       >
         {index + 1}

@@ -362,6 +362,8 @@ class Project(GroupMixin, Document):
     archived = BooleanField(db_field="arch", default=False)
     # 是否启用校对角色/校对模式；「仅翻嵌」项目为 False
     with_proofread = BooleanField(db_field="wp", default=True)
+    # 是否启用「原作者」栏（文件级署名标号）；老项目缺省为 False
+    with_author = BooleanField(db_field="wa", default=False)
     # 是否已成功导出过（用于进度条计算「已导出」条件）
     has_output = BooleanField(db_field="ho", default=False)
 
@@ -416,6 +418,7 @@ class Project(GroupMixin, Document):
         target_languages=None,
         intro="",
         with_proofread=True,
+        with_author=False,
         labelplus_txt=None,
     ) -> "Project":
         """创建一个项目"""
@@ -470,6 +473,7 @@ class Project(GroupMixin, Document):
             project.application_check_type = application_check_type
         project.intro = intro
         project.with_proofread = bool(with_proofread)
+        project.with_author = bool(with_author)
         # 保存团队
         project.save()
         # 创建项目目标语言对象
@@ -1077,6 +1081,7 @@ class Project(GroupMixin, Document):
             "checked_source_count": self.checked_source_count,
             "archived": bool(self.archived),
             "with_proofread": bool(self.with_proofread),
+            "with_author": bool(self.with_author),
             "has_output": bool(self.has_output),
             # 已嵌字（导出时写入 file.typesetter）图片数 / 图片总数，用于嵌字进度绿条
             # 注意：老数据的 tyu 字段可能缺失(=null)，$ne:"" 会把 null 也算进来，故用 nin ["", None]

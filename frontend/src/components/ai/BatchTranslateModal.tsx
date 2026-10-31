@@ -299,7 +299,10 @@ export const BatchTranslateModalContent: FC<{
         );
         return;
       }
-      const sources = srcRes.data as APISource[];
+      // 原作者标号只读，不参与批量翻译/匹配
+      const sources = (srcRes.data as APISource[]).filter(
+        (source) => source.kind !== 'author',
+      );
       if (sources.length === 0) {
         setFileState(
           f,

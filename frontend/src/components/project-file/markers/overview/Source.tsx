@@ -47,7 +47,8 @@ export const Source: FC<SourceProps> = ({
     (state: AppState) => state.project.currentProject,
   );
 
-  const statusLine = checkTranslationState(source);
+  const isAuthor = source.kind === 'author';
+  const statusLine = isAuthor ? 'translationOk' : checkTranslationState(source);
 
   const handleSourcePositionTypeChange = (checked: boolean) => {
     dispatch(
@@ -169,6 +170,20 @@ export const Source: FC<SourceProps> = ({
         }
         .Source__MyTranslationStatus {
         }
+        .Source__Author {
+          padding: 5px 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+        .Source__AuthorLabel {
+          font-size: 12px;
+          color: ${style.textColorSecondary};
+        }
+        .Source__AuthorContent {
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
         .Source__TranslaitonListWrapper {
           flex: auto;
         }
@@ -199,7 +214,7 @@ export const Source: FC<SourceProps> = ({
         <div className="Source__ContentTop">
           <div className="Source__Info">
             <div className="Source__Index">{index + 1}</div>
-            {prevSource && (
+            {!isAuthor && prevSource && (
               <Button
                 className="Source__RerankButton"
                 elem="button"
@@ -211,7 +226,7 @@ export const Source: FC<SourceProps> = ({
                 onClick={handleRerankUp}
               />
             )}
-            {nextSource && (
+            {!isAuthor && nextSource && (
               <Button
                 className="Source__RerankButton"
                 elem="button"
@@ -225,40 +240,51 @@ export const Source: FC<SourceProps> = ({
             )}
           </div>
           <div className="Source__TranslaitonListWrapper">
-            <TranslationList
-              myTranslation={source.myTranslation}
-              otherTranslations={source.translations}
-              source={source}
-              targetID={targetID}
-              className="Source__TranslationList"
-            />
+            {isAuthor ? (
+              <div className="Source__Author">
+                <div className="Source__AuthorLabel">
+                  {formatMessage({ id: 'translation.anonymous' })}
+                </div>
+                <div className="Source__AuthorContent">{source.content}</div>
+              </div>
+            ) : (
+              <TranslationList
+                myTranslation={source.myTranslation}
+                otherTranslations={source.translations}
+                source={source}
+                targetID={targetID}
+                className="Source__TranslationList"
+              />
+            )}
           </div>
         </div>
-        <div className="Source__ContentBottom">
-          <div className="Source__ContentBottomIconWrapper">
-            <Icon className="Source__ContentBottomIcon" icon="tag" />
-          </div>
-          {can(currentProject, PROJECT_PERMISSION.MOVE_LABEL) ? (
-            <Switch
-              className="Source__PositionSwitch"
-              size="small"
-              checkedChildren={formatMessage({
-                id: 'imageTranslator.positionIn',
-              })}
-              unCheckedChildren={formatMessage({
-                id: 'imageTranslator.positionOut',
-              })}
-              checked={source.positionType === SOURCE_POSITION_TYPE.IN}
-              onChange={handleSourcePositionTypeChange}
-            />
-          ) : (
-            <div className="Source__SourcePositionTypeText">
-              {SOURCE_POSITION_TYPE.IN
-                ? formatMessage({ id: 'imageTranslator.positionIn' })
-                : formatMessage({ id: 'imageTranslator.positionOut' })}
+        {!isAuthor && (
+          <div className="Source__ContentBottom">
+            <div className="Source__ContentBottomIconWrapper">
+              <Icon className="Source__ContentBottomIcon" icon="tag" />
             </div>
-          )}
-        </div>
+            {can(currentProject, PROJECT_PERMISSION.MOVE_LABEL) ? (
+              <Switch
+                className="Source__PositionSwitch"
+                size="small"
+                checkedChildren={formatMessage({
+                  id: 'imageTranslator.positionIn',
+                })}
+                unCheckedChildren={formatMessage({
+                  id: 'imageTranslator.positionOut',
+                })}
+                checked={source.positionType === SOURCE_POSITION_TYPE.IN}
+                onChange={handleSourcePositionTypeChange}
+              />
+            ) : (
+              <div className="Source__SourcePositionTypeText">
+                {SOURCE_POSITION_TYPE.IN
+                  ? formatMessage({ id: 'imageTranslator.positionIn' })
+                  : formatMessage({ id: 'imageTranslator.positionOut' })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

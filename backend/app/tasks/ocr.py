@@ -11,6 +11,7 @@ from uuid import uuid4
 import requests
 from app import celery, gs_vision, oss
 from app.constants.file import FileType, ImageOCRPercent, ParseErrorType, ParseStatus
+from app.constants.source import SourceKind
 from app.models import connect_db
 from app.tasks import SyncResult
 from app.utils.logging import logger
@@ -553,7 +554,9 @@ def merge_and_ocr(parsing_images, /, *, parse_alone=False):
                 y = block_data["label_position"]["y"]
                 vertices = block_data["vertices"]
                 # 创建原文
-                same_position_source = image.sources().filter(x=x, y=y).first()
+                same_position_source = image.sources().filter(
+                    x=x, y=y, kind__ne=SourceKind.AUTHOR
+                ).first()
                 if same_position_source is None:
                     image.create_source(
                         text,

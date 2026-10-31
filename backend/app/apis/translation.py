@@ -1,4 +1,5 @@
 import datetime
+from flask_babel import gettext
 from app.core.views import MoeAPIView
 from app.decorators.auth import token_required
 from app.decorators.log import log_action
@@ -6,6 +7,7 @@ from app.decorators.url import fetch_model
 from app.exceptions import NoPermissionError
 from app.models.file import Source, Translation
 from app.models.project import ProjectPermission
+from app.constants.source import SourceKind
 from app.validators.translation import (
     CreateTranslationSchema,
     EditTranslationSchema,
@@ -33,6 +35,8 @@ class SourceTranslationListAPI(MoeAPIView):
 
         }
         """
+        if source.kind == SourceKind.AUTHOR:
+            raise NoPermissionError(gettext("原作者标号不能添加翻译"))
         if not self.current_user.can(source.file.project, ProjectPermission.ADD_TRA):
             raise NoPermissionError
         data = self.get_json(CreateTranslationSchema())
@@ -66,6 +70,8 @@ class TranslationAPI(MoeAPIView):
 
         }
         """
+        if translation.source.kind == SourceKind.AUTHOR:
+            raise NoPermissionError(gettext("原作者标号不能修改翻译"))
         data = self.get_json(EditTranslationSchema())
         if "selected" in data:  # 检查是否有校对权限
             if not self.current_user.can(
@@ -121,6 +127,8 @@ class TranslationAPI(MoeAPIView):
 
         }
         """
+        if translation.source.kind == SourceKind.AUTHOR:
+            raise NoPermissionError(gettext("原作者标号不能删除翻译"))
         if translation.user != self.current_user and not self.current_user.can(
             translation.source.file.project, ProjectPermission.DELETE_TRA
         ):

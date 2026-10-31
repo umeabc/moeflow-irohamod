@@ -6,7 +6,7 @@ import style from '@/style';
 
 /** 翻译用户显示的属性接口 */
 interface TranslationUserProps {
-  iconType: 'translation' | 'proofread' | 'typesetter';
+  iconType: 'translation' | 'proofread' | 'typesetter' | 'author';
   iconTooltip?: string;
   avatar?: string;
   name?: string;
@@ -27,7 +27,9 @@ export const TranslationUser: FC<TranslationUserProps> = ({
       ? 'pencil-alt'
       : iconType === 'proofread'
         ? 'pen-nib'
-        : 'tag';
+        : iconType === 'author'
+          ? 'signature'
+          : 'tag';
 
   return (
     <div

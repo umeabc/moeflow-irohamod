@@ -28,6 +28,7 @@
   --moeflow-primaryColorDarker: #d94c66;
   --moeflow-primaryColorLighter: #ff8f9c;
   --moeflow-primaryColorLightest: #ffbdc5;
+  --moeflow-primaryColorBg: #fff1f3;
   --moeflow-warningColorLighter: #ffd583;
   --moeflow-warningColorLightest: #ffe0a4;
   --moeflow-hoverColor: #eee;
@@ -89,6 +90,7 @@ html[data-theme='dark'] {
   --moeflow-primaryColorDarker: #d94c66;
   --moeflow-primaryColorLighter: #ff8f9c;
   --moeflow-primaryColorLightest: #ffbdc5;
+  --moeflow-primaryColorBg: rgba(255, 101, 124, 0.14);
   --moeflow-warningColorLighter: #ffd583;
   --moeflow-warningColorLightest: #ffe0a4;
   --moeflow-hoverColor: #2f2f2f;
@@ -120,6 +122,23 @@ html[data-theme='dark'] {
   --moeflow-progressTrack: #2a2a2a;
   --moeflow-sliderRail: #3a3a3a;
   --moeflow-sliderThumb: #d0d0d0;
+}
+
+/* 暗色下保留四模式 Tag 的文字色：站内全局 .ant-tag 覆盖会把彩色 Tag 压成灰色 */
+html[data-theme='dark'] .ProjectItem__ModeTag.ant-tag-blue,
+html[data-theme='dark'] .ProjectSettingBase__ModeTag.ant-tag-blue,
+html[data-theme='dark'] .ProjectCreateForm__ModeTag.ant-tag-blue {
+  color: var(--moeflow-processingColor);
+}
+html[data-theme='dark'] .ProjectItem__ModeTag.ant-tag-purple,
+html[data-theme='dark'] .ProjectSettingBase__ModeTag.ant-tag-purple,
+html[data-theme='dark'] .ProjectCreateForm__ModeTag.ant-tag-purple {
+  color: var(--moeflow-primaryColorLighter);
+}
+html[data-theme='dark'] .ProjectItem__ModeTag.ant-tag-magenta,
+html[data-theme='dark'] .ProjectSettingBase__ModeTag.ant-tag-magenta,
+html[data-theme='dark'] .ProjectCreateForm__ModeTag.ant-tag-magenta {
+  color: var(--moeflow-primaryColor);
 }
 
 body {

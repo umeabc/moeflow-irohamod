@@ -30,6 +30,8 @@ export interface File {
   translator?: string;
   proofreader?: string;
   typesetter?: string;
+  /** 原作者署名（项目启用原作者模式时使用） */
+  originalAuthor?: string;
   fileTargetCache?: FileTargetCache;
   // 图片文件专用
   url?: string;
