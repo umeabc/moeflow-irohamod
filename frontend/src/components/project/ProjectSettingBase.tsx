@@ -31,6 +31,7 @@ import style from '../../style';
 import { toLowerCamelCase } from '@/utils';
 import { can } from '@/utils/user';
 import { getProjectModeColor, getProjectModeLabel } from '@/utils/project';
+import { AuthorLabelSetting } from './AuthorLabelSetting';
 import { ProjectEditForm } from './ProjectEditForm';
 
 /** 项目基础设置的属性接口 */
@@ -451,6 +452,14 @@ export const ProjectSettingBase: FC<ProjectSettingBaseProps> = ({
           </ContentItem>
         )}
       </Content>
+      {currentProject.withAuthor && !archived && (
+        <Content>
+          <ContentTitle>{formatMessage({ id: 'project.authorInfo' })}</ContentTitle>
+          <ContentItem>
+            <AuthorLabelSetting />
+          </ContentItem>
+        </Content>
+      )}
       {/* <Content>
         <ContentTitle>{formatMessage({ id: 'site.aboutQuota' })}</ContentTitle>
         <ContentItem>

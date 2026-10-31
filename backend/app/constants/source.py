@@ -13,3 +13,9 @@ class SourceKind(StrType):
 
     TEXT = "text"  # 普通标号
     AUTHOR = "author"  # 原作者署名标号（文件级唯一）
+
+
+# LabelPlus 标签分组编号（导出时写入 [x,y,group] 的第三个值）。
+# 1 / 2 由 SourcePositionType 决定，作者信息固定为第 3 组。
+AUTHOR_LABEL_GROUP = 3
+

@@ -80,9 +80,19 @@ export const Source: FC<SourceProps> = ({
       key={source.id}
       className={classNames('Source', className, {
         'Source--focus': source.focus,
+        'Source--author': isAuthor,
       })}
       css={css`
         display: flex;
+        &.Source--author {
+          .Source__StatusLine {
+            background: rgba(179, 127, 235, 0.55);
+          }
+          .Source__Index {
+            background-color: rgba(179, 127, 235, 0.85);
+            color: #fff;
+          }
+        }
         &.Source--focus {
           .Source__Info,
           .Source__ContentBottomIconWrapper {

@@ -1885,3 +1885,22 @@ msgstr "No valid parameters."
 #~ msgid "Initialized Language collection with %d languages"
 #~ msgstr "初始化语言表，共添加 %d 种语言"
 
+#: app/models/project.py:1003
+msgid "作者信息"
+msgstr "Author Info"
+
+#: app/services/file_author.py:120
+msgid "作者信息模板格式错误"
+msgstr "Invalid author info template"
+
+#: app/services/file_author.py:126
+msgid "作者信息模板最多 1000 个字符"
+msgstr "Author info template must be at most 1000 characters"
+
+#: app/services/file_author.py:136
+msgid "作者信息模板包含未知占位符：{names}（可用：翻译、嵌字、原作者）"
+msgstr "Author info template contains unknown placeholders: {names} (available: 翻译 / 嵌字 / 原作者)"
+
+#: app/services/file_author.py:210
+msgid "该项目未启用原作者"
+msgstr "This project does not enable the original author"

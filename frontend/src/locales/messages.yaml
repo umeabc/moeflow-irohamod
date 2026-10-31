@@ -608,6 +608,38 @@ project.typeProofreadAuthor:
 project.modePreviewLabel:
   zhCn: 当前模式：
   en: 'Current mode: '
+project.authorInfo:
+  zhCn: 作者信息
+  en: Author Info
+project.authorInfoTip:
+  zhCn: 按模板为每张图片生成作者信息标号：{翻译}、{嵌字}、{原作者} 会替换成该图对应负责人，其余文字（如 B站@BA校委会）作为固定文案加到每张图上；某行占位符都为空时整行省略。留空则使用文件卡里手填的原作者。
+  en: 'Generates one author-info marker per image from this template: {翻译}, {嵌字}, {原作者} are replaced with that image''s credits, other text (e.g. B站@BA校委会) is added to every image, and a line is skipped when all of its placeholders are empty. Leave empty to use the manually entered author credit.'
+project.authorInfoPlaceholder:
+  zhCn: |-
+    B站@BA校委会
+    翻译：{翻译}
+    嵌字：{嵌字}
+    原作者：{原作者}
+  en: |-
+    B站@BA校委会
+    翻译：{翻译}
+    嵌字：{嵌字}
+    原作者：{原作者}
+project.authorInfoInsert:
+  zhCn: 插入占位符：
+  en: 'Insert placeholder:'
+project.authorInfoPreview:
+  zhCn: 预览（示例负责人）
+  en: Preview (sample credits)
+project.authorInfoEmptyPreview:
+  zhCn: （留空时使用文件卡里手填的原作者）
+  en: (empty template falls back to the manually entered author credit)
+project.authorInfoSave:
+  zhCn: 保存作者信息
+  en: Save author info
+project.authorInfoSaved:
+  zhCn: 作者信息设置已保存
+  en: Author info settings saved
 project.name:
   zhCn: 项目名称
   en: Project Name

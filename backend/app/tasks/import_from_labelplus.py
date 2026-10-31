@@ -14,7 +14,7 @@ from app.models import connect_db
 from . import SyncResult, _FORCE_SYNC_TASK
 from celery.utils.log import get_task_logger
 from app.utils.labelplus import load_from_labelplus
-from app.constants.source import SourcePositionType
+from app.constants.source import AUTHOR_LABEL_GROUP, SourcePositionType
 from celery.result import AsyncResult
 
 logger = get_task_logger(__name__)
@@ -66,6 +66,10 @@ def import_from_labelplus_task(project_id):
             for file_index, labelplus_file in enumerate(labelplus_data):
                 file = project.create_file(labelplus_file["file_name"])
                 for labelplus_label in labelplus_file["labels"]:
+                    # 第 3 组是「作者信息」，不是可翻译标号；导入时跳过，
+                    # 否则会被当成框外标号并拉低翻译进度
+                    if labelplus_label["position_type"] == AUTHOR_LABEL_GROUP:
+                        continue
                     source = file.create_source(
                         content="",
                         x=labelplus_label["x"],

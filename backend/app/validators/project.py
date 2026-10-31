@@ -1,4 +1,4 @@
-from marshmallow import fields, post_load, validates_schema
+from marshmallow import fields, post_load, validates_schema, validate
 
 from app.exceptions import ProjectSetNotExistError, LanguageNotExistError
 from app.models.project import Project, ProjectSet
@@ -250,6 +250,9 @@ class EditProjectSchema(DefaultSchema):
     )
     default_role = fields.Str(validate=[object_id])
     project_set = fields.Str(validate=[object_id])
+    # 作者信息模板：完整校验（长度 / 占位符）在 API 里调用
+    # validate_author_template 统一处理，这里只限制类型与长度上限
+    author_label_template = fields.Str(validate=[validate.Length(max=1000)])
 
     @validates_schema
     def verify_default_role(self, data):

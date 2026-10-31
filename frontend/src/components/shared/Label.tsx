@@ -111,6 +111,10 @@ export const Label: FC<LabelProps> = ({
   if (positionType === SOURCE_POSITION_TYPE.OUT) {
     backgroundRGB = '255, 213, 131'; // 黄色
   }
+  if (kind === 'author') {
+    // 作者信息单独一个颜色（紫色），与框内粉色 / 框外黄色区分
+    backgroundRGB = '179, 127, 235';
+  }
   if (active) {
     arrowWidth *= 1.4;
     arrowHeight *= 1.4;

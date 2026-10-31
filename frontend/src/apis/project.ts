@@ -35,6 +35,8 @@ export interface APIProject {
   archived: boolean;
   withProofread: boolean;
   withAuthor: boolean;
+  /** 作者信息模板：{翻译}/{嵌字}/{原作者} 占位符 + 固定文案；空串=使用手填原作者 */
+  authorLabelTemplate: string;
   hasOutput: boolean;
   typesetFileCount: number;
   imageFileCount: number;
@@ -207,6 +209,8 @@ interface EditProjectData {
   applicationCheckType: number;
   defaultRole: string;
   projectSet?: string;
+  /** 作者信息模板（仅启用原作者的项目可改） */
+  authorLabelTemplate?: string;
 }
 /** 修改项目 */
 const editProject = ({

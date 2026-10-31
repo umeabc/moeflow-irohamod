@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     from app.models.project import Project
 from app.tasks.file_parse import parse_text, safe
 from app.tasks.ocr import ocr
-from app.constants.source import SourceKind, SourcePositionType
+from app.constants.source import AUTHOR_LABEL_GROUP, SourceKind, SourcePositionType
 from app.constants.file import (
     FileNotExistReason,
     FileSafeStatus,
@@ -334,19 +334,9 @@ class File(Document):
         for target in self.project.targets():
             file.create_target_cache(target)
         # 复制原作者标号（图片修订版；文本文件不会出现作者标号）
-        author_source = Source.objects(file=self, kind=SourceKind.AUTHOR).first()
-        if author_source:
-            Source(
-                file=file,
-                kind=SourceKind.AUTHOR,
-                author_key=str(file.id),
-                content=author_source.content,
-                x=author_source.x,
-                y=author_source.y,
-                position_type=author_source.position_type,
-                machine=False,
-                rank=file.next_source_rank(),
-            ).save()
+        from app.services.file_author import apply_author_label
+
+        apply_author_label(file, project=self.project)
         return file
 
     def activate_revision(self):
@@ -374,20 +364,10 @@ class File(Document):
             update_self=False,
         )
         self.update_cache("edit_time", datetime.datetime.utcnow())
-        # 修订版切换后确保原作者标号仍存在（作者标号不参与计数）
-        if self.type == FileType.IMAGE and (self.original_author or "").strip():
-            if not Source.objects(file=self, kind=SourceKind.AUTHOR).first():
-                Source(
-                    file=self,
-                    kind=SourceKind.AUTHOR,
-                    author_key=str(self.id),
-                    content=self.original_author,
-                    x=0.01,
-                    y=0.01,
-                    position_type=SourcePositionType.IN,
-                    machine=False,
-                    rank=self.next_source_rank(),
-                ).save()
+        # 修订版切换后确保作者信息标号仍存在（作者标号不参与计数）
+        from app.services.file_author import apply_author_label
+
+        apply_author_label(self, project=self.project)
         # 更新项目翻译计数缓存
         for target in self.project.targets():
             self.inc_cache(
@@ -1236,7 +1216,12 @@ class File(Document):
         data += ">>>>>>>>[" + path + self.name + "]<<<<<<<<\r\n"
         # 遍历所有原文
         for id, source in enumerate(self.sources(), start=1):
-            group_id = source.position_type
+            # 作者信息固定导出为第 3 组（框内=1、框外=2、作者信息=3）
+            group_id = (
+                AUTHOR_LABEL_GROUP
+                if source.kind == SourceKind.AUTHOR
+                else source.position_type
+            )
             # 标签信息 ---[id]---[x,y,group_id]
             data += (
                 "----------------["
@@ -1250,8 +1235,10 @@ class File(Document):
                 + "]\r\n"
             )
             if source.kind == SourceKind.AUTHOR:
-                # 原作者标号直接导出文件级署名
-                content = source.content
+                # 作者信息按项目模板 + 当前负责人字段实时渲染（不依赖缓存内容）
+                from app.services.file_author import render_author_label
+
+                content = render_author_label(self, project=self.project)
             else:
                 translation = source.best_translation(target=target)
                 # 有翻译
@@ -1596,9 +1583,18 @@ class Source(Document):
         self.file.inc_cache("source_count", -1)
 
     def to_api(self):
+        content = self.content
+        if (self.kind or SourceKind.TEXT) == SourceKind.AUTHOR:
+            # 作者信息是派生内容：按项目模板 + 当前负责人字段实时渲染，
+            # 避免「改了翻译/嵌字负责人但标号文案还是旧的」
+            from app.services.file_author import render_author_label
+
+            file = self.file
+            if file is not None:
+                content = render_author_label(file)
         return {
             "id": str(self.id),
-            "content": self.content,
+            "content": content,
             "x": self.x,
             "y": self.y,
             "rank": self.rank,

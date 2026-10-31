@@ -364,6 +364,9 @@ class Project(GroupMixin, Document):
     with_proofread = BooleanField(db_field="wp", default=True)
     # 是否启用「原作者」栏（文件级署名标号）；老项目缺省为 False
     with_author = BooleanField(db_field="wa", default=False)
+    # 作者信息模板（仅 with_author 项目使用）：支持 {翻译}/{嵌字}/{原作者} 占位符，
+    # 纯文本（如 B站@BA校委会）会出现在每张图上；为空时回退到手填原作者（v16 行为）
+    author_label_template = StringField(db_field="alt", default="")
     # 是否已成功导出过（用于进度条计算「已导出」条件）
     has_output = BooleanField(db_field="ho", default=False)
 
@@ -697,6 +700,12 @@ class Project(GroupMixin, Document):
         # 创建文件对象
         file = self.create_file(filename, parent)
         file.upload_real_file(real_file)
+        # 启用原作者的项目：新图片自动带一条「作者信息」标号（内容按模板渲染，
+        # 模板为空时仅在手填原作者后才出现，行为与 v16 一致）
+        if file.type == FileType.IMAGE and bool(self.with_author):
+            from app.services.file_author import apply_author_label
+
+            apply_author_label(file, project=self)
         return file
 
     @classmethod
@@ -989,14 +998,15 @@ class Project(GroupMixin, Document):
         file_ids_exclude: List[str] = None,
     ):
         """将图片文件的翻译导出成Labelplus格式"""
+        # 标签分组：1=框内、2=框外；启用原作者的项目追加第 3 组「作者信息」
+        label_groups = [gettext("框内"), gettext("框外")]
+        if bool(self.with_author):
+            label_groups.append(gettext("作者信息"))
         # Labelplus翻译文件头格式
         data = (
             "1,0\r\n"  # 版本
             + "-\r\n"
-            + gettext("框内")
-            + "\r\n"  # 标签分组
-            + gettext("框外")
-            + "\r\n"
+            + "".join(group + "\r\n" for group in label_groups)
             + "-\r\n"
             + gettext("可使用 LabelPlus Photoshop 脚本导入 psd 中")
             + "\r\n"  # 注释
@@ -1082,6 +1092,7 @@ class Project(GroupMixin, Document):
             "archived": bool(self.archived),
             "with_proofread": bool(self.with_proofread),
             "with_author": bool(self.with_author),
+            "author_label_template": self.author_label_template or "",
             "has_output": bool(self.has_output),
             # 已嵌字（导出时写入 file.typesetter）图片数 / 图片总数，用于嵌字进度绿条
             # 注意：老数据的 tyu 字段可能缺失(=null)，$ne:"" 会把 null 也算进来，故用 nin ["", None]

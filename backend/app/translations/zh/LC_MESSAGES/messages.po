@@ -1838,3 +1838,22 @@ msgstr "没有有效参数"
 #~ msgid "Initialized Language collection with %d languages"
 #~ msgstr ""
 
+#: app/models/project.py:1003
+msgid "作者信息"
+msgstr "作者信息"
+
+#: app/services/file_author.py:120
+msgid "作者信息模板格式错误"
+msgstr "作者信息模板格式错误"
+
+#: app/services/file_author.py:126
+msgid "作者信息模板最多 1000 个字符"
+msgstr "作者信息模板最多 1000 个字符"
+
+#: app/services/file_author.py:136
+msgid "作者信息模板包含未知占位符：{names}（可用：翻译、嵌字、原作者）"
+msgstr "作者信息模板包含未知占位符：{names}（可用：翻译、嵌字、原作者）"
+
+#: app/services/file_author.py:210
+msgid "该项目未启用原作者"
+msgstr "该项目未启用原作者"

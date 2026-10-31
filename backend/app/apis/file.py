@@ -22,6 +22,7 @@ from app.utils.hash import get_file_md5
 from app.models.file import File, FileTargetCache, Translation
 from app.models.project import Project, ProjectPermission
 from app.services.file_author import (
+    apply_author_label,
     clear_original_author,
     ensure_original_author_editable,
     get_author_source,
@@ -466,6 +467,9 @@ class FileAPI(MoeAPIView):
             if editable:
                 file.update(**editable)
                 file.reload()
+                # 负责人字段可能出现在作者信息模板里，同步更新作者标号文案
+                if file.type == FileType.IMAGE and bool(file.project.with_author):
+                    apply_author_label(file)
                 return {
                     "message": gettext("保存成功"),
                     "file": file.to_api(),

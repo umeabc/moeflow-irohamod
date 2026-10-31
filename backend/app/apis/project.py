@@ -7,6 +7,7 @@ import datetime
 from app.exceptions.project import ProjectFinishedError, TargetNotExistError
 from flask import current_app
 from flask_babel import gettext
+from flask_apikit.exceptions import ValidateError
 
 from app.core.views import MoeAPIView
 from app.decorators.auth import token_required
@@ -27,6 +28,11 @@ from app.validators.project import (
     CreateOutputSchema,
 )
 from app.core.responses import MoePagination
+from app.services.file_author import (
+    apply_author_label,
+    apply_project_author_template,
+    validate_author_template,
+)
 from app.tasks.output_project import output_project
 from app.exceptions.output import OutputTooFastError
 
@@ -98,8 +104,23 @@ class ProjectAPI(MoeAPIView):
                 raise NoPermissionError(
                     gettext("仅项目管理员与创建人可移动项目集")
                 )
+        # 作者信息模板：仅「启用原作者」的项目可用
+        template_changed = "author_label_template" in data
+        if template_changed:
+            if not bool(project.with_author):
+                raise ValidateError(gettext("该项目未启用原作者"))
+            data["author_label_template"] = validate_author_template(
+                data["author_label_template"]
+            )
         project.update(**data)
         project.reload()
+        if template_changed:
+            # 模板变更后，按新模板为全部图片补齐/清理作者信息标号
+            # （展示与导出本身按模板实时渲染，这里只保证标号存在）
+            try:
+                apply_project_author_template(project)
+            except Exception:  # noqa: BLE001 - 同步失败不应回滚模板保存
+                current_app.logger.exception("同步作者信息标号失败")
         return {
             "message": gettext("修改成功"),
             "project": project.to_api(user=self.current_user),
@@ -377,6 +398,10 @@ class ProjectTargetOutputListAPI(MoeAPIView):
         )
         for f in files:
             f.update(typesetter=self.current_user.name)
+            f.reload()  # update() 不刷新内存对象，作者信息渲染需要最新嵌字者
+            # 嵌字者可能出现在作者信息模板里，导出后同步作者标号文案
+            if bool(project.with_author):
+                apply_author_label(f, project=project)
         output_project(str(output.id))
         return output.to_api()
 
