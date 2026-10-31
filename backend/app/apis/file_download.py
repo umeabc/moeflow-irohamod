@@ -86,7 +86,6 @@ def _run_media_import_task_inner(task, project, settings, download_kind="twitter
     )
 
     proxy = getattr(settings, "download_proxy", "") or ""
-    auth = (getattr(settings, "twitter_auth", "") or "").strip()
     ct0 = (getattr(settings, "twitter_ct0", "") or "").strip()
     session = (getattr(settings, "pixiv_session", "") or "").strip()
     bluesky_auth_headers = None

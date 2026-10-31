@@ -5,16 +5,14 @@
 后台线程逐张下载入库并更新 done/duplicated/finished，前端轮询进度。
 """
 import datetime
-from typing import Union, NoReturn
+from typing import Union
 
-from bson import ObjectId
 from mongoengine import (
     BooleanField,
     DateTimeField,
     Document,
     IntField,
     ListField,
-    ObjectIdField,
     ReferenceField,
     StringField,
 )

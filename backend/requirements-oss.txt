@@ -1,0 +1,14 @@
+# Optional Aliyun OSS backend (STORAGE_TYPE=OSS).
+oss2==2.7.0
+  aliyun-python-sdk-core-v3==2.13.3
+    jmespath==0.10.0
+    pycryptodome==3.22.0
+  aliyun-python-sdk-kms==2.16.5
+    aliyun-python-sdk-core==2.16.0
+      cryptography==44.0.3
+        cffi==1.17.1
+          pycparser==2.22
+      jmespath==0.10.0
+  crcmod==1.7
+  pycryptodome==3.22.0
+  requests==2.22.0

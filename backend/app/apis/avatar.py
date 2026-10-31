@@ -12,7 +12,7 @@ from app.exceptions import UploadFileNotFoundError
 from app.models.team import Team, TeamPermission
 from flask_babel import gettext, lazy_gettext
 from app.utils.logging import logger
-import oss2
+from app.services.oss import NoSuchKey
 from app.exceptions.base import NoPermissionError, RequestDataWrongError
 
 
@@ -71,7 +71,7 @@ class AvatarAPI(MoeAPIView):
                     avatar_owner._avatar,
                     bucket_name=oss.default_bucket_name() or None,
                 )
-            except oss2.exceptions.NoSuchKey as e:
+            except NoSuchKey as e:
                 logger.error(e)
             except Exception as e:
                 logger.error(e)

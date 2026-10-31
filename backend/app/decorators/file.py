@@ -49,15 +49,3 @@ def only_file(func):
         return func(self, *args, **kwargs)
 
     return wrapper
-
-
-def only_folder(func):
-    """只允许FOLDER使用的函数，供File模型使用"""
-
-    @wraps(func)
-    def wrapper(self: "File", *args, **kwargs):
-        if self.type != FileType.FOLDER:
-            raise FileTypeNotSupportError(gettext("不能对文件执行 ") + str(func))
-        return func(self, *args, **kwargs)
-
-    return wrapper

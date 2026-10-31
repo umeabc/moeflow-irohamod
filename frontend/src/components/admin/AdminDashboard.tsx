@@ -15,7 +15,7 @@ import style from '@/style';
 interface SummaryValue<T = number> { value?: T; error?: boolean; }
 interface AdminSummary { teams: SummaryValue; projects: SummaryValue; images: SummaryValue; storage: SummaryValue<{ storageType?: string; total: number; used: number; free: number }>; system: SummaryValue<APISystemStatus>; }
 const emptySummary = (): AdminSummary => ({ teams: {}, projects: {}, images: {}, storage: {}, system: {} });
-const formatBytes = (bytes?: number | null) => { if (bytes == null || bytes < 0) return '—'; if (!bytes) return '0 B'; const units = ['B','KB','MB','GB','TB']; const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1); return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`; };
+import { formatBytes } from '@/utils/format';
 const percentText = (value?: number | null) => value == null ? '—' : `${value.toFixed(1)}%`;
 const SummaryCard: FC<{ title: string; icon: string; value: React.ReactNode; detail?: React.ReactNode; onClick: () => void }> = ({ title, icon, value, detail, onClick }) => <Card hoverable onClick={onClick} className="AdminDashboard__SummaryCard"><div className="AdminDashboard__CardIcon"><Icon icon={icon as any} /></div><div className="AdminDashboard__CardTitle">{title}</div><div className="AdminDashboard__CardValue">{value}</div>{detail && <div className="AdminDashboard__CardDetail">{detail}</div>}</Card>;
 

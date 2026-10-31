@@ -633,7 +633,7 @@ export const FileList: FC<FileListProps> = ({
           });
         }}
         // 上传失败
-        onerror={(error, file, _status, respMsg) => {
+        onerror={(error, file) => {
           if (!file || !file.id) {
             return;
           }
@@ -641,7 +641,7 @@ export const FileList: FC<FileListProps> = ({
           let isDuplicate = false;
           try {
             const body =
-              typeof respMsg === 'string' ? JSON.parse(respMsg) : respMsg;
+              typeof error.body === 'string' ? JSON.parse(error.body) : error.body;
             if (body && body.code === 8008) {
               isDuplicate = true;
               message.warning(body.message, 4);
@@ -1059,7 +1059,7 @@ export const FileList: FC<FileListProps> = ({
           targetID={target.id}
           selectedFileIds={selectedFileIds}
           onExported={() => {
-            loadPage(currentPageSpecRef.current);
+            if (currentPageSpecRef.current) loadPage(currentPageSpecRef.current);
             // 导出成功后刷新项目数据（has_output 等），使进度条绿条立即更新
             api.project
               .getProject({ id: project.id })
@@ -1094,7 +1094,8 @@ export const FileList: FC<FileListProps> = ({
           // 下载导入成功后重新拉取列表（跳回第一页）：
           // 不手动构造 items 插入，避免后端返回字段与列表渲染所需的
           // 完整结构不一致时崩溃白屏，改为走正常列表接口刷新。
-          loadPage({ ...currentPageSpecRef.current, page: 1 });
+          const pageSpec = currentPageSpecRef.current;
+          if (pageSpec) loadPage({ ...pageSpec, page: 1 });
         }}
       />
     </div>

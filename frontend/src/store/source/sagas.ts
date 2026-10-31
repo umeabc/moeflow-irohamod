@@ -12,7 +12,7 @@ import {
 } from 'redux-saga/effects';
 import { v4 as uuidv4 } from 'uuid';
 import { AppState } from '..';
-import { api, BasicSuccessResult, resultTypes } from '@/apis';
+import { api, BasicSuccessResult, DataFailureResult, FailureResults, resultTypes } from '@/apis';
 import { APISource } from '@/apis/source';
 import { APITranslation } from '@/apis/translation';
 import { SOURCE_POSITION_TYPE } from '@/constants/source';
@@ -48,9 +48,11 @@ import {
   deleteTranslation,
 } from './slice';
 const inputDebounceDelay = 500;
+const asFailure = (error: unknown) => error as FailureResults;
+const reportFailure = (error: unknown) => asFailure(error).default();
 
 // worker Sage
-function* fetchSourcesWorker(action: ReturnType<typeof fetchSourcesSaga>) {
+function* fetchSourcesWorker(action: ReturnType<typeof fetchSourcesSaga>): Generator<any, void, any> {
   yield put(setSourcesLoading(true));
   yield put(setSources([]));
   const [cancelToken, cancel] = getCancelToken();
@@ -72,7 +74,7 @@ function* fetchSourcesWorker(action: ReturnType<typeof fetchSourcesSaga>) {
     }));
     yield put(setSources(data));
   } catch (error) {
-    error.default();
+    reportFailure(error);
   } finally {
     if (yield cancelled()) {
       cancel();
@@ -81,7 +83,7 @@ function* fetchSourcesWorker(action: ReturnType<typeof fetchSourcesSaga>) {
   }
 }
 
-function* createSourceWorker(action: ReturnType<typeof createSourceSaga>) {
+function* createSourceWorker(action: ReturnType<typeof createSourceSaga>): Generator<any, void, any> {
   const tempID = uuidv4();
   yield put(
     createSource({
@@ -89,6 +91,7 @@ function* createSourceWorker(action: ReturnType<typeof createSourceSaga>) {
       x: action.payload.x,
       y: action.payload.y,
       isTemp: true,
+      rank: 0, // 服务端创建后返回真实顺序；临时标号不参与排序
       labelStatus: 'creating',
       proodreadContentStatuses: {},
       focus: false,
@@ -151,7 +154,7 @@ function* createSourceWorker(action: ReturnType<typeof createSourceSaga>) {
       );
     }
   } catch (error) {
-    error.default();
+    reportFailure(error);
     yield put(deleteSource({ id: tempID }));
   } finally {
     if (yield cancelled()) {
@@ -160,7 +163,7 @@ function* createSourceWorker(action: ReturnType<typeof createSourceSaga>) {
   }
 }
 
-function* editSourceWorker(action: ReturnType<typeof editSourceSaga>) {
+function* editSourceWorker(action: ReturnType<typeof editSourceSaga>): Generator<any, void, any> {
   yield put(
     editSource({
       id: action.payload.id,
@@ -191,8 +194,8 @@ function* editSourceWorker(action: ReturnType<typeof editSourceSaga>) {
     );
   } catch (error) {
     if (
-      error.type === resultTypes.BASIC_FAILURE &&
-      error.data.code === 8005 // label 已被删除
+      asFailure(error).type === resultTypes.BASIC_FAILURE &&
+      (asFailure(error) as DataFailureResult).data.code === 8005 // label 已被删除
     ) {
       yield put(deleteSource({ id: action.payload.id }));
     } else {
@@ -217,7 +220,7 @@ function* editSourceWorker(action: ReturnType<typeof editSourceSaga>) {
         );
       }
     }
-    error.default();
+    reportFailure(error);
   } finally {
     if (yield cancelled()) {
       cancel();
@@ -225,7 +228,7 @@ function* editSourceWorker(action: ReturnType<typeof editSourceSaga>) {
   }
 }
 
-function* deleteSourceWorker(action: ReturnType<typeof deleteSourceSaga>) {
+function* deleteSourceWorker(action: ReturnType<typeof deleteSourceSaga>): Generator<any, void, any> {
   const source: Source = yield select((state: AppState) =>
     state.source.sources.find((source) => source.id === action.payload.id),
   );
@@ -269,14 +272,14 @@ function* deleteSourceWorker(action: ReturnType<typeof deleteSourceSaga>) {
     yield put(focusTranslation({ id: '' }));
   } catch (error) {
     if (
-      error.type === resultTypes.BASIC_FAILURE &&
-      error.data.code === 8005 // label 已被删除
+      asFailure(error).type === resultTypes.BASIC_FAILURE &&
+      (asFailure(error) as DataFailureResult).data.code === 8005 // label 已被删除
     ) {
       yield put(deleteSource({ id: action.payload.id }));
       yield put(focusSource({ id: '', effects: [], noises: [] }));
       yield put(focusTranslation({ id: '' }));
     }
-    error.default();
+    reportFailure(error);
   } finally {
     if (yield cancelled()) {
       cancel();
@@ -290,7 +293,7 @@ function* deleteSourceWorker(action: ReturnType<typeof deleteSourceSaga>) {
   }
 }
 
-function* rerankSourceWorker(action: ReturnType<typeof rerankSourceSaga>) {
+function* rerankSourceWorker(action: ReturnType<typeof rerankSourceSaga>): Generator<any, void, any> {
   const { id, next_source_id } = action.payload;
 
   yield api.source.rerankSource({
@@ -305,7 +308,7 @@ function* rerankSourceWorker(action: ReturnType<typeof rerankSourceSaga>) {
 
 function* editMyTranslationWorker(
   action: ReturnType<typeof editMyTranslationSaga>,
-) {
+): Generator<any, void, any> {
   const { sourceID, content, targetID, focus = false } = action.payload;
 
   yield put(
@@ -360,7 +363,7 @@ function* editMyTranslationWorker(
       }
     }
   } catch (error) {
-    error.default();
+    reportFailure(error);
     yield put(
       editSource({ id: sourceID, myTranslationContentStatus: 'saveFailed' }),
     );
@@ -373,7 +376,7 @@ function* editMyTranslationWorker(
 
 function* batchSelectTranslationWorker(
   action: ReturnType<typeof batchSelectTranslationSaga>,
-) {
+): Generator<any, void, any> {
   const { fileID, data } = action.payload;
   const [cancelToken, cancel] = getCancelToken();
   try {
@@ -411,7 +414,7 @@ function* batchSelectTranslationWorker(
       }
     }
   } catch (error) {
-    error.default();
+    reportFailure(error);
   } finally {
     if (yield cancelled()) {
       cancel();
@@ -422,7 +425,7 @@ function* batchSelectTranslationWorker(
 
 function* selectTranslationWorker(
   action: ReturnType<typeof selectTranslationSaga>,
-) {
+): Generator<any, void, any> {
   const { sourceID, translationID, selected } = action.payload;
   const [cancelToken, cancel] = getCancelToken();
   try {
@@ -445,7 +448,7 @@ function* selectTranslationWorker(
       }),
     );
   } catch (error) {
-    error.default();
+    reportFailure(error);
   } finally {
     if (yield cancelled()) {
       cancel();
@@ -454,7 +457,7 @@ function* selectTranslationWorker(
   }
 }
 
-function* editProofreadWorker(action: ReturnType<typeof editProofreadSaga>) {
+function* editProofreadWorker(action: ReturnType<typeof editProofreadSaga>): Generator<any, void, any> {
   const { sourceID, translationID, proofreadContent } = action.payload;
   const currentUser: UserState = yield select((state: AppState) => state.user);
 
@@ -526,7 +529,7 @@ function* editProofreadWorker(action: ReturnType<typeof editProofreadSaga>) {
       );
     }
   } catch (error) {
-    error.default();
+    reportFailure(error);
     yield put(
       editProofreadContentStatuses({
         sourceID,
@@ -542,7 +545,7 @@ function* editProofreadWorker(action: ReturnType<typeof editProofreadSaga>) {
 }
 
 // watcher Saga
-function* watcher() {
+function* watcher(): Generator<any, void, any> {
   yield takeLatest(fetchSourcesSaga.type, fetchSourcesWorker);
   yield takeEvery(createSourceSaga.type, createSourceWorker);
   yield takeLatestPerKey(

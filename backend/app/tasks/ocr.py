@@ -596,7 +596,6 @@ def ocr_task(type, id):
     (Project, Team)
     connect_db(celery.conf.app_config)
     oss.init(celery.conf.app_config)
-    gs_vision.init(celery.conf.app_config)
     project = Project.objects(id=id).first()
     if project is None:
         return f"跳过 (项目不存在)：<{type}>{id}"

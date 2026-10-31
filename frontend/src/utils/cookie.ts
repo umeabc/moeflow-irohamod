@@ -4,14 +4,6 @@ import { jwtDecode } from 'jwt-decode';
 const cookies = new Cookies();
 
 /**
- * 将 Cookie 中取出的字符串转为布尔值
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const toBoolean = (value: string | undefined) => {
-  return value?.toLowerCase() === 'true';
-};
-
-/**
  * 从 Cookie 中获取 token
  */
 const getToken = (): string | undefined => {

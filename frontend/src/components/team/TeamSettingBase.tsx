@@ -44,7 +44,7 @@ export const TeamSettingBase: FC<TeamSettingBaseProps> = ({ className }) => {
   const deleteTeam = () => {
     setDeleteLoading(true);
     api
-      .deleteTeam({ id: currentTeam.id })
+      .deleteTeam({ teamID: currentTeam.id })
       .then((result) => {
         setDeleteLoading(false);
         // 删除成功
@@ -53,7 +53,7 @@ export const TeamSettingBase: FC<TeamSettingBaseProps> = ({ className }) => {
         // 跳转到主页
         history.replace(`/dashboard`);
         // 弹出提示
-        message.success(result.data.message);
+        message.success(result.data?.message);
       })
       .catch((error) => {
         error.default();

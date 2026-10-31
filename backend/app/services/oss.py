@@ -12,9 +12,14 @@ import logging
 from typing import Union, Optional
 from urllib import parse
 
-import oss2
-from oss2 import to_string
-from oss2.exceptions import NoSuchKey
+try:
+    from oss2.exceptions import NoSuchKey
+except ImportError:
+    class NoSuchKey(Exception):
+        """Optional OSS SDK is not installed; remote backends still report missing keys."""
+        def __init__(self, status=404, headers=None, body=None, details=None):
+            super().__init__(status)
+            self.status = status
 
 import requests
 
@@ -32,8 +37,6 @@ def md5sum(src):
 def aliyun_cdn_url_auth_c(uri, key, exp):
     """阿里云 CDN 鉴权方式 C"""
     p = re.compile("^(http://|https://)?([^/?]+)(/[^?]*)?(\\?.*)?$")
-    if not p:
-        return None
     m = p.match(uri)
     scheme, host, path, args = m.groups()
     if not scheme:
@@ -67,6 +70,8 @@ class OSS:
         # 非 R2 模式也初始化为空列表，避免 AttributeError
         self.r2_buckets: list[dict] = []
         if self.storage_type == StorageType.OSS:
+            import oss2
+
             self.auth = oss2.Auth(
                 config["OSS_ACCESS_KEY_ID"],
                 config["OSS_ACCESS_KEY_SECRET"],
@@ -82,7 +87,6 @@ class OSS:
             self.cdn_url_key = config["CDN_URL_KEY_A"]
         elif self.storage_type == StorageType.R2:
             # Cloudflare R2：S3 兼容 API（AWS SigV4），用 boto3 访问
-            import boto3
             import json as _json
 
             self.r2_cf_api_token = config.get("R2_CF_API_TOKEN", "")
@@ -569,16 +573,9 @@ class OSS:
                         pass
                 self._remote_invalidate_cache(path)
         elif self.storage_type == StorageType.LOCAL_STORAGE:
-            # 如果给予列表，则批量删除
-            if isinstance(path, list):
-                for p in path:
-                    folder_path = os.path.join(self.STORAGE_PATH, p)
-                    if os.path.isdir(folder_path) and len(os.listdir(folder_path)) == 0:
-                        os.rmdir(folder_path)
-            else:
-                folder_path = os.path.join(self.STORAGE_PATH, path)
-                if os.path.isdir(folder_path) and len(os.listdir(folder_path)) == 0:
-                    os.rmdir(folder_path)
+            folder_path = os.path.join(self.STORAGE_PATH, path)
+            if os.path.isdir(folder_path) and len(os.listdir(folder_path)) == 0:
+                os.rmdir(folder_path)
 
     def remote_stats(self) -> dict:
         """imgstore /stats：返回文件数与占用字节（写 API 鉴权）"""
@@ -686,7 +683,9 @@ class OSS:
             params["response-content-disposition"] = "attachment"
         if process_name:
             params["x-oss-process"] = f"style/{process_name}"
-        key = to_string(path + filename)
+        import oss2
+
+        key = str(path + filename)
         req = oss2.http.Request(
             method, oss_domain + parse.quote(key), headers=headers, params=params
         )

@@ -5,7 +5,9 @@
 import os
 from PIL import Image, ImageOps
 
-from oss2.exceptions import NoSuchKey
+from app.services.oss import NoSuchKey
+
+from flask import current_app
 
 from app import STORAGE_PATH, celery
 from app.constants.storage import StorageType
@@ -118,7 +120,10 @@ def create_thumbnail_task(image_id: str):
 
 
 def create_thumbnail(image_id, /, *, run_sync=False):
-    alive_workers = celery.control.ping()
+    if current_app.config.get("TESTING"):
+        alive_workers = []
+    else:
+        alive_workers = celery.control.ping()
     if len(alive_workers) == 0 or run_sync:
         # 同步执行
         create_thumbnail_task(image_id)

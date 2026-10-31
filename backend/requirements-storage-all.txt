@@ -1,0 +1,4 @@
+# Compatibility mode: install every optional storage/OCR integration.
+-r requirements-oss.txt
+-r requirements-r2.txt
+-r requirements-google-ocr.txt

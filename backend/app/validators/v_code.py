@@ -81,19 +81,3 @@ class ConfirmEmailVCodeSchema(DefaultSchema):
     @validates_schema
     def verify_captcha(self, data):
         captcha_validator(data["captcha_info"], data["captcha"])
-
-
-class ResetPasswordVCodeSchema(DefaultSchema):
-    """发送重置密码邮件验证"""
-
-    email = fields.Email(
-        required=True,
-        validate=[UserValidate.exist_email],
-        error_messages={**required_message, **email_invalid_message},
-    )
-    captcha_info = fields.Str(required=True, error_messages={**required_message})
-    captcha = fields.Str(required=True, error_messages={**required_message})
-
-    @validates_schema
-    def verify_captcha(self, data):
-        captcha_validator(data["captcha_info"], data["captcha"])

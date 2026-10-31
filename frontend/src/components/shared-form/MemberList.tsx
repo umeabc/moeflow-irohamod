@@ -23,7 +23,6 @@ import { toLowerCamelCase } from '@/utils';
 import { getCancelToken } from '@/utils/api';
 import { can } from '../../utils/user';
 import { Spin } from '@/components';
-import { TypeData } from '@/components/shared-form/TypeRadioGroup';
 
 /** 成员设置页的属性接口 */
 interface MemberListProps {
@@ -78,15 +77,15 @@ export const MemberList: FC<MemberListProps> = ({
         },
       })
       .then((result) => {
-        const data = (result.data || []) as TypeData[];
+        const data = (result.data || []).map(toLowerCamelCase) as Role[];
         // 仅翻嵌项目隐藏「校对」角色
         const filtered =
           groupType === 'project' &&
-          (currentGroup as any)?.withProofread === false
-            ? data.filter((r: any) => r.system_code !== 'proofreader')
+          (currentGroup as Project).withProofread === false
+            ? data.filter((role) => role.systemCode !== 'proofreader')
             : data;
-        setTypes(filtered as Role[]);
-        return filtered as Role[];
+        setTypes(filtered);
+        return filtered;
       })
       .catch((error) => {
         error.default();

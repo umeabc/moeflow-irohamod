@@ -2,7 +2,7 @@ import { css } from '@emotion/core';
 import { Button, Form as AntdForm, Input, message, Spin, Switch, Upload } from 'antd';
 import TextArea from 'antd/lib/input/TextArea';
 import classNames from 'classnames';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { api } from '@/apis';
 import {
@@ -102,13 +102,13 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
       .catch(() => setBrandAssets(null));
   };
 
-  const brandTextMeta: { key: string; labelId: string }[] = [
+  const brandTextMeta: { key: string; labelId: string }[] = React.useMemo(() => [
     { key: 'site.name', labelId: 'admin.brandTextSiteName' },
     { key: 'site.slogan', labelId: 'admin.brandTextSlogan' },
     { key: 'site.englishName', labelId: 'admin.brandTextEnglishName' },
-  ];
+  ], []);
 
-  const refreshBrandTexts = () => {
+  const refreshBrandTexts = useCallback(() => {
     api.siteSetting
       .getCustomMessages({})
       .then((result) => {
@@ -141,7 +141,7 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
           })),
         );
       });
-  };
+  }, [brandTextMeta]);
 
   const onBrandTextChange = (
     key: string,
@@ -268,9 +268,11 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
       .getSiteSetting({})
       .then((result) => {
         const data = toLowerCamelCase(result.data);
-        data.autoJoinTeamIDs = arrayToTextarea(data.autoJoinTeamIDs);
         setSiteSetting(data);
-        form.setFieldsValue(data);
+        form.setFieldsValue({
+          ...data,
+          autoJoinTeamIDs: arrayToTextarea(data.autoJoinTeamIDs),
+        });
         setLlmPresets(
           Array.isArray(data.llmPresets) && data.llmPresets.length > 0
             ? data.llmPresets
@@ -282,7 +284,7 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
       });
     refreshBrandAssets();
     refreshBrandTexts();
-  }, []);
+  }, [form, refreshBrandTexts]);
 
   return loading ? (
     <Spin />

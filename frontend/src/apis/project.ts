@@ -219,7 +219,7 @@ const editProject = ({
   configs,
 }: {
   id: string;
-  data: EditProjectData;
+  data: Partial<EditProjectData>;
   configs?: AxiosRequestConfig;
 }) => {
   return request({

@@ -7,9 +7,6 @@ import re
 import uuid
 
 import chardet
-from aliyunsdkcore import client
-from aliyunsdkcore.profile import region_provider
-from aliyunsdkcore.request import RoaRequest
 from celery.exceptions import MaxRetriesExceededError
 from flask import json
 
@@ -136,6 +133,10 @@ def safe_task(self, file_id):
 
     (Project, Team)
     # 配置文件
+    from aliyunsdkcore import client
+    from aliyunsdkcore.profile import region_provider
+    from aliyunsdkcore.request import RoaRequest
+
     green_client = client.AcsClient(
         celery.conf.app_config["SAFE_ACCESS_KEY_ID"],
         celery.conf.app_config["SAFE_ACCESS_KEY_SECRET"],
@@ -228,6 +229,10 @@ def safe_result_task(self, file_id):
 
     (Project, Team)
     # 配置
+    from aliyunsdkcore import client
+    from aliyunsdkcore.profile import region_provider
+    from aliyunsdkcore.request import RoaRequest
+
     green_client = client.AcsClient(
         celery.conf.app_config["SAFE_ACCESS_KEY_ID"],
         celery.conf.app_config["SAFE_ACCESS_KEY_SECRET"],

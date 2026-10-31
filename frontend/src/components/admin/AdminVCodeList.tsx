@@ -2,7 +2,7 @@ import { css } from '@emotion/core';
 import { Table, TablePaginationConfig } from 'antd';
 import classNames from 'classnames';
 import React, { useEffect, useState } from 'react';
-import apis from '@/apis';
+import apis, { FailureResults } from '@/apis';
 import { APIVCode } from '@/apis/user';
 import { FC } from '@/interfaces';
 import { toLowerCamelCase } from '@/utils';
@@ -26,7 +26,7 @@ export const AdminVCodeList: FC<AdminVCodeListProps> = ({ className }) => {
       const data = toLowerCamelCase(result.data);
       setData(data);
     } catch (error) {
-      error.default();
+      (error as FailureResults).default();
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,5 @@
 import { cancelled, put, select, takeLatest } from 'redux-saga/effects';
-import api from '../../apis';
+import api, { FailureResults } from '../../apis';
 import { toLowerCamelCase } from '../../utils';
 import { getCancelToken } from '../../utils/api';
 import { clearCurrentTeam, setCurrentTeam, setCurrentTeamSaga } from './slice';
@@ -7,7 +7,9 @@ import { AppState } from '..';
 import { UserTeam } from '../../interfaces';
 
 // worker Sage
-function* setCurrentTeamWorker(action: ReturnType<typeof setCurrentTeamSaga>) {
+function* setCurrentTeamWorker(
+  action: ReturnType<typeof setCurrentTeamSaga>,
+): Generator {
   // 清空当前 team
   yield put(clearCurrentTeam());
   const teams = yield select((state: AppState) => state.team.teams);
@@ -25,7 +27,7 @@ function* setCurrentTeamWorker(action: ReturnType<typeof setCurrentTeamSaga>) {
       });
       yield put(setCurrentTeam(toLowerCamelCase(result.data)));
     } catch (error) {
-      error.default();
+      (error as FailureResults).default();
     } finally {
       if (yield cancelled()) {
         cancel();

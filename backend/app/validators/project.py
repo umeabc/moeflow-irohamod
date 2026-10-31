@@ -287,16 +287,6 @@ class EditProjectSchema(DefaultSchema):
         return in_data
 
 
-class ChangeProjectUserSchema(DefaultSchema):
-    """修改项目用户验证器"""
-
-    role = fields.Str(
-        required=True,
-        validate=[object_id],
-        error_messages={**required_message},
-    )
-
-
 class CreateProjectTargetSchema(DefaultSchema):
     """创建项目目标验证器"""
 

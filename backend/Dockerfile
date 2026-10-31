@@ -14,8 +14,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir --user -r /tmp/requirements.txt
+ARG PIP_INDEX_URL=https://pypi.org/simple
+ENV PIP_INDEX_URL=${PIP_INDEX_URL}
+COPY requirements*.txt /tmp/
+ARG STORAGE_TYPE=LOCAL_STORAGE
+ARG ENABLE_GOOGLE_OCR=auto
+RUN pip install --no-cache-dir --user -r /tmp/requirements.txt && \
+    if [ "$STORAGE_TYPE" = "ALL" ]; then \
+        pip install --no-cache-dir --user -r /tmp/requirements-storage-all.txt; \
+    elif [ "$STORAGE_TYPE" = "OSS" ]; then \
+        pip install --no-cache-dir --user -r /tmp/requirements-oss.txt; \
+    elif [ "$STORAGE_TYPE" = "R2" ]; then \
+        pip install --no-cache-dir --user -r /tmp/requirements-r2.txt; \
+    elif [ "$STORAGE_TYPE" != "LOCAL_STORAGE" ] && [ "$STORAGE_TYPE" != "REMOTE_HTTP" ]; then \
+        echo "Unsupported STORAGE_TYPE: $STORAGE_TYPE" >&2; exit 1; \
+    fi && \
+    if [ "$ENABLE_GOOGLE_OCR" = "true" ] || [ "$STORAGE_TYPE" = "ALL" ]; then \
+        pip install --no-cache-dir --user -r /tmp/requirements-google-ocr.txt; \
+    fi
 
 # Copy application code
 COPY . /app

@@ -6,7 +6,7 @@
 import json
 import os
 import re
-import oss2
+from app.services.oss import NoSuchKey
 import shutil
 from zipfile import ZipFile
 
@@ -153,7 +153,7 @@ def output_project_task(output_id):
                         local_path=file_path,
                         bucket_name=file.storage_bucket or None,
                     )
-                except oss2.exceptions.NoSuchKey:
+                except NoSuchKey:
                     errors += (
                         f"File {file.name}<{str(file.id)}> is not found in server.\r\n"
                     )
@@ -228,7 +228,7 @@ def output_project_task(output_id):
 
 
 def output_project(output_id, /, *, run_sync=False):
-    alive_workers = celery.control.ping()
+    alive_workers = [] if _FORCE_SYNC_TASK else celery.control.ping()
     if len(alive_workers) == 0 or run_sync or _FORCE_SYNC_TASK:
         # 同步执行
         output_project_task(output_id)

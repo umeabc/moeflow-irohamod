@@ -3,10 +3,8 @@ import platform
 import re
 import shutil
 import time
-from urllib.parse import quote
-
 from bson import ObjectId
-from flask import current_app, redirect, request, send_file
+from flask import redirect, request, send_file
 from flask_babel import gettext
 
 from app import STORAGE_PATH, app_config, oss

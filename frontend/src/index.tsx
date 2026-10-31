@@ -2,7 +2,7 @@ import { initI18n } from './locales';
 import { ConfigProvider } from 'antd';
 import Bowser from 'bowser';
 import 'pepjs'; // 指针事件垫片
-import React, { StrictMode } from 'react';
+import { StrictMode } from 'react';
 import ReactDOM from 'react-dom';
 import { IntlProvider } from 'react-intl'; // i18n
 import { Provider } from 'react-redux';
@@ -32,14 +32,6 @@ import { loadHotKey, themeStorage } from './utils/storage';
 import { createDebugLogger } from './utils/debug-logger';
 const debugLogger = createDebugLogger('app');
 
-// 时间插件
-if (false && process.env.NODE_ENV === 'development') {
-  // 用于检测是什么导致 re-render
-  const { default: whyDidYouRender } = await import(
-    '@welldone-software/why-did-you-render'
-  );
-  whyDidYouRender(React, { trackAllPureComponents: true });
-}
 // 浏览器识别
 const browser = Bowser.getParser(window.navigator.userAgent);
 const platform = browser.getPlatformType() as Platform;

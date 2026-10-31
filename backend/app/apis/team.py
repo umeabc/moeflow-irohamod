@@ -5,7 +5,6 @@ from typing import List
 from app.exceptions.team import OnlyAllowAdminCreateTeamError
 from app.models.site_setting import SiteSetting
 from app.models.user import User
-from app.models.language import Language
 from flask import json, request, current_app
 from flask_babel import gettext
 
@@ -31,11 +30,6 @@ from flask_apikit.utils import QueryParser
 from app.models.project import ProjectRole, ProjectSet, ProjectUserRelation
 from app.validators.project import ProjectSetsSchema
 from flask_apikit.exceptions import ValidateError
-
-
-def getLanguageByCode(code):
-    lang = Language.by_code(code)
-    return lang.id
 
 
 class TeamListAPI(MoeAPIView):

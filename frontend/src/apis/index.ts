@@ -139,6 +139,28 @@ interface ValidationFailureResult {
   default: (form?: FormInstance) => void;
 }
 
+function isBasicFailureData(data: unknown): data is BasicFailureResultData {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof (data as BasicFailureResultData).code === 'number' &&
+    typeof (data as BasicFailureResultData).message === 'string'
+  );
+}
+
+function isValidationFailureData(
+  data: unknown,
+): data is ValidationFailureResultData {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    (data as ValidationFailureResultData).code === 2 &&
+    typeof (data as ValidationFailureResultData).message === 'object'
+  );
+}
+
+export type DataFailureResult = BasicFailureResult | ValidationFailureResult;
+
 /** 网络错误响应结果 */
 interface NetworkFailureResult {
   type: typeof resultTypes.NETWORK_FAILURE;
@@ -165,7 +187,7 @@ export type FailureResults =
   | CancelFailureResult
   | OtherFailureResult;
 
-export async function request<T = unknown>(
+export async function request<T = any>(
   axiosConfig: AxiosRequestConfig,
 ): Promise<BasicSuccessResult<T>> {
   const instance = await instanceP;
@@ -184,44 +206,50 @@ export async function request<T = unknown>(
       };
       return result;
     })
-    .catch((error: AxiosError) => {
+    .catch((error: AxiosError<BasicFailureResultData | ValidationFailureResultData>) => {
       if (
         error.response &&
         error.response.status >= 400 &&
         error.response.status < 500
       ) {
-        if (error.response.data.code === 2) {
+        const data = error.response.data;
+        if (isValidationFailureData(data)) {
+          const validationData = data;
           // 将 message 中的字段名转为小驼峰
-          error.response.data.message = toLowerCamelCase(
-            error.response.data.message,
-          );
+          validationData.message = toLowerCamelCase(validationData.message);
           // 验证错误
           const result: ValidationFailureResult = {
             type: resultTypes.VALIDATION_FAILURE,
-            data: error.response.data,
-            default: validateBasicFailure(error.response.data),
+            data: validationData,
+            default: validateBasicFailure(validationData),
           };
           throw result;
-        } else if (error.response.status === 401) {
-          // token 错误
-          const result: BasicFailureResult = {
-            type: resultTypes.BASIC_FAILURE,
-            data: error.response.data,
-            default: () => {
-              // 清理 token
-              store.dispatch(setUserToken({ token: '' }));
-            },
-          };
-          throw result;
-        } else {
+        } else if (isBasicFailureData(data)) {
+          if (error.response.status === 401) {
+            // token 错误
+            const result: BasicFailureResult = {
+              type: resultTypes.BASIC_FAILURE,
+              data,
+              default: () => {
+                // 清理 token
+                store.dispatch(setUserToken({ token: '' }));
+              },
+            };
+            throw result;
+          }
           // 基础错误
           const result: BasicFailureResult = {
             type: resultTypes.BASIC_FAILURE,
-            data: error.response.data,
-            default: defaultBasicFailure(error.response.data),
+            data,
+            default: defaultBasicFailure(data),
           };
           throw result;
         }
+        const result: OtherFailureResult = {
+          type: resultTypes.OTHER_FAILURE,
+          default: () => {},
+        };
+        throw result;
       } else {
         if (error.message === 'Network Error') {
           // 网络错误

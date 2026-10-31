@@ -27,7 +27,7 @@ const deleteTeam = ({
   teamID: string;
   configs?: AxiosRequestConfig;
 }) =>
-  request<unknown>({
+  request<{ message?: string }>({
     method: 'DELETE',
     url: `/v1/admin/teams/${teamID}`,
     ...configs,

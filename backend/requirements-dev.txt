@@ -1,6 +1,7 @@
 # DEVELOPMENT AND TESTING DEPENDENCIES
 # Include production dependencies first
 -r requirements.txt
+-r requirements-storage-all.txt
 
 # Testing frameworks
 pytest-cov==5.0.0

@@ -1,7 +1,7 @@
-# MoeFlow 定制版（iroha16-fix1）备份仓库
+# MoeFlow 定制版（iroha16-fix4）备份仓库
 
 > 本仓库为 MoeFlow（彩翻 / 萌翻）**内部定制版本**的源码备份仓库（私有）。
-> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前镜像：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix1`（= `:latest`）、`ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16`（= `:latest`）；正式机 compose 跟踪 `:latest`。
+> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前测试镜像：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix4`、`ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix4`；正式机 compose 仍跟踪 `:latest`。
 > 本文档为**脱敏版**，不含具体主机、域名、端口、代理与凭据信息。
 
 ---
@@ -51,6 +51,7 @@ MoeFlow（彩翻）是一款**自托管漫画翻译协作平台**：支持上传
 - **imgstore 存储概览（admin）**：dashboard「存储空间」卡片在 REMOTE_HTTP 模式显示「imgstore 总存储占用」（已用 / 剩余）；管理后台新增「imgstore 存储概览」页（服务 URL / 已用 / 剩余 / 总容量 / 占用比例）。LOCAL / R2 模式照常。
 - **登录页全新改版**：左品牌区（吉祥物 + 光环动画）+ 右登录/注册分段卡片；已登录状态展示「已登录」卡片（进入仪表盘 / 退出）。
 - **暗色模式高亮修复**：通知标题与站点设置「下载图片设置」分区标题在暗色模式下改为主题粉色高亮。
+- **iroha16-fix4 代码维护**：修复前端 TypeScript/ESLint/Jest 配置与既有类型错误；删除未使用组件、工具与依赖；合并重复的 `formatBytes` 和导出清理逻辑；云存储 SDK 改为按 `STORAGE_TYPE` 构建时可选安装，`LOCAL_STORAGE`/`REMOTE_HTTP` 不再携带 OSS/R2/Google SDK。
 
 ## 部署
 

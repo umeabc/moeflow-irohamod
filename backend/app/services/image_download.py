@@ -6,7 +6,6 @@
   用 Twitter 账号的 auth_token / ct0 cookie 请求推文页，解析其中的图片 URL 再下载。
 """
 import datetime
-import io
 import os
 import re
 from typing import List, Optional, Tuple
@@ -18,7 +17,6 @@ from curl_cffi import requests
 from curl_cffi.requests.exceptions import RequestException
 from flask_babel import gettext
 
-from app.exceptions import MoeError  # noqa: F401  (保留类型引用)
 from app.utils.filename import EMOJI_RE
 from app.utils.logging import logger
 

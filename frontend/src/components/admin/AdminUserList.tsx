@@ -1,5 +1,5 @@
 import { css } from '@emotion/core';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import dayjs from 'dayjs';
 import { FC } from '@/interfaces';
@@ -16,7 +16,7 @@ import {
   Form as AntdForm,
 } from 'antd';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
-import { api } from '@/apis';
+import { api, FailureResults } from '@/apis';
 import { toLowerCamelCase } from '@/utils';
 import { APIUser } from '@/apis/user';
 import { FormItem } from '@/components/shared-form/FormItem';
@@ -59,7 +59,8 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
   const [form] = AntdForm.useForm();
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
 
-  const fetchData = async () => {
+  const paginationKey = JSON.stringify(pagination);
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const result = await api.user.adminGetUserList({
@@ -76,15 +77,15 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
       });
       setData(data);
     } catch (error) {
-      error.default();
+      (error as FailureResults).default();
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination, word]);
 
   useEffect(() => {
     fetchData();
-  }, [JSON.stringify(pagination), word]);
+  }, [paginationKey, fetchData]);
 
   const handleTableChange = (pagination: TablePaginationConfig) => {
     setPagination(pagination);
@@ -102,7 +103,7 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
       fetchData();
       message.success(formatMessage({ id: 'site.setting.editSuccess' }));
     } catch (error) {
-      error.default();
+      (error as FailureResults).default();
     } finally {
       setLoading(false);
     }
@@ -147,7 +148,12 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
       });
       message.success(formatMessage({ id: 'site.setting.editSuccess' }));
     } catch (error) {
-      message.error(error.data.message?.password?.[0]);
+      const failure = error as FailureResults;
+      if (failure.type === 'VALIDATION_FAILURE') {
+        message.error(failure.data.message.password?.[0]);
+      } else {
+        failure.default();
+      }
     } finally {
       setLoading(false);
     }
@@ -160,7 +166,7 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
       message.success(formatMessage({ id: 'admin.deactivateSuccess' }));
       fetchData();
     } catch (error) {
-      error.default();
+      (error as FailureResults).default();
     } finally {
       setLoading(false);
     }

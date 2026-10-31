@@ -6,7 +6,6 @@ import datetime
 from typing import Union, NoReturn
 
 from bson import ObjectId
-from flask_babel import gettext
 from mongoengine import (
     BooleanField,
     DateTimeField,

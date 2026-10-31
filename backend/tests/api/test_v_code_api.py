@@ -1,4 +1,5 @@
 import time
+import unittest
 
 from app.exceptions import NeedTokenError, VCodeCoolingError
 from app.models.v_code import VCode, VCodeType
@@ -118,6 +119,7 @@ class VCodeTestCase(MoeAPITestCase):
         # 前后申请的验证码已变化
         self.assertNotEqual(content, content4)
 
+    @unittest.skip("自助重置密码已移除，改为联系站点管理员")
     def test_reset_password_api(self):
         """重置密码邮件API"""
         # 创建用户

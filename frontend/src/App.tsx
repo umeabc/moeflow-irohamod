@@ -410,9 +410,10 @@ const App: React.FC = () => {
             path="/:url(.*//+.*)"
             exact
             strict
-            render={({ match }) => (
-              <Redirect to={`/${match.params.url.replace(/\/\/+/, '/')}`} />
-            )}
+            render={({ match }) => {
+              const params = match.params as { url?: string };
+              return <Redirect to={`/${params.url?.replace(/\/\/+/, '/') ?? ''}`} />;
+            }}
           />
           <Route exact path={routes.index}>
             <IndexPage />

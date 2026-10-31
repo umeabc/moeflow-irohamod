@@ -2,7 +2,10 @@
  * 建立 FontAwesome 图标库，供 index.tsx 和 test/setup.ts 直接引用
  * （以避免 test 中未引用图标报 Warning）
  */
-import { library } from '@fortawesome/fontawesome-svg-core';
+import {
+  IconDefinition,
+  library,
+} from '@fortawesome/fontawesome-svg-core';
 import {
   faSyncAlt,
   faBars,
@@ -67,8 +70,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { faKissWinkHeart as faKissWinkHeartRegular } from '@fortawesome/free-regular-svg-icons';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
-library.add(
-  ...[
+const solidIcons = [
     faSyncAlt,
     faBars,
     faSearch,
@@ -129,9 +131,11 @@ library.add(
     faSave,
     faPaste,
     faClipboardList,
-  ],
+];
+library.add(
+  ...(solidIcons as IconDefinition[]),
   // Regular icons
-  ...[faKissWinkHeartRegular],
+  faKissWinkHeartRegular as IconDefinition,
   // Brand icons
-  ...[faGithub],
+  faGithub as IconDefinition,
 );

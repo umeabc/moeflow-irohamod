@@ -1,5 +1,5 @@
 import { cancelled, put, select, takeLatest } from 'redux-saga/effects';
-import { api, BasicSuccessResult } from '@/apis';
+import { api, BasicSuccessResult, FailureResults } from '@/apis';
 import { toLowerCamelCase } from '@/utils';
 import { getCancelToken } from '@/utils/api';
 import {
@@ -13,7 +13,7 @@ import { Project } from '@/interfaces';
 // worker Sage
 function* setCurrentProjectWorker(
   action: ReturnType<typeof setCurrentProjectSaga>,
-) {
+): Generator {
   // 清空当前 project
   yield put(clearCurrentProject());
   const projects: Project[] = yield select(
@@ -34,8 +34,8 @@ function* setCurrentProjectWorker(
         configs: { cancelToken },
       });
       yield put(setCurrentProject(toLowerCamelCase(result.data)));
-    } catch (error: any) {
-      error.default();
+    } catch (error) {
+      (error as FailureResults).default();
     } finally {
       if (yield cancelled()) {
         cancel();

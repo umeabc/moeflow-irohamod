@@ -1,7 +1,7 @@
 # MoeFlow 项目交接档案（iroha11 定制版）
 
 > 项目已稳定并正式上线。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
-> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。当前版本 **iroha16-fix3**。
+> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。当前测试版本 **iroha16-fix4**。
 > 注：本档案为**脱敏版**，不含具体主机 IP、域名、端口、代理与凭据；实际部署环境信息由部署方自理。
 
 ---
@@ -132,6 +132,13 @@
   - `CVE-2026-109618` / `CVE-2026-109619`（PHP RCE，8.2.35/8.3.36/8.4.27/8.5.12 修复）：**不适用**——正式机无 PHP（无 php 二进制、无 php-fpm、无 PHP 容器镜像），MoeFlow 后端为 Python 3.11。
   - `CVE-2026-111497`（Node.js Brotli 解码器 OOB 写 → RCE，24.22.1 修复）：**已修复**——正式机唯一 Node 运行时是 `bili-dyn-publisher` 容器，`node -v` = `v24.22.1`（即 2026-10-21 安全版），业务页面 200、日志无报错；MoeFlow 自身不使用 Node（前端为 nginx 静态、后端 Python）。
   - 容器内 nginx 为 `1.26.3`（`nginx:1.26` 基础镜像）：按 Debian 记录受 `CVE-2026-42055`（HTTP/2 头长度）与 `CVE-2026-48142`（charset 越界读）影响，但该容器仅 `listen 80`、无 `http2`、无 `charset` 指令，且只经主机 nginx 以 HTTP/1.1 反代，**当前拓扑不可达**；建议下次重建前端镜像时把 `FROM nginx:1.26` 提到 `nginx:1.31.8`。
+
+## 4.15 v16-fix4 代码维护与可选存储依赖（2026-11-01）
+- 前端修复 Jest/TypeScript/ESLint 配置与既有类型错误；删除未使用组件、工具与依赖；`formatBytes` 合并。
+- 后端合并导出清理逻辑（`app/services/output.py`），清理未注册接口/孤立工具/死分支；Linux 镜像内 28 项关键测试通过、14 项旧流程跳过。
+- 云存储 SDK 按 `STORAGE_TYPE` 构建时可选安装；`REMOTE_HTTP` 镜像不装 OSS/R2/Google SDK，`ALL` 保留完整兼容。
+- 不变：邀请码注册、管理员重置密码。
+- 测试机 172.29.133.24 已切换 fix4（compose 备份 `docker-compose.yml.bak-pre-iroha16-fix4-20261101-004605`）。
 
 ## 4.14 v16-fix3 作者信息自定义（2026-10-31）
 - **项目设置「作者信息」模板**：`Project.author_label_template`（`alt`）支持 `{翻译}` / `{嵌字}` / `{原作者}` 占位符，模板中的固定文案（如 `B站@BA校委会`）会出现在每张图上；整行占位符为空时省略该行，模板留空则回退到文件卡手填原作者。

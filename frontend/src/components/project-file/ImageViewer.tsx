@@ -34,9 +34,6 @@ import { MovableAreaImageBackground } from './MovableAreaImageBackground';
 import { MovableLabel } from './MovableLabel';
 import { Tooltip } from '@/components/shared/Tooltip';
 import { routes } from '@/pages/routes';
-import { createDebugLogger } from '@/utils/debug-logger';
-
-const debugLogger = createDebugLogger('components:project-file:ImageViewer');
 /**
  * 🖥浏览器识别
  */

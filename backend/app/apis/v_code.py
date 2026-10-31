@@ -4,7 +4,7 @@ from app.constants.v_code import VCodeTypeIntro
 from app.core.views import MoeAPIView
 from app.decorators.auth import admin_required, token_required
 from app.models.v_code import Captcha, VCode, VCodeType
-from app.validators import ConfirmEmailVCodeSchema, ResetPasswordVCodeSchema
+from app.validators import ConfirmEmailVCodeSchema
 
 
 class CaptchaAPI(MoeAPIView):
@@ -90,44 +90,6 @@ class ResetEmailVCodeAPI(MoeAPIView):
         )  # 重新发送等待的秒数
         email = self.current_user.email.lower()
         v_code = VCode.create(VCodeType.RESET_EMAIL, email, wait=wait)
-        v_code.to_email(email)
-        return {"wait": wait}
-
-
-class ResetPasswordVCodeAPI(MoeAPIView):
-    def post(self):
-        """
-        @api {post} /v1/reset-password-codes 重置密码邮件验证码
-        @apiVersion 1.0.0
-        @apiName reset_password_v_code
-        @apiGroup VCode
-
-        @apiUse APIHeader
-
-        @apiParam {String} email 邮箱地址
-        @apiParam {String} captchaInfo  人机验证码标识符
-        @apiParam {String} captcha      人机验证码内容
-        @apiParamExample {json} 请求示例
-        {
-            "email": "your@email.com",
-            "captcha_info":"f9ef49a6c9b347e3e8e941e25bcf5092",
-            "captcha":"3276"
-        }
-
-        @apiSuccess {Number} wait 下次发送等待时间
-        @apiSuccessExample {json} 返回示例
-        {
-            "wait": 60
-        }
-
-        @apiUse VCodeCoolingError
-        """
-        wait = current_app.config.get(
-            "RESET_PASSWORD_WAIT_SECONDS", 60
-        )  # 重新发送等待的秒数
-        data = self.get_json(ResetPasswordVCodeSchema())
-        email = data["email"].lower()
-        v_code = VCode.create(VCodeType.RESET_PASSWORD, email, wait=wait)
         v_code.to_email(email)
         return {"wait": wait}
 

@@ -56,7 +56,7 @@ export const ProjectImportForm: FC<ProjectImportFormProps> = ({
         const entries = await zipReader.getEntries();
         for (const entry of entries) {
           const writer = new zip.BlobWriter();
-          entry.getData?.(writer);
+          if (!entry.directory) entry.getData(writer);
           if (entry.filename === 'project.json') {
             project = await writer.getData();
           }
@@ -87,7 +87,7 @@ export const ProjectImportForm: FC<ProjectImportFormProps> = ({
               for (const entry of entries) {
                 if (entry.filename.startsWith('images/')) {
                   const writer = new zip.BlobWriter();
-                  entry.getData?.(writer);
+                  if (!entry.directory) entry.getData(writer);
                   const filename = entry.filename.replace('images/', '');
                   setImportStatuses(
                     produce((draft) => {

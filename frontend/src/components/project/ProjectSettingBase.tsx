@@ -440,7 +440,7 @@ export const ProjectSettingBase: FC<ProjectSettingBaseProps> = ({
                 options={projectSetOptions}
                 disabled={
                   !['admin', 'creator'].includes(
-                    currentProject.role?.systemCode,
+                    currentProject.role?.systemCode ?? '',
                   )
                 }
                 placeholder={formatMessage({

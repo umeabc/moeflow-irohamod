@@ -1,7 +1,6 @@
 from app.constants.file import FileType, ParseStatus
-from app.models.file import File
-from app.constants.output import OutputTypes
 from app.tasks.ocr import ocr
+from app.tasks.output_project import output_project
 from app.models.team import TeamPermission
 import datetime
 from app.exceptions.project import ProjectFinishedError, TargetNotExistError
@@ -33,7 +32,7 @@ from app.services.file_author import (
     apply_project_author_template,
     validate_author_template,
 )
-from app.tasks.output_project import output_project
+from app.services.output import create_all_outputs
 from app.exceptions.output import OutputTooFastError
 
 
@@ -279,42 +278,14 @@ class ProjectOutputListAPI(MoeAPIView):
     def post(self, project: Project):
         if not self.current_user.can(project, ProjectPermission.OUTPUT_TRA):
             raise NoPermissionError
-        outputs_json = []
-        for target in project.targets():
-            # 等待一定时间后允许再次导出
-            last_output = target.outputs().first()
-            if last_output and (
-                datetime.datetime.utcnow() - last_output.create_time
-                < datetime.timedelta(
-                    seconds=current_app.config.get("OUTPUT_WAIT_SECONDS", 60 * 5)
-                )
-            ):
-                continue
-            # 删除导出：保留「最近 3 个」且「最近 7 天」内的
-            # 删除条件：7 天以前 且 不在最近 3 个内
-            cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=7)
-            latest_three_ids = {
-                str(o.id) for o in target.outputs().limit(3)
-            }
-            old_targets = [
-                o
-                for o in target.outputs().filter(create_time__lt=cutoff)
-                if str(o.id) not in latest_three_ids
-            ]
-            if old_targets:
-                Output.delete_real_files(old_targets)
-                for o in old_targets:
-                    o.delete()
-            # 创建新target
-            output = Output.create(
-                project=project,
-                target=target,
-                user=self.current_user,
-                type=OutputTypes.ALL,
-            )
-            output_project(str(output.id))
-            outputs_json.append(output.to_api())
-        return outputs_json
+        outputs = create_all_outputs(
+            project,
+            self.current_user,
+            output_wait_seconds=current_app.config.get(
+                "OUTPUT_WAIT_SECONDS", 60 * 5
+            ),
+        )
+        return [output.to_api() for output in outputs]
 
 
 class ProjectTargetOutputListAPI(MoeAPIView):
@@ -425,35 +396,6 @@ class ProjectTargetOutputListAPI(MoeAPIView):
         result = output.to_api()
         result["typesetter_marked_count"] = marked
         return result
-
-
-# 暂未启用此接口
-class ProjectLabelplusAPI(MoeAPIView):
-    @token_required
-    @fetch_model(Project)
-    @fetch_model(Target)
-    def get(self, project: Project, target: Target):
-        """
-        @api {get} /v1/projects/<project_id>/targets/<target_id>/labelplus
-            获取labelplus翻译内容
-        @apiVersion 1.0.0
-        @apiName getProjectLabelplusAPI
-        @apiGroup Project
-        @apiUse APIHeader
-        @apiUse TokenHeader
-
-        @apiParam {string} target 翻译目标
-
-        @apiSuccessExample {json} 返回示例
-        {
-
-        }
-        """
-        if not self.current_user.can(project, ProjectPermission.OUTPUT_TRA):
-            raise NoPermissionError
-        if target.project != project:
-            raise TargetNotExistError
-        return project.to_labelplus(target=target)
 
 
 class ProjectOCRAPI(MoeAPIView):

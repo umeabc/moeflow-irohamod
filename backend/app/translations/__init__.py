@@ -1,9 +1,8 @@
 import logging
 from typing import Optional
-from flask import g, request, has_request_context
+from flask import current_app, g, request, has_app_context, has_request_context
 from app.constants.locale import Locale
 import flask_babel
-import app.config as _app_config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -70,5 +69,11 @@ def hardcode_text(msgid: str) -> str:
 
 
 def server_gettext(msgid: str):
-    with flask_babel.force_locale(_app_config.BABEL_DEFAULT_LOCALE):
+    if has_app_context():
+        locale = current_app.config["BABEL_DEFAULT_LOCALE"]
+    else:
+        from app.factory import app_config
+
+        locale = app_config["BABEL_DEFAULT_LOCALE"]
+    with flask_babel.force_locale(locale):
         return gettext(msgid)

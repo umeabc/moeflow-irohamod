@@ -85,6 +85,8 @@ celerybeat-schedule
 !.*.sample
 
 # virtualenv
+.review-deps/
+.review-minimal/
 .venv
 venv/
 ENV/

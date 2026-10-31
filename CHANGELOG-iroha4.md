@@ -681,6 +681,30 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 
 ---
 
+## 十八、代码瘦身与可选存储依赖（v16-fix4，2026-11-01）
+
+- **维护修复**：
+  - 前端 Jest 改用 `ts-jest` + jsdom，补充 jest-dom，修复既有测试无法启动；19 项测试通过。
+  - ESLint 排除 `build/` 产物；前端 `typecheck` 与生产构建通过。
+  - 恢复被同名覆盖的注册测试；旧邮箱验证码/自助重置密码测试标记为过时跳过（后端关键回归：28 通过、14 跳过）；新增邀请码注册覆盖。
+  - 后端修复无 Flask 上下文时读取默认语言、测试环境误连 Celery、缩略图任务在测试中探测消息队列等问题；Linux 最小镜像内 Ruff 通过。
+- **低风险清理**：删除未使用的 `ImageViewerLabelTextExample`、`takeLeadingPerKey`、`test/utils.ts`、两个模板文件、调试日志器与恒假分支；删除五个无源码引用的前端依赖。后端删除未注册的 `ProjectLabelplusAPI`、孤立工具/Schema、无用导入和 OSS 死分支。
+- **重复实现合并**：
+  - 前端三份 `formatBytes` 提取到 `src/utils/format.ts`。
+  - 后端单项目/团队导出共用 `app/services/output.py:create_all_outputs`，保留单项目返回本次输出、团队任务忽略返回值的差异。
+- **云存储可选依赖**：
+  - `requirements.txt` 仅保留基础依赖；新增 `requirements-oss.txt`、`requirements-r2.txt`、`requirements-google-ocr.txt`、`requirements-storage-all.txt`。
+  - Dockerfile 新增 `STORAGE_TYPE`（`LOCAL_STORAGE`/`REMOTE_HTTP`/`OSS`/`R2`/`ALL`）与 `ENABLE_GOOGLE_OCR` 构建参数；默认最小镜像不安装 OSS/R2/Google SDK，`ALL` 保留完整兼容安装。
+  - OSS、Google Storage 改为按需导入；imgstore/R2/LOCAL 不依赖缺失 SDK。
+- **注册/密码策略不变**：仍为邀请码注册、忘记密码联系管理员；未恢复已停用的邮箱验证码注册和自助重置接口。
+- **测试机部署（172.29.133.24）**：已切换
+  `ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix4` +
+  `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix4`（`REMOTE_HTTP` 构建，后端约 371MB）。
+  compose 备份：`/opt/moeflow-deploy/docker-compose.yml.bak-pre-iroha16-fix4-20261101-004605`。
+- **验证**：后端 Linux 镜像内 28 项关键测试通过、14 项旧流程跳过；前端 19 项测试、typecheck、生产构建通过；`/api/ping`、`/api/v1/site/*`、登录/注册页与验证码正常。
+
+---
+
 ## 备注
 
 - 本改动为定制版本，与上游 moeflow 官方代码存在差异；如需回退，可用官方 tag `v1.1.7` / `v1.1.8` 重新构建。

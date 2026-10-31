@@ -159,7 +159,7 @@ export const ImageSourceViewerProofreader: FC<
 
   /** 向当前活动输入框（无翻译时为翻译输入，否则为校对输入）光标处插入符号 */
   const insertSymbol = (symbol: string) => {
-    if (focusedSourceCreating || focusedSourceDeleting) {
+    if (!focusedSource || focusedSourceCreating || focusedSourceDeleting) {
       return;
     }
     const isTranslationActive = isNoTranslation;
