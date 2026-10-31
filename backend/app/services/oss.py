@@ -527,6 +527,13 @@ class OSS:
 
     def rmdir(self, path, bucket_name: Optional[str] = None):
         """（批量）删除文件夹，仅本地储存"""
+        # 兼容调用方传路径列表（如 Output.delete_real_files）：
+        # R2 / REMOTE_HTTP 的前缀逻辑只接受字符串，列表会当成 dict key 触发
+        # TypeError(unhashable type: 'list')，导致旧导出目录永远删不掉
+        if isinstance(path, (list, tuple)):
+            for single_path in path:
+                self.rmdir(single_path, bucket_name=bucket_name)
+            return
         if self.storage_type == StorageType.R2:
             # R2 无目录概念：按前缀列出并批量删除
             conf = self._r2_conf_by_bucket(bucket_name)
