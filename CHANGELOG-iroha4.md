@@ -634,6 +634,28 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 
 ---
 
+## 十六、作者信息自定义（v16-fix3，2026-10-31）
+
+- **① 项目设置「作者信息」模板**（仅 `with_author` 项目显示；项目管理员/创建人可改）：
+  - 新增 `Project.author_label_template`（db_field `alt`，≤1000 字），支持 `{翻译}` / `{嵌字}` / `{原作者}` 三个占位符，按该图的 `File.translator` / `typesetter` / `original_author` 实时替换；模板里的纯文本（如 `B站@BA校委会`）即「每张都先加」的固定文案。
+  - 某一行的占位符全部为空时整行省略（不会留下「翻译：」空行）；模板留空时回退 v16 行为（作者信息 = 文件卡手填原作者）。
+  - 前端 `AuthorLabelSetting.tsx`：多行模板 + 占位符插入按钮 + 示例负责人预览 + 1000 字计数；后端 `validate_author_template` 校验长度与未知占位符（400）。
+  - 作者信息是**派生内容**：`Source.to_api` / `File.to_labelplus` 均按模板实时渲染，避免负责人变更后文案滞后；标号本身自动创建/清理（上传新图、改翻译/嵌字负责人、设置/清空原作者、导出写入嵌字者、修订版创建/激活、模板保存）。
+- **② 单独颜色 + 导出分组**：
+  - 编辑器作者标号由粉色改为**紫色**（`rgba(179,127,235)`），overview 序号与左侧状态条同步紫色。
+  - LabelPlus 导出：启用原作者的项目头部增加第 3 组「作者信息」（`gettext("作者信息")`），作者标号行第三字段导出为 `3`；其他项目仍只有框内(1) / 框外(2) 两组。重新导入时跳过第 3 组，避免被当成框外标号拉低翻译进度。
+- **③ 不进自动翻译**：作者标号不产生 Translation；批量 AI 翻译 / 标号匹配继续过滤 `kind=author`，普通 Source / Translation 入口拒绝操作作者标号。
+- **数据结构**：`Project.author_label_template`（`alt`），无新集合；`File.original_author`（`oa`）仍是 `{原作者}` 的数据源。
+- **接口**：`PUT /v1/projects/<id>` 新增 `author_label_template`（仅 `with_author` 项目、CHANGE 权限；空串=清空，保存后同步全项目图片的作者标号）。
+- **测试机部署（172.29.133.24）**：已构建并切换
+  `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix3` + `ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix3`
+  （`/opt/moeflow-deploy/docker-compose.yml` 已改 tag，备份 `docker-compose.yml.bak-pre-fix3-*`）。
+  - 冒烟（backend 容器内 test_client + Mongo 校验）：模板保存/读取、按模板渲染、角色变更即时重渲染、上传自动加标号并随删除清理、给作者标号加翻译被拒、LabelPlus 头含第 3 组且作者行 `,3]`、未知占位符 400、统计计数不变 —— 全部通过。
+  - 项目设置页（BS测试4）实测：模板编辑 → 预览 → 保存提示「作者信息设置已保存」；编辑器作者标号计算样式 `rgba(179, 127, 235, 0.7)`。
+  - 正式机尚未推送；发布时按 `:latest` 流程 `docker tag … :latest && docker push`。
+
+---
+
 ## 备注
 
 - 本改动为定制版本，与上游 moeflow 官方代码存在差异；如需回退，可用官方 tag `v1.1.7` / `v1.1.8` 重新构建。
