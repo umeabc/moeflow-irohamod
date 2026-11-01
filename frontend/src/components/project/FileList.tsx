@@ -932,13 +932,13 @@ export const FileList: FC<FileListProps> = ({
         loading={loading}
         total={total}
         items={items}
-        itemHeight={290}
+        itemHeight={296}
         multiColumn
         columnWidth={200}
         paginationProps={{
           disabled: spinningIDs.length > 0,
         }}
-        minPageSize={16}
+        refetchOnPageSizeChange
         itemCreater={(file) => {
           return (
             <Spin spinning={spinningIDs.indexOf(file.id) > -1}>

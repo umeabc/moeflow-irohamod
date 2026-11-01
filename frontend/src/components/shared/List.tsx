@@ -49,6 +49,8 @@ interface ListProps<T> {
   maxPageSize?: number;
   autoPageSize?: boolean;
   defaultPageSize?: number;
+  /** 每页个数随尺寸变化时，是否重置到第 1 页并重新请求（默认 false，避免影响其他列表） */
+  refetchOnPageSizeChange?: boolean;
   paginationProps?: PaginationProps;
   paginationHeight?: number;
   header?: React.ReactNode | React.ReactElement;
@@ -83,6 +85,7 @@ interface ListProps<T> {
  * @param maxPageSize 每页最大个数（默认100）
  * @param autoPageSize 根据页面大小自动计算每页个数（默认true）
  * @param defaultPageSize 默认每页个数（默认10）
+ * @param refetchOnPageSizeChange 尺寸变化导致每页个数变化时，是否重置到第 1 页并重新请求（默认false）
  * @param paginationProps 分页器的 Props
  * @param paginationHeight 分页器高度（默认55）
  * @param header 列表头部元素（在搜索框下面）
@@ -114,6 +117,7 @@ export function List<T>({
   maxPageSize = 100,
   autoPageSize = true,
   defaultPageSize = 10,
+  refetchOnPageSizeChange = false,
   paginationProps,
   paginationHeight = 49,
   header,
@@ -130,6 +134,8 @@ export function List<T>({
   const domRef = useRef<HTMLDivElement>(null); // 节点自身 Ref
   const cancelRef = useRef<Canceler>();
   const listHeightRef = useRef(0);
+  const listWidthRef = useRef(0);
+  const lastRequestedPageSizeRef = useRef(0); // 上次实际用于请求的每页个数
   const [column, setColumn] = useState(1);
   // 分页
   const [pageSize, setPageSize] = useState(defaultPageSize); // 每页元素个数
@@ -203,6 +209,7 @@ export function List<T>({
     // 记录本次请求的 cancel
     const [cancelToken, cancel] = getCancelToken();
     cancelRef.current = cancel;
+    lastRequestedPageSizeRef.current = pageSize;
     return onChange({ page, pageSize, word, cancelToken });
   };
 
@@ -258,11 +265,24 @@ export function List<T>({
   const handleResize = (width: number, height: number) => {
     // 手机版不改变每页个数（因为键盘上升屏幕尺寸肯定变化，造成混乱）
     // 之前页面键盘打开，跳转到此页后收缩，页面放大也记下
-    if (isMobile && listHeightRef.current >= height) {
+    if (isMobile && listHeightRef.current >= height && listWidthRef.current === width) {
       return;
     }
     listHeightRef.current = height;
-    calcPageSize(width, height);
+    listWidthRef.current = width;
+    const newPageSize = calcPageSize(width, height);
+    // 仅显式启用时：出现尚未请求过的新每页个数，才重置到第 1 页并重新请求
+    // （以 lastRequestedPageSizeRef 为准，避免 state 未重渲染时漏掉新尺寸）
+    if (
+      refetchOnPageSizeChange &&
+      width > 0 &&
+      height > 0 &&
+      newPageSize !== lastRequestedPageSizeRef.current
+    ) {
+      setPage(1);
+      onPageChange?.(1);
+      handleChange({ page: 1, pageSize: newPageSize, word });
+    }
   };
 
   return (
