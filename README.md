@@ -1,7 +1,7 @@
-# MoeFlow 定制版（iroha16-fix4）备份仓库
+# MoeFlow 定制版（iroha16-fix5）备份仓库
 
 > 本仓库为 MoeFlow（彩翻 / 萌翻）**内部定制版本**的源码备份仓库（私有）。
-> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前测试镜像：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix4`、`ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix4`；正式机 compose 仍跟踪 `:latest`。
+> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前测试镜像：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix5`、`ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix5`；正式机 compose 仍跟踪 `:latest`。
 > 本文档为**脱敏版**，不含具体主机、域名、端口、代理与凭据信息。
 
 ---
@@ -52,6 +52,7 @@ MoeFlow（彩翻）是一款**自托管漫画翻译协作平台**：支持上传
 - **登录页全新改版**：左品牌区（吉祥物 + 光环动画）+ 右登录/注册分段卡片；已登录状态展示「已登录」卡片（进入仪表盘 / 退出）。
 - **暗色模式高亮修复**：通知标题与站点设置「下载图片设置」分区标题在暗色模式下改为主题粉色高亮。
 - **iroha16-fix4 代码维护**：修复前端 TypeScript/ESLint/Jest 配置与既有类型错误；删除未使用组件、工具与依赖；合并重复的 `formatBytes` 和导出清理逻辑；云存储 SDK 改为按 `STORAGE_TYPE` 构建时可选安装，`LOCAL_STORAGE`/`REMOTE_HTTP` 不再携带 OSS/R2/Google SDK。
+- **iroha16-fix5 自适应分页**：文件列表移除每页 16 张固定下限，按容器宽高与真实卡片行高计算每页数量；窗口尺寸变化后自动回第 1 页并按新 `limit` 重取。
 
 ## 部署
 

@@ -705,6 +705,26 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 
 ---
 
+## 十九、文件列表自适应分页（v16-fix5，2026-11-01）
+
+- **问题**：项目文件页每页固定 16 张，窗口变大/变小不恢复自适应。
+- **根因**：
+  - `FileList` 传入 `minPageSize={16}`，把计算值≤16 的窗口统一抬回 16。
+  - `iroha16-fix1` 把 `itemHeight` 250→290、卡片 268→286，实际行高（286+10 间距）应 296，更多常见窗口触发 16 下限。
+  - `List.handleResize` 只更新分页器 `pageSize`，未用新 `limit` 重新请求。
+- **修复**：
+  - `FileList` 移除 16 下限，`itemHeight` 改为 296。
+  - 通用 `List` 新增默认关闭的 `refetchOnPageSizeChange`；仅文件页开启。
+  - 尺寸变化且出现尚未请求过的页大小时，重置第 1 页并用新 `pageSize` 重取；`lastRequestedPageSizeRef` 防重复/漏请求，移动端键盘缩小仍不触发。
+- **验证**：`typecheck`、19 项 Jest、ESLint 0 error、生产构建通过。
+- **测试机部署（172.29.133.24）**：已切换
+  `ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix5` +
+  `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix5`，后端 build ID `iroha16-fix5`。
+  compose 备份：`/opt/moeflow-deploy/docker-compose.yml.bak-pre-iroha16-fix5-20261101-174820`。
+- **说明**：后端本次无业务改动，仅为统一版本号重建；未更新 `:latest`、未部署正式机。
+
+---
+
 ## 备注
 
 - 本改动为定制版本，与上游 moeflow 官方代码存在差异；如需回退，可用官方 tag `v1.1.7` / `v1.1.8` 重新构建。
