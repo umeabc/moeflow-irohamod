@@ -721,7 +721,10 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
   `ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix5` +
   `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix5`，后端 build ID `iroha16-fix5`。
   compose 备份：`/opt/moeflow-deploy/docker-compose.yml.bak-pre-iroha16-fix5-20261101-174820`。
-- **说明**：后端本次无业务改动，仅为统一版本号重建；未更新 `:latest`、未部署正式机。
+- **GHCR**：已推送 fix5 版本标签，并把 `:latest` 指向同一 digest：
+  - frontend `sha256:1a3024e5ee4aff2ca23bce095f33780ec7c064b10d88766fa888d01e799efa83`
+  - backend `sha256:a8dbf96cfe9110927dc63115cfdbce85f63f254a0fe0343c8b04359997f74ffd`
+- **说明**：后端本次无业务改动，仅为统一版本号重建；未部署正式机，正式机需手动 pull 后才会升级到 fix5。
 
 ---
 

@@ -1,7 +1,7 @@
 # MoeFlow 定制版（iroha16-fix5）备份仓库
 
 > 本仓库为 MoeFlow（彩翻 / 萌翻）**内部定制版本**的源码备份仓库（私有）。
-> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前测试镜像：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix5`、`ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix5`；正式机 compose 仍跟踪 `:latest`。
+> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前测试镜像：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix5`、`ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix5`；GHCR `:latest` 已于 2026-11-01 指向 fix5，正式机 compose 跟踪 `:latest`，需手动 `docker compose pull` 才会升级。
 > 本文档为**脱敏版**，不含具体主机、域名、端口、代理与凭据信息。
 
 ---
