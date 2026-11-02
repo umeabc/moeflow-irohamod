@@ -743,5 +743,14 @@
   "file.importTaskStartInvalid": "未获得有效任务编号，请刷新核实后重试",
   "file.importTaskProgressUnavailable": "进度暂不可用，后台任务可能仍在执行",
   "file.importTaskRetryProgress": "重新查询进度",
-  "file.importFinishedClose": "完成并关闭"
+  "file.importFinishedClose": "完成并关闭",
+  "admin.contributionStats": "参与统计",
+  "admin.contributionDescription": "按当前图片负责人记录统计，同一图片同一角色计一次",
+  "admin.contributionUser": "用户",
+  "admin.contributionEmail": "邮箱",
+  "admin.contributionTranslator": "翻译",
+  "admin.contributionProofreader": "校对",
+  "admin.contributionTypesetter": "嵌字",
+  "admin.contributionTotal": "合计",
+  "admin.contributionEmpty": "暂无参与统计"
 }

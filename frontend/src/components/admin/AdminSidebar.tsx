@@ -175,6 +175,12 @@ export const AdminSidebar: FC<AdminSidebarProps> = ({ onNavigate }) => {
             {formatMessage({ id: 'admin.management' })}
           </div>
           <AdminNavItem
+            to={`${routes.admin}/contribution-stats`}
+            icon="clipboard-list"
+            label={formatMessage({ id: 'admin.contributionStats' })}
+            onNavigate={onNavigate}
+          />
+          <AdminNavItem
             to={`${routes.admin}/users`}
             icon="user-check"
             label={formatMessage({ id: 'admin.users' })}

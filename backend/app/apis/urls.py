@@ -98,6 +98,7 @@ from app.apis.notice import (
     NoticeListAPI,
     NoticeReadAPI,
 )
+from app.apis.admin_stats import AdminContributionStatsAPI
 from app.apis.admin_team import AdminTeamAPI, AdminTeamListAPI
 from app.apis.admin_log import (
     AdminActionLogAPI,
@@ -539,6 +540,11 @@ avatar.add_url_rule(
 
 # 管理员
 admin = Blueprint("admin", __name__, url_prefix=v1_prefix + "/admin")
+admin.add_url_rule(
+    "/contribution-stats",
+    methods=["GET", "OPTIONS"],
+    view_func=AdminContributionStatsAPI.as_view("admin_contribution_stats"),
+)
 admin.add_url_rule(
     "/files",
     methods=["GET", "OPTIONS"],

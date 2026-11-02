@@ -36,6 +36,7 @@ import group from './group';
 import insight from './insight';
 import invitationCode from './invitationCode';
 import adminTeam from './adminTeam';
+import adminStats from './adminStats';
 import siteSetting from './siteSetting';
 import notice from './notice';
 import log from './log';
@@ -328,6 +329,7 @@ export const api = {
   insight,
   invitationCode,
   adminTeam,
+  adminStats,
   // invitation,
   language,
   log,

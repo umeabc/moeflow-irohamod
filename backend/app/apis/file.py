@@ -317,6 +317,7 @@ class MoveTargetProjectsAPI(MoeAPIView):
         projects = Project.objects(
             project_set=project.project_set,
             id__ne=project.id,
+            status=ProjectStatus.WORKING,
             **type_filter,
         ).only("id", "name")
         return [{"id": str(p.id), "name": p.name} for p in projects]

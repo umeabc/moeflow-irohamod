@@ -743,5 +743,14 @@
   "file.importTaskStartInvalid": "No valid task ID was returned. Refresh to verify before retrying",
   "file.importTaskProgressUnavailable": "Progress is temporarily unavailable; the background task may still be running",
   "file.importTaskRetryProgress": "Retry progress check",
-  "file.importFinishedClose": "Done and close"
+  "file.importFinishedClose": "Done and close",
+  "admin.contributionStats": "Contribution statistics",
+  "admin.contributionDescription": "Counted from current image assignments; each image counts once per role.",
+  "admin.contributionUser": "User",
+  "admin.contributionEmail": "Email",
+  "admin.contributionTranslator": "Translation",
+  "admin.contributionProofreader": "Proofreading",
+  "admin.contributionTypesetter": "Typesetting",
+  "admin.contributionTotal": "Total",
+  "admin.contributionEmpty": "No contribution statistics"
 }

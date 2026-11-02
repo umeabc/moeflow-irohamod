@@ -2277,3 +2277,31 @@ file.importTaskRetryProgress:
 file.importFinishedClose:
   zhCn: 完成并关闭
   en: Done and close
+
+admin.contributionStats:
+  zhCn: 参与统计
+  en: Contribution statistics
+admin.contributionDescription:
+  zhCn: 按当前图片负责人记录统计，同一图片同一角色计一次
+  en: Counted from current image assignments; each image counts once per role.
+admin.contributionUser:
+  zhCn: 用户
+  en: User
+admin.contributionEmail:
+  zhCn: 邮箱
+  en: Email
+admin.contributionTranslator:
+  zhCn: 翻译
+  en: Translation
+admin.contributionProofreader:
+  zhCn: 校对
+  en: Proofreading
+admin.contributionTypesetter:
+  zhCn: 嵌字
+  en: Typesetting
+admin.contributionTotal:
+  zhCn: 合计
+  en: Total
+admin.contributionEmpty:
+  zhCn: 暂无参与统计
+  en: No contribution statistics

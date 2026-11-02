@@ -1,10 +1,29 @@
-# MoeFlow 项目交接档案（iroha16-fix5 定制版）
+# MoeFlow 项目交接档案（iroha16-fix6 定制版）
 
-> 项目已稳定并正式上线。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
-> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。当前测试版本 **iroha16-fix5**。
+> 项目已有历史上线版本，本次 iroha16-fix6 已实现待验收，尚未部署。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
+> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。当前待构建测试版本 **iroha16-fix6**（尚未部署）。
 > 注：本档案为**脱敏版**，不含具体主机 IP、域名、端口、代理与凭据；实际部署环境信息由部署方自理。
 
 ---
+
+## iroha16-fix6（2026-11-02，已实现待验收 / 待部署）
+
+- 待构建测试镜像标记：前端 `v1.1.7-iroha16-fix6` / 后端 `v1.1.8-iroha16-fix6`。本次未构建或部署镜像，未操作测试机、正式机，未提交 Git；不代表已更新 GHCR 或线上版本。
+- 后台新增「参与统计」：管理员接口 `GET /v1/admin/contribution-stats`，页面 `/admin/contribution-stats`，入口在管理分组。一次查询用户、一次遍历有效图片，不按用户查询文件。按当前 `File` 的 translator / proofreader / typesetter 负责人字符串统计参与图片数；支持顿号、中文逗号、英文逗号，trim 后同图同角色去重，与 `User.name` 精确匹配。仅计 `IMAGE` 且 `activated=True`，包含所有项目状态；列出未封禁、未注销用户及零计数用户，排除 `[Redacted]`，按合计降序、姓名升序。表格包含用户、邮箱、翻译、校对、嵌字、合计，支持分页、空态、加载态；中英文翻译及 locale JSON 已更新。
+- 图片移动目标接口 `GET /v1/projects/<project_id>/move-target-projects` 增加 `status=ProjectStatus.WORKING`，排除完结、归档、计划完结、计划删除、已删除项目；保持项目集、类型 / 作者模式隔离与原权限。已检查 `FileMoveModal.tsx` 直接使用接口列表，无需前端过滤。
+- 新增后端测试 `tests/api/test_admin_stats_api.py`：覆盖统计多角色 / 多人 / 三种分隔符 / 去重 / 精确匹配 / 零计数 / banned 与脱敏用户排除 / 图片与激活条件 / 历史状态，以及移动目标六种状态、四种类型组合与权限。
+- 后端使用现有 `.review-minimal`、`.review-deps` 依赖与 `.env.test.sample` 的本地 mongomock（`moeflow_test`），命令见下方。完整相关测试结果为 **16 passed, 1 failed**；排除既有上传失败时 **16 passed, 1 deselected**。既有 `test_upload_project_file` 在第二次上传同内容文件时触发 `FileDuplicateError`（8008）；在内存加载 HEAD 原版 `app/apis/file.py` 后单独运行仍失败，确认与本次修改无关，未修改该既有行为。
+- 前端 `npm.cmd run typecheck` 通过；`npm.cmd test -- --runInBand`：**2 suites / 19 tests passed**；`npm.cmd run lint`：**0 errors / 253 warnings**；`npm.cmd run build` 通过（保留既有 eval / 大 chunk 警告）。Windows PowerShell 禁用 npm.ps1，使用 npm.cmd。构建初次因系统临时目录删除权限失败，设置 `TEMP` / `TMP` 为工作区 `frontend/.fix6-tmp` 后通过。
+- `npm.cmd run build:locale` 已尝试，tsx 因 Windows `uv_os_get_passwd ENOMEM` 无法启动；使用现有 TypeScript `transpileModule` 将同一生成脚本转为临时 CommonJS 后执行，成功生成 `en.json` / `zh-cn.json`，临时脚本已清理；未修改 package.json 或依赖。
+- 未决项：上述既有上传测试失败；尚未进行部署验收与真实 MongoDB 大数据量性能验证。统计以当前负责人记录为准，负责人字段被更改或用户改名后会随当前记录变化，不回溯操作日志。
+
+后端复现（在 `backend/` 下，显式加载测试配置，不连接远程服务）：
+
+```powershell
+$env:PYTHONPATH="$PWD/.review-minimal;$PWD/.review-deps"
+python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample'); import pytest; raise SystemExit(pytest.main(['-o','addopts=','tests/api/test_admin_stats_api.py','tests/api/test_admin_api.py','tests/api/test_file_api.py','-q','-k','not test_upload_project_file']))"
+```
+
 
 ## 1. 项目概览
 - 名称：MoeFlow（萌翻 / 彩翻）—— 自托管漫画翻译协作平台。

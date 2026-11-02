@@ -12,6 +12,7 @@ import { AdminImageSafeCheck } from '@/components/admin/AdminImageSafeCheck';
 import { AdminSiteSetting } from '@/components/admin/AdminSiteSetting';
 import { AdminInviteCode } from '@/components/admin/AdminInviteCode';
 import { AdminTeam } from '@/components/admin/AdminTeam';
+import { AdminContributionStats } from '@/components/admin/AdminContributionStats';
 import { AdminNoticeList } from '@/components/admin/AdminNoticeList';
 import { AdminR2Storage } from '@/components/admin/AdminR2Storage';
 import { AdminImgstoreStorage } from '@/components/admin/AdminImgstoreStorage';
@@ -42,6 +43,9 @@ const Admin: FC = () => {
       <Switch>
         <Route exact path={path}>
           <AdminDashboard />
+        </Route>
+        <Route path={`${path}/contribution-stats`}>
+          {page('admin.contributionStats', 'admin.contributionDescription', <AdminContributionStats />)}
         </Route>
         <Route path={`${path}/users`}>
           {page('admin.users', 'admin.pageDescription.users', <AdminUserList />)}
