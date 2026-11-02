@@ -2,20 +2,21 @@
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 镜像 tag：`moeflow-frontend:1.1.7-iroha14` / `moeflow-backend:1.1.8-iroha14`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`…`iroha13` 镜像保留各自版本 tag）。当前版本：**iroha16-fix6**（前端 `v1.1.7-iroha16-fix6` / 后端 `v1.1.8-iroha16-fix6`，已部署测试机并推送 GHCR latest）。
+> 镜像 tag：`moeflow-frontend:1.1.7-iroha14` / `moeflow-backend:1.1.8-iroha14`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`…`iroha13` 镜像保留各自版本 tag）。当前版本：**iroha16-fix6**（前端 `v1.1.7-iroha16-fix6` / 后端 `v1.1.8-iroha16-fix6`，已部署测试机与正式机并推送 GHCR latest）。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：以 `docker save` 导出镜像 tar → 生产侧 `docker load` 导入（仅替换前端/后端镜像，勿改动 env / compose）。
 
 ---
 
-## iroha16-fix6（2026-11-02，已部署测试机）
+## iroha16-fix6（2026-11-02，已部署测试机与正式机）
 
-- 测试镜像：前端 `v1.1.7-iroha16-fix6` / 后端 `v1.1.8-iroha16-fix6`，后端 build ID `iroha16-fix6`；已部署 `172.29.133.24`。
+- 镜像：前端 `v1.1.7-iroha16-fix6` / 后端 `v1.1.8-iroha16-fix6`，后端 build ID `iroha16-fix6`；测试机 `172.29.133.24` 与正式机（`moeflow.basmc.org`）均已部署。
 - GHCR：版本标签及 `:latest` 已推送。
   - frontend `sha256:8cbd8bf1aa8c57ea5f0b5dac205c26583983a1e4e352cbed5dd54eace3d73a45`
   - backend `sha256:73509e1bf9ea4065a5dfeac50c9157e595eea1ee9830dbb937ed41d5981c7000`
-- compose 备份：`/opt/moeflow-deploy/docker-compose.yml.bak-pre-iroha16-fix6-20261102-160424`。
-- 真实环境验收：统计接口 200、5 个用户、0.018s；抽样 5 个项目的移动目标全部为 WORKING；首页/API/管理页 200；Celery ready。正式机未 pull/部署。
+- 测试机 compose 备份：`/opt/moeflow-deploy/docker-compose.yml.bak-pre-iroha16-fix6-20261102-160424`。
+- 正式机 compose 备份：`/var/dockers/moeflow/docker-compose.yml.bak-pre-fix6-20261102-014743`；旧镜像已打 `pre-fix6-20261102-014743` 回退标签。
+- 真实环境验收：测试机统计接口 200、5 个用户、0.018s；正式机统计接口 200、58 个用户、1.833s。两端均抽样 5 个项目，移动目标全部为 WORKING；正式机域名/API/管理页 200，Celery ready，后端日志无 error。
 - 后台新增「参与统计」：管理员接口 `GET /v1/admin/contribution-stats`，页面 `/admin/contribution-stats`，入口在管理分组。一次查询用户、一次遍历有效图片，不按用户查询文件。按当前 `File` 的 translator / proofreader / typesetter 负责人字符串统计参与图片数；支持顿号、中文逗号、英文逗号，trim 后同图同角色去重，与 `User.name` 精确匹配。仅计 `IMAGE` 且 `activated=True`，包含所有项目状态；列出未封禁、未注销用户及零计数用户，排除 `[Redacted]`，按合计降序、姓名升序。表格包含用户、邮箱、翻译、校对、嵌字、合计，支持分页、空态、加载态；中英文翻译及 locale JSON 已更新。
 - 图片移动目标接口 `GET /v1/projects/<project_id>/move-target-projects` 增加 `status=ProjectStatus.WORKING`，排除完结、归档、计划完结、计划删除、已删除项目；保持项目集、类型 / 作者模式隔离与原权限。已检查 `FileMoveModal.tsx` 直接使用接口列表，无需前端过滤。
 - 新增后端测试 `tests/api/test_admin_stats_api.py`：覆盖统计多角色 / 多人 / 三种分隔符 / 去重 / 精确匹配 / 零计数 / banned 与脱敏用户排除 / 图片与激活条件 / 历史状态，以及移动目标六种状态、四种类型组合与权限。
