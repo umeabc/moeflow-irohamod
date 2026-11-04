@@ -1,14 +1,14 @@
 # MoeFlow 定制版（iroha16-fix7）备份仓库
 
 > 本仓库为 MoeFlow（彩翻 / 萌翻）**内部定制版本**的源码备份仓库（私有）。
-> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前源码 **iroha16-fix7，已实现待验收/待部署**。本轮没有镜像构建或发布；历史 fix6 部署记录见下方。
+> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前源码 **iroha16-fix7，已部署测试机与正式机**。fix7 版本标签及 latest 已推送 GHCR，测试机与正式机验收通过；历史 fix6 部署记录见下方。
 > 本文档为**脱敏版**，不含具体主机、域名、端口、代理与凭据信息。
 
 ---
 
-## iroha16-fix7（2026-11-05，已实现待验收/待部署）
+## iroha16-fix7（2026-11-05，已部署测试机与正式机）
 
-本轮仅修改本地源码、资源、依赖声明与测试；未 commit、未构建/部署镜像、未操作测试机/正式机/GHCR。此前 fix6 部署记录保留为历史，不能视为 fix7 已部署。
+本轮源码已提交，镜像已在测试机构建并验收；GHCR fix7 版本标签与 latest 已发布，正式机完成部署与烟测。此前 fix6 部署记录保留为历史。
 
 - **批次 1**：删除未注册的旧角色 API 链、不可达同步用户媒体下载、无入口自助重置密码、异步 `wait_result` 与直接 `asgiref` 依赖；保留 RBAC/角色模型、逐图线程导入、改密 PUT、管理员重置和联系管理员页面。删除无消费者的前端包装、验证码列表、模板组件与 `mascot-jump2.png`。
 - **批次 2**：生产、开发、OSS/R2/Google OCR 根依赖分离；新的锁文件生成器使用独立 venv 和现有精确版本约束，成功解析及 `pip check` 后才替换文件，避免测试工具进入生产。补全 `curl_cffi` 和 AVIF 依赖；删除 `fontmin` 脚本、无用类型/工具依赖，更新 npm lock。
@@ -23,45 +23,52 @@
 AVIF 上游 wheel 信息：[pillow-avif-plugin 1.5.5](https://pypi.org/project/pillow-avif-plugin/1.5.5/) 提供 CPython 3.11 Windows/Linux wheel；本轮实际编解码是否通过以本节最终测试记录为准。
 
 
-### fix7 最终相关验证（本地）
+### fix7 发布验证与回退
 
-- 后端统一运行 15 个相关测试文件：**146 passed、4 failed、0 skipped，83.83s**。所要求的 admin_stats/file/admin/output/auth/v_code/file_model/multi_target_cache 全部通过；另覆盖 source/project API、project model、媒体启动/schema/依赖隔离。原 `test_upload_project_file` 已通过。
-- 新图片回归：**7 passed、4 failed**。WebP 实际上传、原图/封面/预览解码、JPEG 文件头与白底、ZIP/LabelPlus 文件名对应、现有 JPEG 碰名、旧 JPG/PNG/GIF 字节不变均通过。4 个新增 AVIF 用例实际执行后均报 `ImportError: AVIF support requires pillow-avif-plugin==1.5.5`；没有 skip 或模拟图片解码。
-- AVIF 安装命令因环境禁止 pip 网络套接字而失败（`WinError 10013`），本地 pip 缓存无该 wheel。**AVIF 在 Pillow 9.5 下的真实编解码仍未验证，属于本轮环境阻断，不可据此认定已验收。** 缺插件时记录明确警告，AVIF 操作报错，其它格式可正常运行。
-- 前端 `npm.cmd run typecheck` 通过（修复 FilePond element 可空类型错误后重跑）；`npm.cmd test -- --runInBand`：**4 suites / 24 tests passed**；`npm.cmd run lint`：**0 errors / 243 warnings**；`npm.cmd run build` 通过。保留既有第三方 `eval` 与大 chunk 提示。产物 48 个文件、3,665,735 字节、**0 个 source map**，已检查 Admin/子页、ImageTranslator、AI 和 ZIP 独立 chunk。
-- `npm.cmd install --package-lock-only --ignore-scripts --no-audit --no-fund` 成功；lock 节点 1201 → 974，删除 227 项，没有升级保留包版本。存在原有可选 peer 提示。
-- 五种后端 lock profile 的 `--check` 通过；已安装依赖的 `pip check` 通过（不代表缺失的 AVIF 已安装）；从既有缓存补齐测试环境 `jmespath==0.10.0`、`execnet==2.1.1`。因包源不可访问，未重新执行完整联网锁解析。
-- 直接执行 Babel compile，英文/中文 MO 均编译成功、PO 未改写。Docker 安装分支以 shell 替身核对 LOCAL_STORAGE/REMOTE_HTTP/OSS/R2/ALL × Google auto/true 共 10 种组合，ALL 无重复 Google pip 调用；**未构建镜像，不能代替真实镜像构建验收**。
-- AST 比较确认 cache 测试 15 个方法和 69 次中间 `check_cache` 调用及参数未变；file_model 22 个测试方法完整保留。source/output 改用子场景参数化，导出保留 7 种场景，不能仅按测试方法数量判断覆盖变化。
-- `git diff --check` 通过。仅工作树修改，HEAD 保持 `6789d32`，未暂存、未 commit、未部署。`imgstore/` 和四份 workflow 未变。
+- **源码提交**：`974a4e2a8c5c8286a5960c7659da8f86c3f44a17`，`feat: 代码瘦身与 WebP/AVIF 支持（fix7）`。发布后另行提交本节部署记录。
+- **前序已通过验证**：`test_auth_api` **18 passed**、后端关键测试 **66 passed**、前端 **4 suites / 24 tests passed** 及 `typecheck`。18 与 66 分别记录，不相加为完整后端测试总数；本次续发沿用这些结果。
+- **本次发布前检查**：Windows 使用 `npm.cmd`；TEMP/TMP 指向 `frontend/.fix7-tmp` 后，`npm.cmd run build` **通过，16.54s**；`npm.cmd run lint` **0 errors / 243 warnings**；`git diff --check` 通过。保留构建的循环 chunk、第三方 `eval` 与大 chunk 提示，未在发布阶段扩大代码改动。
+- **前端产物**：48 个文件、3,665,735 字节、**0 个 source map**；本地、测试机构建目录、两机运行容器中全部 48 个文件的 SHA256 一致。两机首页及管理页 HTTP 内容也与本地产物一致。`index.html` SHA256：`072a25fdbb3ab61d47dbea8dc3adf87af2744014cd34ffb74bc5a75f0e32c0ea`。
+- **真实镜像构建**：测试机目录 `/opt/build/moeflow-iroha16-fix7` 包含该源码提交与 `frontend/build`；后端使用 `STORAGE_TYPE=REMOTE_HTTP`、`MOEFLOW_BUILD_ID=iroha16-fix7`、阿里云 PIP 镜像。前端 `v1.1.7-iroha16-fix7` / 后端 `v1.1.8-iroha16-fix7` 均构建成功，镜像 revision 标签指向上述源码提交。
+- **图片运行时**：构建镜像内 `pillow_avif` import 与真实 AVIF 编解码通过；两机后端容器内 WebP/AVIF 原生 RGBA 内存编码、解码、尺寸与透明通道验证通过，WebP 无损像素一致。后端与 Celery 容器 build ID 均为 `iroha16-fix7`。
+- **GHCR 发布**：先推送并核验两端 fix7 版本标签，再推送 `latest`；registry 上版本与 latest digest 一致，正式机 pull 后 digest 及三个运行容器的镜像身份再次核验一致。
 
-后端复现（工作目录 `backend/`，只加载本地测试配置）：
+| 镜像 | fix7 版本与 latest 的 registry digest |
+| --- | --- |
+| `ghcr.io/umeabc/moeflow-frontend` | `sha256:dbfeadd8dc101868f5fc2b890b3298f9f44e11022bbe0a0c358fe395cff489a1` |
+| `ghcr.io/umeabc/moeflow-backend` | `sha256:42c7b56f0b84baaf4f45d6808ad5b91b7a80b6e998eb94ac64c6ea3550725721` |
+
+- **测试机烟测**：首页、`/api/ping`、`/admin`、`/admin/contribution-stats` 均通过 HTTP 验证；鉴权统计接口 **200 / 5 用户 / 0.056s**。抽样 5 个源项目，移动目标数为 **1、1、1、1、0**；逐项核对 WORKING 状态、同项目集、校对/作者模式、排除源项目及目标集合完整性，全部通过。
+- **正式机烟测**：正式域名首页、API 健康接口、两处 admin 页面均通过 HTTP 验证；鉴权统计接口 **200 / 59 用户 / 1.776s**。抽样 5 个源项目，移动目标数为 **2、2、2、23、0**，同样的数据库规则与集合校验全部通过。页面结果为 HTTP 烟测，不代表完整交互 UI 测试。
+- **运行状态**：两机 Celery inspect 均返回 **pong**、启动日志含 **ready**；本次部署后的 backend/celery/frontend 日志检查范围内无 error/traceback，后端启动日志 build ID 正确。
+- **测试机回退**：compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix7-20261105-023640`；前后端旧 latest 均保留镜像标签 `pre-fix7-20261105-023640`。
+- **正式机回退**：compose 备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-fix7-20261104-103922`；前后端旧 latest 均保留镜像标签 `pre-fix7-20261104-103922`。备份文件名时间采用各主机本地时区，正式机为 UTC−08:00。
+- **操作范围**：只重建 `moeflow-backend`、`moeflow-celery`、`moeflow-frontend`；MongoDB、Redis、init 容器及正式机 rabbitmq orphan 的容器 ID/状态均保持不变。未执行 prune/remove-orphans，未操作其它项目。`.fix7-tmp`、`.review-*`、build、日志与部署凭据不入库；本地缓存排除规则位于 `.git/info/exclude`。
+
+### 前序验证记录与复现
+
+早期缺少 AVIF 插件时，15 个相关文件统一测试为 **146 passed / 4 failed**，其中图片回归 **7 passed / 4 failed**，4 项均为缺少插件的导入错误；此为历史环境记录。后续本地已有 `pillow-avif-plugin==1.5.5`，发布镜像及两机真实编解码验证见上。本次续发未重新运行这组完整 150 用例，不将容器编解码烟测表述为完整上传/导出套件重跑结果。
+
+前序另已验证：五种依赖 lock profile `--check`、已安装依赖 `pip check`、中英文 Babel MO 编译，以及 Docker 安装分支的 10 种组合；本轮已补充真实镜像构建。npm lock 节点 1201 → 974（删除 227 项，未升级保留包）；cache 测试 15 个方法及 69 次中间校验、file_model 22 个方法和导出 7 种场景的覆盖保留。未重新执行完整联网锁解析。
+
+前端发布检查（在 `frontend/`）：
+
+```powershell
+New-Item -ItemType Directory -Force .fix7-tmp | Out-Null
+$env:TEMP=(Resolve-Path .fix7-tmp).Path
+$env:TMP=$env:TEMP
+npm.cmd run build
+npm.cmd run lint
+```
+
+后端图片回归复现（在 `backend/`，仅加载本地测试配置；测试依赖与 AVIF 插件需已安装）：
 
 ```powershell
 $env:PYTHONPATH="$PWD/.review-minimal;$PWD/.review-deps"
 $env:TEMP="$PWD/.review-minimal/tmp"; $env:TMP=$env:TEMP
 New-Item -ItemType Directory -Force -Path $env:TEMP | Out-Null
-$tests = @(
-  'tests/api/test_admin_stats_api.py', 'tests/api/test_file_api.py',
-  'tests/api/test_admin_api.py', 'tests/api/test_output_api.py',
-  'tests/api/test_auth_api.py', 'tests/api/test_v_code_api.py',
-  'tests/api/test_source_api.py', 'tests/api/test_project_api.py',
-  'tests/api/test_media_import_api.py', 'tests/api/test_image_formats_api.py',
-  'tests/model/test_file_model.py', 'tests/model/test_project_model.py',
-  'tests/other/test_multi_target_cache.py', 'tests/base/test_project_schema.py',
-  'tests/other/test_lock_requirements.py'
-)
-python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample', override=True); import pytest, sys; raise SystemExit(pytest.main(['-o','addopts=','-q'] + sys.argv[1:]))" @tests
-```
-
-在可访问包源的同等环境补齐 AVIF 后，必须重跑真实图片测试；保持 Pillow 9.5，不能通过跳过 AVIF 用例验收：
-
-```powershell
-python -m pip install --target .review-minimal --no-deps pillow-avif-plugin==1.5.5
 python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample', override=True); import pytest; raise SystemExit(pytest.main(['-o','addopts=','-q','tests/api/test_image_formats_api.py']))"
 ```
-
-前端在 `frontend/` 下依次执行 `npm.cmd run typecheck`、`npm.cmd test -- --runInBand`、`npm.cmd run lint`、`npm.cmd run build`。本机 build 使用工作区临时目录（`$env:TEMP="$PWD/.fix6-tmp"; $env:TMP=$env:TEMP`），验证后已清理缓存；默认产物不含 source map。
 
 
 ## iroha16-fix6（2026-11-02，已部署测试机与正式机）
