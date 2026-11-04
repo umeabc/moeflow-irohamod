@@ -1,3 +1,4 @@
+import { IMAGE_UPLOAD_TYPES } from '@/constants/file';
 import { css, Global } from '@emotion/core';
 import {
   AutoComplete,
@@ -584,6 +585,14 @@ export const FileList: FC<FileListProps> = ({
       />
       <FilePond
         name="file"
+        acceptedFileTypes={IMAGE_UPLOAD_TYPES}
+        oninit={() => {
+          // File type validation is server-side. Without the optional FilePond
+          // validation plugin, its generated input needs its accept hint set here.
+          filePondRef.current?.element
+            ?.querySelector('input[type="file"]')
+            ?.setAttribute('accept', IMAGE_UPLOAD_TYPES.join(','));
+        }}
         className="FileList__FilePond"
         ref={(ref) => (filePondRef.current = ref)}
         css={css`

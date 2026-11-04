@@ -169,9 +169,13 @@ class BrandAssetAPI(MoeAPIView):
             file_path = os.path.join(STORAGE_PATH, BRAND_ASSET_PREFIX, name)
             if not os.path.isfile(file_path):
                 return {"message": gettext("图片文件不存在")}, 404
+            mime_type = {
+                ".webp": "image/webp",
+                ".avif": "image/avif",
+            }.get(os.path.splitext(name)[1].lower(), "image/png")
             return send_file(
                 file_path,
-                mimetype="image/png",
+                mimetype=mime_type,
                 max_age=3600,
             )
         return redirect(
@@ -197,7 +201,7 @@ class AdminBrandAssetAPI(MoeAPIView):
         @apiUse TokenHeader
 
         @apiParam {String} type 类型：mascot | favicon
-        @apiParam {File} file 图片文件（png/jpg/jpeg/webp/gif）
+        @apiParam {File} file 图片文件（png/jpg/jpeg/webp/avif/gif）
 
         @apiSuccessExample {json} 返回示例
         {
@@ -212,8 +216,8 @@ class AdminBrandAssetAPI(MoeAPIView):
             raise UploadFileNotFoundError(gettext("请选择图片"))
         filename = file.filename or ""
         ext = os.path.splitext(filename)[1].lower()
-        if ext not in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
-            return {"message": gettext("仅支持 png/jpg/jpeg/webp/gif 图片")}, 400
+        if ext not in (".png", ".jpg", ".jpeg", ".webp", ".avif", ".gif"):
+            return {"message": gettext("仅支持 png/jpg/jpeg/webp/avif/gif 图片")}, 400
         save_name = str(ObjectId()) + ext
         try:
             oss.upload(

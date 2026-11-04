@@ -20,7 +20,7 @@ from flask_babel import gettext
 from app.utils.filename import EMOJI_RE
 from app.utils.logging import logger
 
-IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif")
+IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif")
 UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
@@ -65,6 +65,7 @@ def _guess_filename(url: str, content_type: str, fallback: str) -> str:
         "image/jpeg": ".jpg",
         "image/png": ".png",
         "image/webp": ".webp",
+        "image/avif": ".avif",
         "image/gif": ".gif",
     }.get((content_type or "").split(";")[0].strip().lower())
     stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", name or fallback)[:80] or fallback
@@ -331,6 +332,7 @@ def _download_twitter_pic(
         "image/jpeg": ".jpg",
         "image/png": ".png",
         "image/webp": ".webp",
+        "image/avif": ".avif",
         "image/gif": ".gif",
     }.get(ctype.split(";")[0].strip().lower(), ".jpg")
     # 优先用「Twitter-推文内容前 40 字符 + 时间 + P数」命名
@@ -438,6 +440,7 @@ def _download_bluesky_pic(
             "image/jpeg": ".jpg",
             "image/png": ".png",
             "image/webp": ".webp",
+            "image/avif": ".avif",
             "image/gif": ".gif",
         }.get(ctype.split(";")[0].strip().lower(), ".jpg")
         # 与 Twitter 一致：Bluesky-贴文内容前 40 字符 + 时间戳 + P数 命名
@@ -738,6 +741,7 @@ def _download_pixiv_pic(
         "image/jpeg": ".jpg",
         "image/png": ".png",
         "image/webp": ".webp",
+        "image/avif": ".avif",
         "image/gif": ".gif",
     }.get(ctype.split(";")[0].strip().lower(), ".jpg")
     # Pixiv：PID-标题-P数 命名
@@ -1171,86 +1175,11 @@ def enumerate_twitter_user_media(
         raise ImageDownloadError(gettext("获取用户媒体失败，请检查网络/代理或 auth/ct0 是否有效"))
 
 
-def download_twitter_user_media(
-    user_url: str,
-    auth_token: str,
-    ct0: str,
-    proxy: str = "",
-    timeout: int = 60,
-    max_pages: int = 40,
-) -> List[Tuple[bytes, str]]:
-    """抓取 X 用户媒体时间线里的全部图片并下载。
-
-    参考 tmd：用 UserByScreenName 拿用户 ID → UserMedia 分页翻页
-    （每页 100 条，Bottom cursor 续页）→ 解析每条推文的
-    extended_entities.media（photo）→ 下载全部原图。
-    """
-    user_url = (user_url or "").strip()
-    screen_name = _extract_twitter_username(user_url)
-    if not (auth_token and ct0):
-        raise ImageDownloadError(gettext("未配置 Twitter 的 auth/ct0，请在站点设置-下载图片设置中填写"))
-    proxies = build_proxies(proxy)
-    try:
-        user_id = _twitter_get_user_id(screen_name, auth_token, ct0, proxy, timeout)
-        results: List[Tuple[bytes, str]] = []
-        cursor = ""
-        for page in range(max_pages):
-            api_url = f"https://x.com{TWITTER_USER_MEDIA_PATH}"
-            params = {
-                "variables": _TWITTER_USER_MEDIA_VARIABLES.format(
-                    user_id=user_id, cursor=cursor
-                ),
-                "features": _TWITTER_USER_MEDIA_FEATURES,
-            }
-            with _session(proxies, _twitter_api_headers(ct0)) as s:
-                s.cookies.update({"auth_token": auth_token, "ct0": ct0})
-                r = s.get(api_url, params=params, timeout=timeout)
-                if not r.ok:
-                    break  # 中途失败停止翻页（可能被限流）
-                page_items, next_cursor = _twitter_parse_user_media_page(r.json())
-            if not page_items and not next_cursor:
-                break
-            page_counter: dict = {}
-            for img_url, text, created_at in page_items:
-                key = (text, created_at)
-                page_counter[key] = page_counter.get(key, 0) + 1
-                try:
-                    results.append(
-                        _download_twitter_pic(
-                            img_url,
-                            proxy,
-                            timeout,
-                            text=text,
-                            created_at=created_at,
-                            page=page_counter[key],
-                            ct0=ct0,
-                        )
-                    )
-                except ImageDownloadError:
-                    continue  # 单张失败跳过，不中断整体
-            cursor = next_cursor
-            if not cursor:
-                break
-        if not results:
-            raise ImageDownloadError(gettext("该用户的媒体时间线中未找到图片"))
-        return results
-    except RequestException as e:
-        logger.error("download twitter user media failed: %s", e)
-        raise ImageDownloadError(gettext("获取用户媒体失败，请检查网络/代理或 auth/ct0 是否有效"))
-
-
 def download_image(source: str, url: str, settings) -> List[Tuple[bytes, str]]:
     """统一入口：按 source 分发，settings 提供各来源凭据/代理。返回图片列表。"""
     proxy = getattr(settings, "download_proxy", "") or ""
     if source == "twitter":
         return download_twitter(
-            url,
-            (getattr(settings, "twitter_auth", "") or "").strip(),
-            (getattr(settings, "twitter_ct0", "") or "").strip(),
-            proxy,
-        )
-    if source == "twitter_user":
-        return download_twitter_user_media(
             url,
             (getattr(settings, "twitter_auth", "") or "").strip(),
             (getattr(settings, "twitter_ct0", "") or "").strip(),
@@ -1266,12 +1195,6 @@ def download_image(source: str, url: str, settings) -> List[Tuple[bytes, str]]:
         )
     if source == "pixiv":
         return download_pixiv(
-            url,
-            (getattr(settings, "pixiv_session", "") or "").strip(),
-            proxy,
-        )
-    if source == "pixiv_user":
-        return enumerate_pixiv_user_media(
             url,
             (getattr(settings, "pixiv_session", "") or "").strip(),
             proxy,

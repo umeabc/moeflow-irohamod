@@ -1,0 +1,3 @@
+# Optional r2 integration, resolved against production pins.
+-r requirements.txt
+boto3==1.34.140

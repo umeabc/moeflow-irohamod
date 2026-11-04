@@ -206,7 +206,7 @@ class FileAPITestCase(MoeAPITestCase):
                 self.assertEqual(None, f1.parent)
                 self.assertEqual(2, project.files().count())
             # == 向dir文件夹上传文件 ==
-            with open(os.path.join(TEST_FILE_PATH, "term.txt"), "rb") as file:
+            with open(os.path.join(TEST_FILE_PATH, "revisionA.txt"), "rb") as file:
                 data = self.post(
                     "/v1/projects/{}/files".format(project.id),
                     data={"file": (file, "2.txt"), "parent_id": str(dir1.id)},

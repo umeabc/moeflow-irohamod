@@ -1,8 +1,9 @@
+import { RegistrationFields } from '@/components/shared-form/RegistrationFields';
+import { useRegistration } from '@/hooks/useRegistration';
 import { css } from '@emotion/core';
 import {
   Button,
   Input,
-  Modal,
   Switch,
   Form as AntdForm,
   InputRef,
@@ -21,8 +22,8 @@ import { AppState } from '../store';
 import { setUserToken } from '../store/user/slice';
 import { useTitle } from '../hooks';
 import { FC } from '../interfaces';
-import { EMAIL_REGEX, USER_NAME_REGEX } from '../utils/regex';
-import defaultMascot from '@/images/brand/mascot-jump1.png';
+import { EMAIL_REGEX } from '../utils/regex';
+import defaultMascot from '@/images/brand/mascot-jump1.webp';
 import { useBrandMascot } from '@/hooks';
 import style from '@/style';
 
@@ -135,48 +136,7 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
       });
   };
 
-  /** 注册提交（复用 Register 页逻辑：需邀请码） */
-  const handleRegisterFinish = (values: any) => {
-    api.auth
-      .register({ data: values })
-      .then((result) => {
-        // 重置表单
-        form.resetFields();
-        // 询问用户是否记住我
-        Modal.confirm({
-          title: formatMessage({ id: 'auth.registerSuccessTitle' }),
-          content: formatMessage({ id: 'auth.autoLoginTip' }),
-          okText: formatMessage({ id: 'auth.rememberMe' }),
-          okType: 'primary',
-          cancelText: formatMessage({ id: 'form.cancel' }),
-          onOk: () => {
-            dispatch(
-              setUserToken({
-                token: (result.data as { token: string }).token,
-                rememberMe: true,
-              }),
-            );
-            // 跳转到仪表盘
-            history.push('/dashboard/projects');
-          },
-          onCancel: () => {
-            dispatch(
-              setUserToken({ token: (result.data as { token: string }).token }),
-            );
-            // 跳转到仪表盘
-            history.push('/dashboard/projects');
-          },
-        });
-      })
-      .catch((result: FailureResults) => {
-        if (result.type === resultTypes.VALIDATION_FAILURE) {
-          // 字段验证错误
-          result.default(form);
-          return;
-        }
-        result.default();
-      });
-  };
+  const handleRegisterFinish = useRegistration(form);
 
   /** 提交表单（按模式分发） */
   const handleFinish = (values: any) => {
@@ -622,57 +582,7 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
             )}
 
             {/* 注册模式字段（复用 Register 页：需邀请码） */}
-            {mode === 'register' && (
-              <>
-                <FormItem
-                  name="email"
-                  rules={[
-                    { required: true },
-                    {
-                      type: 'email',
-                      message: formatMessage({ id: 'auth.emailFormatTip' }),
-                    },
-                  ]}
-                >
-                  <Input
-                    prefix={formatMessage({ id: 'site.email' })}
-                    size="large"
-                  />
-                </FormItem>
-                <FormItem name="inviteCode" rules={[{ required: true }]}>
-                  <Input
-                    prefix={formatMessage({ id: 'register.inviteCode' })}
-                    size="large"
-                  />
-                </FormItem>
-                <FormItem
-                  name="name"
-                  rules={[
-                    { required: true },
-                    {
-                      pattern: USER_NAME_REGEX,
-                      message: formatMessage({ id: 'auth.userNameFormatTip' }),
-                    },
-                    { min: 2 },
-                    { max: 18 },
-                  ]}
-                >
-                  <Input
-                    prefix={formatMessage({ id: 'site.userName' })}
-                    size="large"
-                  />
-                </FormItem>
-                <FormItem
-                  name="password"
-                  rules={[{ required: true }, { min: 6 }, { max: 60 }]}
-                >
-                  <Input.Password
-                    prefix={formatMessage({ id: 'site.password' })}
-                    size="large"
-                  />
-                </FormItem>
-              </>
-            )}
+            {mode === 'register' && <RegistrationFields />}
 
             <FormItem className="Login__SubmitFormItem">
               <Button

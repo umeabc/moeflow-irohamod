@@ -15,6 +15,7 @@ from app.exceptions.file import FileNotExistError
 from app import oss
 
 from app.models import connect_db
+from app.utils.image import ensure_image_codec, needs_jpeg_export
 from . import SyncResult
 from celery.utils.log import get_task_logger
 
@@ -50,6 +51,7 @@ def create_thumbnail_task(image_id: str):
         return f"失败：创建缩略图失败，不支持的存储模式 {image_id}"
     try:
         image = File.by_id(image_id)
+        ensure_image_codec(image.save_name)
         image_bucket = image.storage_bucket or None
         cover_name = celery.conf.app_config["OSS_PROCESS_COVER_NAME"] + "-" + image.save_name
         safe_check_name = (
@@ -85,19 +87,28 @@ def create_thumbnail_task(image_id: str):
                 return f"失败：创建缩略图失败，原图文件未找到 {image_id}"
             original = Image.open(buf)
 
-            def _to_rgb(img):
-                """JPEG 不支持 RGBA/P 模式，需转为 RGB（透明区填白底）。"""
-                if img.mode == "RGBA":
-                    bg = Image.new("RGB", img.size, (255, 255, 255))
-                    bg.paste(img, mask=img.split()[3])
-                    return bg
-                if img.mode not in ("RGB", "L"):
-                    return img.convert("RGB")
-                return img
+            # New formats keep the extension's codec so remote content types and
+            # bytes agree. Preserve the existing JPEG previews for other formats.
+            preview_format = (
+                os.path.splitext(image.save_name)[1][1:].upper()
+                if needs_jpeg_export(image.save_name)
+                else "JPEG"
+            )
+
+            def save_preview(img, buffer):
+                if preview_format == "JPEG":
+                    # Preserve the existing preview behavior for JPG/PNG/GIF.
+                    if img.mode == "RGBA":
+                        bg = Image.new("RGB", img.size, (255, 255, 255))
+                        bg.paste(img, mask=img.split()[3])
+                        img = bg
+                    img.convert("RGB").save(buffer, format="JPEG", quality=85)
+                else:
+                    img.save(buffer, format=preview_format, quality=85)
 
             cover = ImageOps.fit(original, (180, 140), Image.ANTIALIAS)
             cover_buf = BytesIO()
-            _to_rgb(cover).convert("RGB").save(cover_buf, format="JPEG", quality=85)
+            save_preview(cover, cover_buf)
             cover_buf.seek(0)
             oss.upload(
                 oss_file_prefix, cover_name, cover_buf, bucket_name=image_bucket
@@ -105,7 +116,7 @@ def create_thumbnail_task(image_id: str):
             safe = original.copy()
             safe.thumbnail((400, 500))
             safe_buf = BytesIO()
-            _to_rgb(safe).convert("RGB").save(safe_buf, format="JPEG", quality=85)
+            save_preview(safe, safe_buf)
             safe_buf.seek(0)
             oss.upload(
                 oss_file_prefix, safe_check_name, safe_buf, bucket_name=image_bucket

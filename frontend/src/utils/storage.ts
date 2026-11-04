@@ -1,7 +1,7 @@
 import store from 'store';
 import { HotKeyOption } from '../components/HotKey/interfaces';
 import { HotKeyState } from '../store/hotKey/slice';
-import { LLMConf } from '@/services/ai/llm_preprocess';
+import type { LLMConf } from '@/services/ai/llm_preprocess';
 
 interface DefaultTarget {
   projectID: string;

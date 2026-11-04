@@ -200,6 +200,28 @@ def _run_media_import_task_inner(task, project, settings, download_kind="twitter
         task.save()
 
 
+def _start_media_import_task(project, settings, items, download_kind):
+    """保存枚举结果并启动逐图导入，保留平台的命名元数据。"""
+    name_fields = (
+        ("text", "created_at", "illust_id", "page")
+        if download_kind == "pixiv"
+        else ("text", "created_at", "page")
+    )
+    task = MediaImportTask(
+        project=project,
+        task_id=str(project.id) + "_" + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f"),
+        urls=[item[0] for item in items],
+        names=[dict(zip(name_fields, item[1:])) for item in items],
+        total=len(items),
+    ).save()
+    threading.Thread(
+        target=_run_media_import_task,
+        args=(task, project, settings, download_kind),
+        daemon=True,
+    ).start()
+    return {"task_id": task.task_id, "total": task.total}
+
+
 class ProjectFileFromURLAPI(MoeAPIView):
     """从 URL（社交媒体/外部链接）下载图片直接导入项目（支持一次下载多张）"""
 
@@ -231,7 +253,6 @@ class ProjectFileFromURLAPI(MoeAPIView):
             raise NoPermissionError(gettext("您没有此项目的上传文件权限"))
         settings = SiteSetting.get()
 
-        # twitter_user：进度式导入（枚举 -> 后台线程下载 -> 返回 task_id）
         if source == "twitter_user":
             try:
                 items = enumerate_twitter_user_media(
@@ -244,25 +265,8 @@ class ProjectFileFromURLAPI(MoeAPIView):
                 return {"message": str(e)}, 400
             if not items:
                 return {"message": gettext("该用户的媒体时间线中未找到图片")}, 400
-            task = MediaImportTask(
-                project=project,
-                task_id=str(project.id) + "_" + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f"),
-                urls=[u for u, _, _, _ in items],
-                names=[
-                    {"text": t, "created_at": c, "page": p} for _, t, c, p in items
-                ],
-                total=len(items),
-            ).save()
-            # 后台线程下载（进程内线程，任务状态存 Mongo 供轮询）
-            t = threading.Thread(
-                target=_run_media_import_task,
-                args=(task, project, settings, "twitter"),
-                daemon=True,
-            )
-            t.start()
-            return {"task_id": task.task_id, "total": task.total}
+            return _start_media_import_task(project, settings, items, "twitter")
 
-        # pixiv_user：进度式导入（枚举 -> 后台线程下载 -> 返回 task_id）
         if source == "pixiv_user":
             try:
                 items = enumerate_pixiv_user_media(
@@ -274,25 +278,8 @@ class ProjectFileFromURLAPI(MoeAPIView):
                 return {"message": str(e)}, 400
             if not items:
                 return {"message": gettext("该用户的作品中未找到可下载的图片")}, 400
-            task = MediaImportTask(
-                project=project,
-                task_id=str(project.id) + "_" + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f"),
-                urls=[u for u, _, _, _, _ in items],
-                names=[
-                    {"text": t, "created_at": c, "illust_id": iid, "page": p}
-                    for _, t, c, iid, p in items
-                ],
-                total=len(items),
-            ).save()
-            t = threading.Thread(
-                target=_run_media_import_task,
-                args=(task, project, settings, "pixiv"),
-                daemon=True,
-            )
-            t.start()
-            return {"task_id": task.task_id, "total": task.total}
+            return _start_media_import_task(project, settings, items, "pixiv")
 
-        # bluesky_user：进度式导入（枚举 -> 后台线程下载 -> 返回 task_id）
         if source == "bluesky_user":
             try:
                 items = enumerate_bluesky_user_media(
@@ -308,22 +295,7 @@ class ProjectFileFromURLAPI(MoeAPIView):
                 return {"message": str(e)}, 400
             if not items:
                 return {"message": gettext("该用户的媒体时间线中未找到图片")}, 400
-            task = MediaImportTask(
-                project=project,
-                task_id=str(project.id) + "_" + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f"),
-                urls=[u for u, _, _, _ in items],
-                names=[
-                    {"text": t, "created_at": c, "page": p} for _, t, c, p in items
-                ],
-                total=len(items),
-            ).save()
-            t = threading.Thread(
-                target=_run_media_import_task,
-                args=(task, project, settings, "bluesky"),
-                daemon=True,
-            )
-            t.start()
-            return {"task_id": task.task_id, "total": task.total}
+            return _start_media_import_task(project, settings, items, "bluesky")
 
         # 其余来源：一次性下载导入
         try:

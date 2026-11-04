@@ -1,11 +1,9 @@
 import { css, Global } from '@emotion/core';
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { useSelector } from 'react-redux';
 import { Redirect, Route, Switch, useLocation } from 'react-router-dom';
 import { NoticeLoginPopup } from './components/notice/NoticeLoginPopup';
-import Admin from './pages/Admin';
 import Dashboard from './pages/Dashboard';
-import ImageTranslator from './pages/ImageTranslator';
 import { IndexPage } from './pages/Index';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -14,6 +12,10 @@ import { NotFoundPage } from './pages/404';
 import { AppState } from './store';
 import style from './style';
 import { routes } from './pages/routes';
+import { Spin } from './components/shared/Spin';
+
+const Admin = lazy(() => import('./pages/Admin'));
+const ImageTranslator = lazy(() => import('./pages/ImageTranslator'));
 
 // 公共的页面
 const publicPaths = [
@@ -428,14 +430,18 @@ const App: React.FC = () => {
             <ResetPassword />
           </Route>
           <Route path={routes.imageTranslator.asRouter}>
-            <ImageTranslator />
+            <Suspense fallback={<Spin size="large" />}>
+              <ImageTranslator />
+            </Suspense>
           </Route>
           <Route path={routes.dashboard.$}>
             <Dashboard />
           </Route>
           {userIsAdmin && (
             <Route path={routes.admin}>
-              <Admin />
+              <Suspense fallback={<Spin size="large" />}>
+                <Admin />
+              </Suspense>
             </Route>
           )}
           <Route path="/*">

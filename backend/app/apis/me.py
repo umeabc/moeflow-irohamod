@@ -15,7 +15,6 @@ from app.validators.auth import (
     ChangeEmailSchema,
     ChangePasswordSchema,
     LoginSchema,
-    ResetPasswordSchema,
 )
 from app.validators.join_process import (
     SearchInvitationSchema,
@@ -192,37 +191,6 @@ class MePasswordAPI(MoeAPIView):
         self.current_user.password = data["new_password"]
         self.current_user.save()
         return {"message": gettext("修改成功，请重新登陆")}
-
-    def delete(self):
-        """
-        @api {delete} /v1/user/password 重置用户密码
-        @apiVersion 1.0.0
-        @apiName reset_password
-        @apiGroup Me
-        @apiUse APIHeader
-
-        @apiParam {String}      email   邮箱
-        @apiParam {String}      v_code  验证码
-        @apiParam {String}      password  新密码
-        @apiParamExample {json} 请求示例
-        {
-            "email":"123@123.com",
-            "v_code":"kJhu12",
-            "password":"123123"
-        }
-
-        @apiUse 204
-
-        @apiUse ValidateError
-        """
-        data = self.get_json(ResetPasswordSchema())
-        user = User.by_email(data["email"])
-        user.password = data["password"]
-        user.save()
-        # 计算token
-        token = user.generate_token()
-        return {"token": token}
-
 
 class MeInvitationListAPI(MoeAPIView):
     @token_required

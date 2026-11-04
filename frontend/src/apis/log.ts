@@ -89,20 +89,6 @@ const getErrorLogs = ({
   });
 };
 
-const getErrorLogDetail = ({
-  logId,
-  configs,
-}: {
-  logId: string;
-  configs?: AxiosRequestConfig;
-}) => {
-  return request<APIErrorLog>({
-    method: 'GET',
-    url: `/v1/admin/logs/errors/${logId}`,
-    ...configs,
-  });
-};
-
 const resolveErrorLog = ({
   logId,
   resolved,
@@ -128,6 +114,5 @@ const resolveErrorLog = ({
 export default {
   getActionLogs,
   getErrorLogs,
-  getErrorLogDetail,
   resolveErrorLog,
 };

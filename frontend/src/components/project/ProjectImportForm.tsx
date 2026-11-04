@@ -10,7 +10,6 @@ import { useHistory } from 'react-router-dom';
 import { AppState } from '@/store';
 import { toLowerCamelCase } from '@/utils';
 import { resetFilesState } from '@/store/file/slice';
-import * as zip from '@zip.js/zip.js';
 import { RcFile } from 'antd/lib/upload';
 import produce from 'immer';
 
@@ -41,7 +40,16 @@ export const ProjectImportForm: FC<ProjectImportFormProps> = ({
   ) as UserProjectSet;
 
   const handleImport = async () => {
+    if (!importFileList?.length) return;
     setImporting(true);
+    let zip: typeof import('@zip.js/zip.js');
+    try {
+      zip = await import('@zip.js/zip.js');
+    } catch {
+      message.error(formatMessage({ id: 'api.networkError' }));
+      setImporting(false);
+      return;
+    }
     if (importFileList) {
       setImportStatuses(importFileList.map((file) => `${file.name} 排队中`));
       for (let i = 0; i < importFileList.length; i++) {
@@ -56,7 +64,7 @@ export const ProjectImportForm: FC<ProjectImportFormProps> = ({
         const entries = await zipReader.getEntries();
         for (const entry of entries) {
           const writer = new zip.BlobWriter();
-          if (!entry.directory) entry.getData(writer);
+          if (!entry.directory) await entry.getData(writer);
           if (entry.filename === 'project.json') {
             project = await writer.getData();
           }
@@ -64,7 +72,7 @@ export const ProjectImportForm: FC<ProjectImportFormProps> = ({
             labelplus = await writer.getData();
           }
         }
-        zipReader.close();
+        await zipReader.close();
         if (project && labelplus) {
           setImportStatuses(
             produce((draft) => {
@@ -85,9 +93,9 @@ export const ProjectImportForm: FC<ProjectImportFormProps> = ({
               const zipReader = new zip.ZipReader(new zip.BlobReader(file));
               const entries = await zipReader.getEntries();
               for (const entry of entries) {
-                if (entry.filename.startsWith('images/')) {
+                if (!entry.directory && entry.filename.startsWith('images/')) {
                   const writer = new zip.BlobWriter();
-                  if (!entry.directory) entry.getData(writer);
+                  if (!entry.directory) await entry.getData(writer);
                   const filename = entry.filename.replace('images/', '');
                   setImportStatuses(
                     produce((draft) => {
@@ -106,7 +114,7 @@ export const ProjectImportForm: FC<ProjectImportFormProps> = ({
                     });
                 }
               }
-              zipReader.close();
+              await zipReader.close();
               // 导入成功
               setImportStatuses(
                 produce((draft) => {

@@ -26,13 +26,20 @@ lint-fix:
 format:
 	venv/bin/ruff format
 
-requirements.txt: deps-top.txt
-	rm -rf venv-rebuild-deps
-	$(PYTHON_BIN) -mvenv venv-rebuild-deps
-	venv-rebuild-deps/bin/pip install -r deps-top.txt
-	echo '# GENERATED: run make requirements.txt to recreate lock file' > requirements.txt
-	venv-rebuild-deps/bin/pipdeptree --freeze >> requirements.txt
-	rm -rf venv-rebuild-deps
+requirements.txt: deps-top.txt scripts/lock_requirements.py
+	$(PYTHON_BIN) scripts/lock_requirements.py production
+
+requirements-dev.txt: deps-dev-top.txt requirements.txt requirements-storage-all.txt requirements-oss.txt requirements-r2.txt requirements-google-ocr.txt scripts/lock_requirements.py
+	$(PYTHON_BIN) scripts/lock_requirements.py dev
+
+requirements-oss.txt: deps-oss-top.txt requirements.txt scripts/lock_requirements.py
+	$(PYTHON_BIN) scripts/lock_requirements.py oss
+
+requirements-r2.txt: deps-r2-top.txt requirements.txt scripts/lock_requirements.py
+	$(PYTHON_BIN) scripts/lock_requirements.py r2
+
+requirements-google-ocr.txt: deps-google-ocr-top.txt requirements.txt scripts/lock_requirements.py
+	$(PYTHON_BIN) scripts/lock_requirements.py google-ocr
 
 test: test_all
 
@@ -54,8 +61,11 @@ babel-update-po:
 	$(BIN_PREFIX)/pybabel extract -F babel.cfg -k lazy_gettext -k hardcode_text -o messages.pot app
 	$(BIN_PREFIX)/pybabel update -i messages.pot -d app/translations
 
-babel-update-mo: babel-update-po
+babel-compile-mo:
 	$(BIN_PREFIX)/pybabel compile -d app/translations
+
+babel-update-mo: babel-update-po
+	$(MAKE) babel-compile-mo
 
 babel-translate-po:
 	venv/bin/python app/scripts/fill_zh_translations.py

@@ -21,16 +21,6 @@ export interface APIUser {
   };
 }
 
-export interface APIVCode {
-  id: string;
-  content: string;
-  intro: string;
-  info: string;
-  expires: string;
-  wrong_count: string;
-  send_time: string;
-}
-
 /** 获取用户列表的请求数据 */
 interface GetUsersParams {
   word: string;
@@ -211,19 +201,6 @@ const adminDeactivateUser = ({
   });
 };
 
-/** 管理员获取验证码列表 */
-const adminGetVCodeList = ({
-  configs,
-}: {
-  configs?: AxiosRequestConfig;
-} = {}) => {
-  return request<APIVCode[]>({
-    method: 'GET',
-    url: `/v1/admin/v-codes`,
-    ...configs,
-  });
-};
-
 export default {
   getUsers,
   editUser,
@@ -234,5 +211,4 @@ export default {
   adminCreateUser,
   adminEditUserPassword,
   adminDeactivateUser,
-  adminGetVCodeList,
 };

@@ -751,9 +751,9 @@ file.uploadTip1:
   zhCn: 点击“上传”按钮 或 拖放、黏贴文件到这来上传吧
   en: Click the "Upload" button or drag or paste files here to upload.
 file.uploadTip2:
-  zhCn: 支持单个或批量文件上传，目前支持这些后缀的文件 .jpg, .jpeg, .png, .bmp, .gif（不区分大小写）
+  zhCn: 支持单个或批量文件上传，目前支持这些后缀的文件 .jpg, .jpeg, .png, .bmp, .gif, .webp, .avif（不区分大小写）
   en: 'Supports single or multi file uploads. Currently supports these file extensions:
-    .jpg, .jpeg, .png, .bmp, .gif (case insensitive).'
+    .jpg, .jpeg, .png, .bmp, .gif, .webp, .avif (case insensitive).'
 file.emptyTip:
   zhCn: 还没有文件，现在上传一个吧！
   en: No files yet, upload one now!

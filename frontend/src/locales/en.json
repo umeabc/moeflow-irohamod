@@ -244,7 +244,7 @@
   "file.uploadSuccess": "Upload Successful",
   "file.uploadFail": "\"{name} upload failed\"",
   "file.uploadTip1": "Click the \"Upload\" button or drag or paste files here to upload.",
-  "file.uploadTip2": "Supports single or multi file uploads. Currently supports these file extensions: .jpg, .jpeg, .png, .bmp, .gif (case insensitive).",
+  "file.uploadTip2": "Supports single or multi file uploads. Currently supports these file extensions: .jpg, .jpeg, .png, .bmp, .gif, .webp, .avif (case insensitive).",
   "file.emptyTip": "No files yet, upload one now!",
   "file.emptySearchTip": "No files contain \"{word}\". Please try a different search term.",
   "file.searchPlaceholder": "Search files across all groups",

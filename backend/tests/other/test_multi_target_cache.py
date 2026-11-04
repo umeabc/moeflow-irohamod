@@ -16,6 +16,33 @@ from app.exceptions.language import SameTargetLanguageError
 class MultiTargetCacheTestCase(MoeAPITestCase):
     """测试多目标语言的Cache变化"""
 
+    def _assert_counts(self, model, translated, checked):
+        model.reload()
+        self.assertEqual(translated, model.translated_source_count)
+        self.assertEqual(checked, model.checked_source_count)
+
+    def _assert_cache_counts(self, project, targets, files, folders, deleted_related=None):
+        """检查项目、目标、文件和目录的计数；删除时检查全部关联记录。"""
+        translated = [sum(entry[2][i] for entry in files) for i in range(2)]
+        checked = [sum(entry[3][i] for entry in files) for i in range(2)]
+        self._assert_counts(project, sum(translated), sum(checked))
+        for i, target in enumerate(targets):
+            self._assert_counts(target, translated[i], checked[i])
+        for model, caches, translated, checked in (*files, *folders):
+            try:
+                model.reload()
+            except DoesNotExist:
+                if deleted_related is None:
+                    raise
+                records = (model, *caches, *deleted_related.get(model.id, ()))
+                for record in records:
+                    with self.assertRaises(DoesNotExist):
+                        record.reload()
+            else:
+                self._assert_counts(model, sum(translated), sum(checked))
+                for i, cache in enumerate(caches):
+                    self._assert_counts(cache, translated[i], checked[i])
+
     def test_project_default_create_target(self):
         """测试创建向时自动创建了target"""
         # == 创建测试数据 ==
@@ -135,105 +162,38 @@ class MultiTargetCacheTestCase(MoeAPITestCase):
         ):
             # 验证数量
             # Project 和 Target
-            project.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                project.translated_source_count,
+            self._assert_cache_counts(
+                project,
+                (target1, target2),
+                files=(
+                    (
+                        file1,
+                        (file1_target1, file1_target2),
+                        (file1_target1_t, file1_target2_t),
+                        (file1_target1_c, file1_target2_c),
+                    ),
+                    (
+                        file2,
+                        (file2_target1, file2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
+                folders=(
+                    (
+                        dir1,
+                        (dir1_target1, dir1_target2),
+                        (file1_target1_t + file2_target1_t, file1_target2_t + file2_target2_t),
+                        (file1_target1_c + file2_target1_c, file1_target2_c + file2_target2_c),
+                    ),
+                    (
+                        dir2,
+                        (dir2_target1, dir2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
             )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                project.checked_source_count,
-            )
-            target1.reload()
-            self.assertEqual(
-                (file1_target1_t + file2_target1_t),
-                target1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file2_target1_c),
-                target1.checked_source_count,
-            )
-            target2.reload()
-            self.assertEqual(
-                (file1_target2_t + file2_target2_t),
-                target2.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target2_c + file2_target2_c),
-                target2.checked_source_count,
-            )
-            # file1和它的两个Cache
-            file1.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t),
-                file1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c), file1.checked_source_count
-            )
-            file1_target1.reload()
-            self.assertEqual(file1_target1_t, file1_target1.translated_source_count)
-            self.assertEqual(file1_target1_c, file1_target1.checked_source_count)
-            file1_target2.reload()
-            self.assertEqual(file1_target2_t, file1_target2.translated_source_count)
-            self.assertEqual(file1_target2_c, file1_target2.checked_source_count)
-            # file2和它的两个Cache
-            file2.reload()
-            self.assertEqual(
-                (file2_target1_t + file2_target2_t),
-                file2.translated_source_count,
-            )
-            self.assertEqual(
-                (file2_target1_c + file2_target2_c), file2.checked_source_count
-            )
-            file2_target1.reload()
-            self.assertEqual(file2_target1_t, file2_target1.translated_source_count)
-            self.assertEqual(file2_target1_c, file2_target1.checked_source_count)
-            file2_target2.reload()
-            self.assertEqual(file2_target2_t, file2_target2.translated_source_count)
-            self.assertEqual(file2_target2_c, file2_target2.checked_source_count)
-            # dir1 和他两个Cache
-            dir1.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                dir1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                dir1.checked_source_count,
-            )
-            dir1_target1.reload()
-            self.assertEqual(
-                file1_target1_t + file2_target1_t,
-                dir1_target1.translated_source_count,
-            )
-            self.assertEqual(
-                file1_target1_c + file2_target1_c,
-                dir1_target1.checked_source_count,
-            )
-            dir1_target2.reload()
-            self.assertEqual(
-                file1_target2_t + file2_target2_t,
-                dir1_target2.translated_source_count,
-            )
-            self.assertEqual(
-                file1_target2_c + file2_target2_c,
-                dir1_target2.checked_source_count,
-            )
-            # dir2 和他两个Cache
-            dir2.reload()
-            self.assertEqual(
-                file2_target1_t + file2_target2_t, dir2.translated_source_count
-            )
-            self.assertEqual(
-                file2_target1_c + file2_target2_c, dir2.checked_source_count
-            )
-            dir2_target1.reload()
-            self.assertEqual(file2_target1_t, dir2_target1.translated_source_count)
-            self.assertEqual(file2_target1_c, dir2_target1.checked_source_count)
-            dir2_target2.reload()
-            self.assertEqual(file2_target2_t, dir2_target2.translated_source_count)
-            self.assertEqual(file2_target2_c, dir2_target2.checked_source_count)
 
         # == 创建测试数据 ==
         self.create_user("11", "1@1.com", "111111").generate_token()
@@ -791,105 +751,38 @@ class MultiTargetCacheTestCase(MoeAPITestCase):
         ):
             # 验证数量
             # Project 和 Target
-            project.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                project.translated_source_count,
+            self._assert_cache_counts(
+                project,
+                (target1, target2),
+                files=(
+                    (
+                        file1,
+                        (file1_target1, file1_target2),
+                        (file1_target1_t, file1_target2_t),
+                        (file1_target1_c, file1_target2_c),
+                    ),
+                    (
+                        file2,
+                        (file2_target1, file2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
+                folders=(
+                    (
+                        dir1,
+                        (dir1_target1, dir1_target2),
+                        (file1_target1_t + file2_target1_t, file1_target2_t + file2_target2_t),
+                        (file1_target1_c + file2_target1_c, file1_target2_c + file2_target2_c),
+                    ),
+                    (
+                        dir2,
+                        (dir2_target1, dir2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
             )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                project.checked_source_count,
-            )
-            target1.reload()
-            self.assertEqual(
-                (file1_target1_t + file2_target1_t),
-                target1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file2_target1_c),
-                target1.checked_source_count,
-            )
-            target2.reload()
-            self.assertEqual(
-                (file1_target2_t + file2_target2_t),
-                target2.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target2_c + file2_target2_c),
-                target2.checked_source_count,
-            )
-            # file1和它的两个Cache
-            file1.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t),
-                file1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c), file1.checked_source_count
-            )
-            file1_target1.reload()
-            self.assertEqual(file1_target1_t, file1_target1.translated_source_count)
-            self.assertEqual(file1_target1_c, file1_target1.checked_source_count)
-            file1_target2.reload()
-            self.assertEqual(file1_target2_t, file1_target2.translated_source_count)
-            self.assertEqual(file1_target2_c, file1_target2.checked_source_count)
-            # file2和它的两个Cache
-            file2.reload()
-            self.assertEqual(
-                (file2_target1_t + file2_target2_t),
-                file2.translated_source_count,
-            )
-            self.assertEqual(
-                (file2_target1_c + file2_target2_c), file2.checked_source_count
-            )
-            file2_target1.reload()
-            self.assertEqual(file2_target1_t, file2_target1.translated_source_count)
-            self.assertEqual(file2_target1_c, file2_target1.checked_source_count)
-            file2_target2.reload()
-            self.assertEqual(file2_target2_t, file2_target2.translated_source_count)
-            self.assertEqual(file2_target2_c, file2_target2.checked_source_count)
-            # dir1 和他两个Cache
-            dir1.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                dir1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                dir1.checked_source_count,
-            )
-            dir1_target1.reload()
-            self.assertEqual(
-                file1_target1_t + file2_target1_t,
-                dir1_target1.translated_source_count,
-            )
-            self.assertEqual(
-                file1_target1_c + file2_target1_c,
-                dir1_target1.checked_source_count,
-            )
-            dir1_target2.reload()
-            self.assertEqual(
-                file1_target2_t + file2_target2_t,
-                dir1_target2.translated_source_count,
-            )
-            self.assertEqual(
-                file1_target2_c + file2_target2_c,
-                dir1_target2.checked_source_count,
-            )
-            # dir2 和他两个Cache
-            dir2.reload()
-            self.assertEqual(
-                file2_target1_t + file2_target2_t, dir2.translated_source_count
-            )
-            self.assertEqual(
-                file2_target1_c + file2_target2_c, dir2.checked_source_count
-            )
-            dir2_target1.reload()
-            self.assertEqual(file2_target1_t, dir2_target1.translated_source_count)
-            self.assertEqual(file2_target1_c, dir2_target1.checked_source_count)
-            dir2_target2.reload()
-            self.assertEqual(file2_target2_t, dir2_target2.translated_source_count)
-            self.assertEqual(file2_target2_c, dir2_target2.checked_source_count)
 
         # == 创建测试数据 ==
         self.create_user("11", "1@1.com", "111111").generate_token()
@@ -1106,195 +999,64 @@ class MultiTargetCacheTestCase(MoeAPITestCase):
         ):
             # 验证数量
             # Project 和 Target
-            project.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                project.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                project.checked_source_count,
-            )
-            target1.reload()
-            self.assertEqual(
-                (file1_target1_t + file2_target1_t),
-                target1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file2_target1_c),
-                target1.checked_source_count,
-            )
-            target2.reload()
-            self.assertEqual(
-                (file1_target2_t + file2_target2_t),
-                target2.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target2_c + file2_target2_c),
-                target2.checked_source_count,
-            )
-            # file1和它的两个Cache
-            try:
-                file1.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    file1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_target2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target2_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target2_tra2.reload()
-            else:
-                self.assertEqual(
-                    (file1_target1_t + file1_target2_t),
-                    file1.translated_source_count,
-                )
-                self.assertEqual(
-                    (file1_target1_c + file1_target2_c),
-                    file1.checked_source_count,
-                )
-                file1_target1.reload()
-                self.assertEqual(file1_target1_t, file1_target1.translated_source_count)
-                self.assertEqual(file1_target1_c, file1_target1.checked_source_count)
-                file1_target2.reload()
-                self.assertEqual(file1_target2_t, file1_target2.translated_source_count)
-                self.assertEqual(file1_target2_c, file1_target2.checked_source_count)
-            # file2和它的两个Cache
-            try:
-                file2.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    file2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_target2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target2_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target2_tra2.reload()
-            else:
-                self.assertEqual(
-                    (file2_target1_t + file2_target2_t),
-                    file2.translated_source_count,
-                )
-                self.assertEqual(
-                    (file2_target1_c + file2_target2_c),
-                    file2.checked_source_count,
-                )
-                file2_target1.reload()
-                self.assertEqual(file2_target1_t, file2_target1.translated_source_count)
-                self.assertEqual(file2_target1_c, file2_target1.checked_source_count)
-                file2_target2.reload()
-                self.assertEqual(file2_target2_t, file2_target2.translated_source_count)
-                self.assertEqual(file2_target2_c, file2_target2.checked_source_count)
-            # dir1 和他两个Cache
-            try:
-                dir1.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    dir1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target2.reload()
-            else:
-                self.assertEqual(
+            self._assert_cache_counts(
+                project,
+                (target1, target2),
+                files=(
                     (
-                        file1_target1_t
-                        + file1_target2_t
-                        + file2_target1_t
-                        + file2_target2_t
+                        file1,
+                        (file1_target1, file1_target2),
+                        (file1_target1_t, file1_target2_t),
+                        (file1_target1_c, file1_target2_c),
                     ),
-                    dir1.translated_source_count,
-                )
-                self.assertEqual(
                     (
-                        file1_target1_c
-                        + file1_target2_c
-                        + file2_target1_c
-                        + file2_target2_c
+                        file2,
+                        (file2_target1, file2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
                     ),
-                    dir1.checked_source_count,
-                )
-                dir1_target1.reload()
-                self.assertEqual(
-                    file1_target1_t + file2_target1_t,
-                    dir1_target1.translated_source_count,
-                )
-                self.assertEqual(
-                    file1_target1_c + file2_target1_c,
-                    dir1_target1.checked_source_count,
-                )
-                dir1_target2.reload()
-                self.assertEqual(
-                    file1_target2_t + file2_target2_t,
-                    dir1_target2.translated_source_count,
-                )
-                self.assertEqual(
-                    file1_target2_c + file2_target2_c,
-                    dir1_target2.checked_source_count,
-                )
-            # dir2 和他两个Cache
-            try:
-                dir2.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    dir1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target2.reload()
-            else:
-                self.assertEqual(
-                    file2_target1_t + file2_target2_t,
-                    dir2.translated_source_count,
-                )
-                self.assertEqual(
-                    file2_target1_c + file2_target2_c,
-                    dir2.checked_source_count,
-                )
-                dir2_target1.reload()
-                self.assertEqual(file2_target1_t, dir2_target1.translated_source_count)
-                self.assertEqual(file2_target1_c, dir2_target1.checked_source_count)
-                dir2_target2.reload()
-                self.assertEqual(file2_target2_t, dir2_target2.translated_source_count)
-                self.assertEqual(file2_target2_c, dir2_target2.checked_source_count)
+                ),
+                folders=(
+                    (
+                        dir1,
+                        (dir1_target1, dir1_target2),
+                        (file1_target1_t + file2_target1_t, file1_target2_t + file2_target2_t),
+                        (file1_target1_c + file2_target1_c, file1_target2_c + file2_target2_c),
+                    ),
+                    (
+                        dir2,
+                        (dir2_target1, dir2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
+                deleted_related={
+                    file1.id: (
+                        file1_source1,
+                        file1_source1_target1_tra1,
+                        file1_source1_target1_tra2,
+                        file1_source1_target2_tra1,
+                        file1_source1_target2_tra2,
+                        file1_source2,
+                        file1_source2_target1_tra1,
+                        file1_source2_target1_tra2,
+                        file1_source2_target2_tra1,
+                        file1_source2_target2_tra2,
+                    ),
+                    file2.id: (
+                        file2_source1,
+                        file2_source1_target1_tra1,
+                        file2_source1_target1_tra2,
+                        file2_source1_target2_tra1,
+                        file2_source1_target2_tra2,
+                        file2_source2,
+                        file2_source2_target1_tra1,
+                        file2_source2_target1_tra2,
+                        file2_source2_target2_tra1,
+                        file2_source2_target2_tra2,
+                    ),
+                },
+            )
 
         # == 创建测试数据 ==
         self.create_user("11", "1@1.com", "111111").generate_token()
@@ -1457,195 +1219,64 @@ class MultiTargetCacheTestCase(MoeAPITestCase):
         ):
             # 验证数量
             # Project 和 Target
-            project.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                project.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                project.checked_source_count,
-            )
-            target1.reload()
-            self.assertEqual(
-                (file1_target1_t + file2_target1_t),
-                target1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file2_target1_c),
-                target1.checked_source_count,
-            )
-            target2.reload()
-            self.assertEqual(
-                (file1_target2_t + file2_target2_t),
-                target2.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target2_c + file2_target2_c),
-                target2.checked_source_count,
-            )
-            # file1和它的两个Cache
-            try:
-                file1.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    file1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_target2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target2_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target2_tra2.reload()
-            else:
-                self.assertEqual(
-                    (file1_target1_t + file1_target2_t),
-                    file1.translated_source_count,
-                )
-                self.assertEqual(
-                    (file1_target1_c + file1_target2_c),
-                    file1.checked_source_count,
-                )
-                file1_target1.reload()
-                self.assertEqual(file1_target1_t, file1_target1.translated_source_count)
-                self.assertEqual(file1_target1_c, file1_target1.checked_source_count)
-                file1_target2.reload()
-                self.assertEqual(file1_target2_t, file1_target2.translated_source_count)
-                self.assertEqual(file1_target2_c, file1_target2.checked_source_count)
-            # file2和它的两个Cache
-            try:
-                file2.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    file2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_target2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target2_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target2_tra2.reload()
-            else:
-                self.assertEqual(
-                    (file2_target1_t + file2_target2_t),
-                    file2.translated_source_count,
-                )
-                self.assertEqual(
-                    (file2_target1_c + file2_target2_c),
-                    file2.checked_source_count,
-                )
-                file2_target1.reload()
-                self.assertEqual(file2_target1_t, file2_target1.translated_source_count)
-                self.assertEqual(file2_target1_c, file2_target1.checked_source_count)
-                file2_target2.reload()
-                self.assertEqual(file2_target2_t, file2_target2.translated_source_count)
-                self.assertEqual(file2_target2_c, file2_target2.checked_source_count)
-            # dir1 和他两个Cache
-            try:
-                dir1.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    dir1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target2.reload()
-            else:
-                self.assertEqual(
+            self._assert_cache_counts(
+                project,
+                (target1, target2),
+                files=(
                     (
-                        file1_target1_t
-                        + file1_target2_t
-                        + file2_target1_t
-                        + file2_target2_t
+                        file1,
+                        (file1_target1, file1_target2),
+                        (file1_target1_t, file1_target2_t),
+                        (file1_target1_c, file1_target2_c),
                     ),
-                    dir1.translated_source_count,
-                )
-                self.assertEqual(
                     (
-                        file1_target1_c
-                        + file1_target2_c
-                        + file2_target1_c
-                        + file2_target2_c
+                        file2,
+                        (file2_target1, file2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
                     ),
-                    dir1.checked_source_count,
-                )
-                dir1_target1.reload()
-                self.assertEqual(
-                    file1_target1_t + file2_target1_t,
-                    dir1_target1.translated_source_count,
-                )
-                self.assertEqual(
-                    file1_target1_c + file2_target1_c,
-                    dir1_target1.checked_source_count,
-                )
-                dir1_target2.reload()
-                self.assertEqual(
-                    file1_target2_t + file2_target2_t,
-                    dir1_target2.translated_source_count,
-                )
-                self.assertEqual(
-                    file1_target2_c + file2_target2_c,
-                    dir1_target2.checked_source_count,
-                )
-            # dir2 和他两个Cache
-            try:
-                dir2.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    dir1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target2.reload()
-            else:
-                self.assertEqual(
-                    file2_target1_t + file2_target2_t,
-                    dir2.translated_source_count,
-                )
-                self.assertEqual(
-                    file2_target1_c + file2_target2_c,
-                    dir2.checked_source_count,
-                )
-                dir2_target1.reload()
-                self.assertEqual(file2_target1_t, dir2_target1.translated_source_count)
-                self.assertEqual(file2_target1_c, dir2_target1.checked_source_count)
-                dir2_target2.reload()
-                self.assertEqual(file2_target2_t, dir2_target2.translated_source_count)
-                self.assertEqual(file2_target2_c, dir2_target2.checked_source_count)
+                ),
+                folders=(
+                    (
+                        dir1,
+                        (dir1_target1, dir1_target2),
+                        (file1_target1_t + file2_target1_t, file1_target2_t + file2_target2_t),
+                        (file1_target1_c + file2_target1_c, file1_target2_c + file2_target2_c),
+                    ),
+                    (
+                        dir2,
+                        (dir2_target1, dir2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
+                deleted_related={
+                    file1.id: (
+                        file1_source1,
+                        file1_source1_target1_tra1,
+                        file1_source1_target1_tra2,
+                        file1_source1_target2_tra1,
+                        file1_source1_target2_tra2,
+                        file1_source2,
+                        file1_source2_target1_tra1,
+                        file1_source2_target1_tra2,
+                        file1_source2_target2_tra1,
+                        file1_source2_target2_tra2,
+                    ),
+                    file2.id: (
+                        file2_source1,
+                        file2_source1_target1_tra1,
+                        file2_source1_target1_tra2,
+                        file2_source1_target2_tra1,
+                        file2_source1_target2_tra2,
+                        file2_source2,
+                        file2_source2_target1_tra1,
+                        file2_source2_target1_tra2,
+                        file2_source2_target2_tra1,
+                        file2_source2_target2_tra2,
+                    ),
+                },
+            )
 
         # == 创建测试数据 ==
         self.create_user("11", "1@1.com", "111111").generate_token()
@@ -1796,195 +1427,64 @@ class MultiTargetCacheTestCase(MoeAPITestCase):
         ):
             # 验证数量
             # Project 和 Target
-            project.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                project.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                project.checked_source_count,
-            )
-            target1.reload()
-            self.assertEqual(
-                (file1_target1_t + file2_target1_t),
-                target1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file2_target1_c),
-                target1.checked_source_count,
-            )
-            target2.reload()
-            self.assertEqual(
-                (file1_target2_t + file2_target2_t),
-                target2.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target2_c + file2_target2_c),
-                target2.checked_source_count,
-            )
-            # file1和它的两个Cache
-            try:
-                file1.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    file1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_target2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target2_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target2_tra2.reload()
-            else:
-                self.assertEqual(
-                    (file1_target1_t + file1_target2_t),
-                    file1.translated_source_count,
-                )
-                self.assertEqual(
-                    (file1_target1_c + file1_target2_c),
-                    file1.checked_source_count,
-                )
-                file1_target1.reload()
-                self.assertEqual(file1_target1_t, file1_target1.translated_source_count)
-                self.assertEqual(file1_target1_c, file1_target1.checked_source_count)
-                file1_target2.reload()
-                self.assertEqual(file1_target2_t, file1_target2.translated_source_count)
-                self.assertEqual(file1_target2_c, file1_target2.checked_source_count)
-            # file2和它的两个Cache
-            try:
-                file2.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    file2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_target2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target2_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target2_tra2.reload()
-            else:
-                self.assertEqual(
-                    (file2_target1_t + file2_target2_t),
-                    file2.translated_source_count,
-                )
-                self.assertEqual(
-                    (file2_target1_c + file2_target2_c),
-                    file2.checked_source_count,
-                )
-                file2_target1.reload()
-                self.assertEqual(file2_target1_t, file2_target1.translated_source_count)
-                self.assertEqual(file2_target1_c, file2_target1.checked_source_count)
-                file2_target2.reload()
-                self.assertEqual(file2_target2_t, file2_target2.translated_source_count)
-                self.assertEqual(file2_target2_c, file2_target2.checked_source_count)
-            # dir1 和他两个Cache
-            try:
-                dir1.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    dir1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target2.reload()
-            else:
-                self.assertEqual(
+            self._assert_cache_counts(
+                project,
+                (target1, target2),
+                files=(
                     (
-                        file1_target1_t
-                        + file1_target2_t
-                        + file2_target1_t
-                        + file2_target2_t
+                        file1,
+                        (file1_target1, file1_target2),
+                        (file1_target1_t, file1_target2_t),
+                        (file1_target1_c, file1_target2_c),
                     ),
-                    dir1.translated_source_count,
-                )
-                self.assertEqual(
                     (
-                        file1_target1_c
-                        + file1_target2_c
-                        + file2_target1_c
-                        + file2_target2_c
+                        file2,
+                        (file2_target1, file2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
                     ),
-                    dir1.checked_source_count,
-                )
-                dir1_target1.reload()
-                self.assertEqual(
-                    file1_target1_t + file2_target1_t,
-                    dir1_target1.translated_source_count,
-                )
-                self.assertEqual(
-                    file1_target1_c + file2_target1_c,
-                    dir1_target1.checked_source_count,
-                )
-                dir1_target2.reload()
-                self.assertEqual(
-                    file1_target2_t + file2_target2_t,
-                    dir1_target2.translated_source_count,
-                )
-                self.assertEqual(
-                    file1_target2_c + file2_target2_c,
-                    dir1_target2.checked_source_count,
-                )
-            # dir2 和他两个Cache
-            try:
-                dir2.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    dir2.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir2_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir2_target2.reload()
-            else:
-                self.assertEqual(
-                    file2_target1_t + file2_target2_t,
-                    dir2.translated_source_count,
-                )
-                self.assertEqual(
-                    file2_target1_c + file2_target2_c,
-                    dir2.checked_source_count,
-                )
-                dir2_target1.reload()
-                self.assertEqual(file2_target1_t, dir2_target1.translated_source_count)
-                self.assertEqual(file2_target1_c, dir2_target1.checked_source_count)
-                dir2_target2.reload()
-                self.assertEqual(file2_target2_t, dir2_target2.translated_source_count)
-                self.assertEqual(file2_target2_c, dir2_target2.checked_source_count)
+                ),
+                folders=(
+                    (
+                        dir1,
+                        (dir1_target1, dir1_target2),
+                        (file1_target1_t + file2_target1_t, file1_target2_t + file2_target2_t),
+                        (file1_target1_c + file2_target1_c, file1_target2_c + file2_target2_c),
+                    ),
+                    (
+                        dir2,
+                        (dir2_target1, dir2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
+                deleted_related={
+                    file1.id: (
+                        file1_source1,
+                        file1_source1_target1_tra1,
+                        file1_source1_target1_tra2,
+                        file1_source1_target2_tra1,
+                        file1_source1_target2_tra2,
+                        file1_source2,
+                        file1_source2_target1_tra1,
+                        file1_source2_target1_tra2,
+                        file1_source2_target2_tra1,
+                        file1_source2_target2_tra2,
+                    ),
+                    file2.id: (
+                        file2_source1,
+                        file2_source1_target1_tra1,
+                        file2_source1_target1_tra2,
+                        file2_source1_target2_tra1,
+                        file2_source1_target2_tra2,
+                        file2_source2,
+                        file2_source2_target1_tra1,
+                        file2_source2_target1_tra2,
+                        file2_source2_target2_tra1,
+                        file2_source2_target2_tra2,
+                    ),
+                },
+            )
 
         # == 创建测试数据 ==
         self.create_user("11", "1@1.com", "111111").generate_token()
@@ -2147,195 +1647,64 @@ class MultiTargetCacheTestCase(MoeAPITestCase):
         ):
             # 验证数量
             # Project 和 Target
-            project.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                project.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                project.checked_source_count,
-            )
-            target1.reload()
-            self.assertEqual(
-                (file1_target1_t + file2_target1_t),
-                target1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file2_target1_c),
-                target1.checked_source_count,
-            )
-            target2.reload()
-            self.assertEqual(
-                (file1_target2_t + file2_target2_t),
-                target2.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target2_c + file2_target2_c),
-                target2.checked_source_count,
-            )
-            # file1和它的两个Cache
-            try:
-                file1.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    file1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_target2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target2_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target2_tra2.reload()
-            else:
-                self.assertEqual(
-                    (file1_target1_t + file1_target2_t),
-                    file1.translated_source_count,
-                )
-                self.assertEqual(
-                    (file1_target1_c + file1_target2_c),
-                    file1.checked_source_count,
-                )
-                file1_target1.reload()
-                self.assertEqual(file1_target1_t, file1_target1.translated_source_count)
-                self.assertEqual(file1_target1_c, file1_target1.checked_source_count)
-                file1_target2.reload()
-                self.assertEqual(file1_target2_t, file1_target2.translated_source_count)
-                self.assertEqual(file1_target2_c, file1_target2.checked_source_count)
-            # file2和它的两个Cache
-            try:
-                file2.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    file2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_target2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target2_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target2_tra2.reload()
-            else:
-                self.assertEqual(
-                    (file2_target1_t + file2_target2_t),
-                    file2.translated_source_count,
-                )
-                self.assertEqual(
-                    (file2_target1_c + file2_target2_c),
-                    file2.checked_source_count,
-                )
-                file2_target1.reload()
-                self.assertEqual(file2_target1_t, file2_target1.translated_source_count)
-                self.assertEqual(file2_target1_c, file2_target1.checked_source_count)
-                file2_target2.reload()
-                self.assertEqual(file2_target2_t, file2_target2.translated_source_count)
-                self.assertEqual(file2_target2_c, file2_target2.checked_source_count)
-            # dir1 和他两个Cache
-            try:
-                dir1.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    dir1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target2.reload()
-            else:
-                self.assertEqual(
+            self._assert_cache_counts(
+                project,
+                (target1, target2),
+                files=(
                     (
-                        file1_target1_t
-                        + file1_target2_t
-                        + file2_target1_t
-                        + file2_target2_t
+                        file1,
+                        (file1_target1, file1_target2),
+                        (file1_target1_t, file1_target2_t),
+                        (file1_target1_c, file1_target2_c),
                     ),
-                    dir1.translated_source_count,
-                )
-                self.assertEqual(
                     (
-                        file1_target1_c
-                        + file1_target2_c
-                        + file2_target1_c
-                        + file2_target2_c
+                        file2,
+                        (file2_target1, file2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
                     ),
-                    dir1.checked_source_count,
-                )
-                dir1_target1.reload()
-                self.assertEqual(
-                    file1_target1_t + file2_target1_t,
-                    dir1_target1.translated_source_count,
-                )
-                self.assertEqual(
-                    file1_target1_c + file2_target1_c,
-                    dir1_target1.checked_source_count,
-                )
-                dir1_target2.reload()
-                self.assertEqual(
-                    file1_target2_t + file2_target2_t,
-                    dir1_target2.translated_source_count,
-                )
-                self.assertEqual(
-                    file1_target2_c + file2_target2_c,
-                    dir1_target2.checked_source_count,
-                )
-            # dir2 和他两个Cache
-            try:
-                dir2.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    dir2.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir2_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir2_target2.reload()
-            else:
-                self.assertEqual(
-                    file2_target1_t + file2_target2_t,
-                    dir2.translated_source_count,
-                )
-                self.assertEqual(
-                    file2_target1_c + file2_target2_c,
-                    dir2.checked_source_count,
-                )
-                dir2_target1.reload()
-                self.assertEqual(file2_target1_t, dir2_target1.translated_source_count)
-                self.assertEqual(file2_target1_c, dir2_target1.checked_source_count)
-                dir2_target2.reload()
-                self.assertEqual(file2_target2_t, dir2_target2.translated_source_count)
-                self.assertEqual(file2_target2_c, dir2_target2.checked_source_count)
+                ),
+                folders=(
+                    (
+                        dir1,
+                        (dir1_target1, dir1_target2),
+                        (file1_target1_t + file2_target1_t, file1_target2_t + file2_target2_t),
+                        (file1_target1_c + file2_target1_c, file1_target2_c + file2_target2_c),
+                    ),
+                    (
+                        dir2,
+                        (dir2_target1, dir2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
+                deleted_related={
+                    file1.id: (
+                        file1_source1,
+                        file1_source1_target1_tra1,
+                        file1_source1_target1_tra2,
+                        file1_source1_target2_tra1,
+                        file1_source1_target2_tra2,
+                        file1_source2,
+                        file1_source2_target1_tra1,
+                        file1_source2_target1_tra2,
+                        file1_source2_target2_tra1,
+                        file1_source2_target2_tra2,
+                    ),
+                    file2.id: (
+                        file2_source1,
+                        file2_source1_target1_tra1,
+                        file2_source1_target1_tra2,
+                        file2_source1_target2_tra1,
+                        file2_source1_target2_tra2,
+                        file2_source2,
+                        file2_source2_target1_tra1,
+                        file2_source2_target1_tra2,
+                        file2_source2_target2_tra1,
+                        file2_source2_target2_tra2,
+                    ),
+                },
+            )
 
         # == 创建测试数据 ==
         self.create_user("11", "1@1.com", "111111").generate_token()
@@ -2522,195 +1891,64 @@ class MultiTargetCacheTestCase(MoeAPITestCase):
         ):
             # 验证数量
             # Project 和 Target
-            project.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                project.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                project.checked_source_count,
-            )
-            target1.reload()
-            self.assertEqual(
-                (file1_target1_t + file2_target1_t),
-                target1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file2_target1_c),
-                target1.checked_source_count,
-            )
-            target2.reload()
-            self.assertEqual(
-                (file1_target2_t + file2_target2_t),
-                target2.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target2_c + file2_target2_c),
-                target2.checked_source_count,
-            )
-            # file1和它的两个Cache
-            try:
-                file1.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    file1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_target2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target2_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target2_tra2.reload()
-            else:
-                self.assertEqual(
-                    (file1_target1_t + file1_target2_t),
-                    file1.translated_source_count,
-                )
-                self.assertEqual(
-                    (file1_target1_c + file1_target2_c),
-                    file1.checked_source_count,
-                )
-                file1_target1.reload()
-                self.assertEqual(file1_target1_t, file1_target1.translated_source_count)
-                self.assertEqual(file1_target1_c, file1_target1.checked_source_count)
-                file1_target2.reload()
-                self.assertEqual(file1_target2_t, file1_target2.translated_source_count)
-                self.assertEqual(file1_target2_c, file1_target2.checked_source_count)
-            # file2和它的两个Cache
-            try:
-                file2.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    file2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_target2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target2_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target2_tra2.reload()
-            else:
-                self.assertEqual(
-                    (file2_target1_t + file2_target2_t),
-                    file2.translated_source_count,
-                )
-                self.assertEqual(
-                    (file2_target1_c + file2_target2_c),
-                    file2.checked_source_count,
-                )
-                file2_target1.reload()
-                self.assertEqual(file2_target1_t, file2_target1.translated_source_count)
-                self.assertEqual(file2_target1_c, file2_target1.checked_source_count)
-                file2_target2.reload()
-                self.assertEqual(file2_target2_t, file2_target2.translated_source_count)
-                self.assertEqual(file2_target2_c, file2_target2.checked_source_count)
-            # dir1 和他两个Cache
-            try:
-                dir1.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    dir1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target2.reload()
-            else:
-                self.assertEqual(
+            self._assert_cache_counts(
+                project,
+                (target1, target2),
+                files=(
                     (
-                        file1_target1_t
-                        + file1_target2_t
-                        + file2_target1_t
-                        + file2_target2_t
+                        file1,
+                        (file1_target1, file1_target2),
+                        (file1_target1_t, file1_target2_t),
+                        (file1_target1_c, file1_target2_c),
                     ),
-                    dir1.translated_source_count,
-                )
-                self.assertEqual(
                     (
-                        file1_target1_c
-                        + file1_target2_c
-                        + file2_target1_c
-                        + file2_target2_c
+                        file2,
+                        (file2_target1, file2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
                     ),
-                    dir1.checked_source_count,
-                )
-                dir1_target1.reload()
-                self.assertEqual(
-                    file1_target1_t + file2_target1_t,
-                    dir1_target1.translated_source_count,
-                )
-                self.assertEqual(
-                    file1_target1_c + file2_target1_c,
-                    dir1_target1.checked_source_count,
-                )
-                dir1_target2.reload()
-                self.assertEqual(
-                    file1_target2_t + file2_target2_t,
-                    dir1_target2.translated_source_count,
-                )
-                self.assertEqual(
-                    file1_target2_c + file2_target2_c,
-                    dir1_target2.checked_source_count,
-                )
-            # dir2 和他两个Cache
-            try:
-                dir2.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    dir2.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir2_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir2_target2.reload()
-            else:
-                self.assertEqual(
-                    file2_target1_t + file2_target2_t,
-                    dir2.translated_source_count,
-                )
-                self.assertEqual(
-                    file2_target1_c + file2_target2_c,
-                    dir2.checked_source_count,
-                )
-                dir2_target1.reload()
-                self.assertEqual(file2_target1_t, dir2_target1.translated_source_count)
-                self.assertEqual(file2_target1_c, dir2_target1.checked_source_count)
-                dir2_target2.reload()
-                self.assertEqual(file2_target2_t, dir2_target2.translated_source_count)
-                self.assertEqual(file2_target2_c, dir2_target2.checked_source_count)
+                ),
+                folders=(
+                    (
+                        dir1,
+                        (dir1_target1, dir1_target2),
+                        (file1_target1_t + file2_target1_t, file1_target2_t + file2_target2_t),
+                        (file1_target1_c + file2_target1_c, file1_target2_c + file2_target2_c),
+                    ),
+                    (
+                        dir2,
+                        (dir2_target1, dir2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
+                deleted_related={
+                    file1.id: (
+                        file1_source1,
+                        file1_source1_target1_tra1,
+                        file1_source1_target1_tra2,
+                        file1_source1_target2_tra1,
+                        file1_source1_target2_tra2,
+                        file1_source2,
+                        file1_source2_target1_tra1,
+                        file1_source2_target1_tra2,
+                        file1_source2_target2_tra1,
+                        file1_source2_target2_tra2,
+                    ),
+                    file2.id: (
+                        file2_source1,
+                        file2_source1_target1_tra1,
+                        file2_source1_target1_tra2,
+                        file2_source1_target2_tra1,
+                        file2_source1_target2_tra2,
+                        file2_source2,
+                        file2_source2_target1_tra1,
+                        file2_source2_target1_tra2,
+                        file2_source2_target2_tra1,
+                        file2_source2_target2_tra2,
+                    ),
+                },
+            )
 
         # == 创建测试数据 ==
         self.create_user("11", "1@1.com", "111111").generate_token()
@@ -2893,171 +2131,64 @@ class MultiTargetCacheTestCase(MoeAPITestCase):
         ):
             # 验证数量
             # Project 和 Target
-            project.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                project.translated_source_count,
+            self._assert_cache_counts(
+                project,
+                (target1, target2),
+                files=(
+                    (
+                        file1,
+                        (file1_target1, file1_target2),
+                        (file1_target1_t, file1_target2_t),
+                        (file1_target1_c, file1_target2_c),
+                    ),
+                    (
+                        file2,
+                        (file2_target1, file2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
+                folders=(
+                    (
+                        dir1,
+                        (dir1_target1, dir1_target2),
+                        (dir1_target1_t, dir1_target2_t),
+                        (dir1_target1_c, dir1_target2_c),
+                    ),
+                    (
+                        dir2,
+                        (dir2_target1, dir2_target2),
+                        (dir2_target1_t, dir2_target2_t),
+                        (dir2_target1_c, dir2_target2_c),
+                    ),
+                ),
+                deleted_related={
+                    file1.id: (
+                        file1_source1,
+                        file1_source1_target1_tra1,
+                        file1_source1_target1_tra2,
+                        file1_source1_target2_tra1,
+                        file1_source1_target2_tra2,
+                        file1_source2,
+                        file1_source2_target1_tra1,
+                        file1_source2_target1_tra2,
+                        file1_source2_target2_tra1,
+                        file1_source2_target2_tra2,
+                    ),
+                    file2.id: (
+                        file2_source1,
+                        file2_source1_target1_tra1,
+                        file2_source1_target1_tra2,
+                        file2_source1_target2_tra1,
+                        file2_source1_target2_tra2,
+                        file2_source2,
+                        file2_source2_target1_tra1,
+                        file2_source2_target1_tra2,
+                        file2_source2_target2_tra1,
+                        file2_source2_target2_tra2,
+                    ),
+                },
             )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                project.checked_source_count,
-            )
-            target1.reload()
-            self.assertEqual(
-                (file1_target1_t + file2_target1_t),
-                target1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file2_target1_c),
-                target1.checked_source_count,
-            )
-            target2.reload()
-            self.assertEqual(
-                (file1_target2_t + file2_target2_t),
-                target2.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target2_c + file2_target2_c),
-                target2.checked_source_count,
-            )
-            # file1和它的两个Cache
-            try:
-                file1.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    file1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_target2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source1_target2_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file1_source2_target2_tra2.reload()
-            else:
-                self.assertEqual(
-                    (file1_target1_t + file1_target2_t),
-                    file1.translated_source_count,
-                )
-                self.assertEqual(
-                    (file1_target1_c + file1_target2_c),
-                    file1.checked_source_count,
-                )
-                file1_target1.reload()
-                self.assertEqual(file1_target1_t, file1_target1.translated_source_count)
-                self.assertEqual(file1_target1_c, file1_target1.checked_source_count)
-                file1_target2.reload()
-                self.assertEqual(file1_target2_t, file1_target2.translated_source_count)
-                self.assertEqual(file1_target2_c, file1_target2.checked_source_count)
-            # file2和它的两个Cache
-            try:
-                file2.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    file2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_target2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source1_target2_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target1_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target1_tra2.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target2_tra1.reload()
-                with self.assertRaises(DoesNotExist):
-                    file2_source2_target2_tra2.reload()
-            else:
-                self.assertEqual(
-                    (file2_target1_t + file2_target2_t),
-                    file2.translated_source_count,
-                )
-                self.assertEqual(
-                    (file2_target1_c + file2_target2_c),
-                    file2.checked_source_count,
-                )
-                file2_target1.reload()
-                self.assertEqual(file2_target1_t, file2_target1.translated_source_count)
-                self.assertEqual(file2_target1_c, file2_target1.checked_source_count)
-                file2_target2.reload()
-                self.assertEqual(file2_target2_t, file2_target2.translated_source_count)
-                self.assertEqual(file2_target2_c, file2_target2.checked_source_count)
-            # dir1 和他两个Cache
-            try:
-                dir1.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    dir1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir1_target2.reload()
-            else:
-                self.assertEqual(
-                    dir1_target1_t + dir1_target2_t,
-                    dir1.translated_source_count,
-                )
-                self.assertEqual(
-                    dir1_target1_c + dir1_target2_c, dir1.checked_source_count
-                )
-                dir1_target1.reload()
-                self.assertEqual(dir1_target1_t, dir1_target1.translated_source_count)
-                self.assertEqual(dir1_target1_c, dir1_target1.checked_source_count)
-                dir1_target2.reload()
-                self.assertEqual(dir1_target2_t, dir1_target2.translated_source_count)
-                self.assertEqual(dir1_target2_c, dir1_target2.checked_source_count)
-            # dir2 和他两个Cache
-            try:
-                dir2.reload()
-            except DoesNotExist:  # 没有则说明target和翻译也没了
-                with self.assertRaises(DoesNotExist):
-                    dir2.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir2_target1.reload()
-                with self.assertRaises(DoesNotExist):
-                    dir2_target2.reload()
-            else:
-                self.assertEqual(
-                    dir2_target1_t + dir2_target2_t,
-                    dir2.translated_source_count,
-                )
-                self.assertEqual(
-                    dir2_target1_c + dir2_target2_c, dir2.checked_source_count
-                )
-                dir2_target1.reload()
-                self.assertEqual(dir2_target1_t, dir2_target1.translated_source_count)
-                self.assertEqual(dir2_target1_c, dir2_target1.checked_source_count)
-                dir2_target2.reload()
-                self.assertEqual(dir2_target2_t, dir2_target2.translated_source_count)
-                self.assertEqual(dir2_target2_c, dir2_target2.checked_source_count)
 
         # == 创建测试数据 ==
         self.create_user("11", "1@1.com", "111111").generate_token()
@@ -3341,91 +2472,38 @@ class MultiTargetCacheTestCase(MoeAPITestCase):
         ):
             # 验证数量
             # Project 和 Target
-            project.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                project.translated_source_count,
+            self._assert_cache_counts(
+                project,
+                (target1, target2),
+                files=(
+                    (
+                        file1,
+                        (file1.cache(target1), file1.cache(target2)),
+                        (file1_target1_t, file1_target2_t),
+                        (file1_target1_c, file1_target2_c),
+                    ),
+                    (
+                        file2,
+                        (file2.cache(target1), file2.cache(target2)),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
+                folders=(
+                    (
+                        dir1,
+                        (dir1_target1, dir1_target2),
+                        (dir1_target1_t, dir1_target2_t),
+                        (dir1_target1_c, dir1_target2_c),
+                    ),
+                    (
+                        dir2,
+                        (dir2_target1, dir2_target2),
+                        (dir2_target1_t, dir2_target2_t),
+                        (dir2_target1_c, dir2_target2_c),
+                    ),
+                ),
             )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                project.checked_source_count,
-            )
-            target1.reload()
-            self.assertEqual(
-                (file1_target1_t + file2_target1_t),
-                target1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file2_target1_c),
-                target1.checked_source_count,
-            )
-            target2.reload()
-            self.assertEqual(
-                (file1_target2_t + file2_target2_t),
-                target2.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target2_c + file2_target2_c),
-                target2.checked_source_count,
-            )
-            # file1和它的两个Cache
-            file1.reload()
-            file1_target1 = file1.cache(target1)
-            file1_target2 = file1.cache(target2)
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t),
-                file1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c), file1.checked_source_count
-            )
-            file1_target1.reload()
-            self.assertEqual(file1_target1_t, file1_target1.translated_source_count)
-            self.assertEqual(file1_target1_c, file1_target1.checked_source_count)
-            file1_target2.reload()
-            self.assertEqual(file1_target2_t, file1_target2.translated_source_count)
-            self.assertEqual(file1_target2_c, file1_target2.checked_source_count)
-            # file2和它的两个Cache
-            file2.reload()
-            file2_target1 = file2.cache(target1)
-            file2_target2 = file2.cache(target2)
-            self.assertEqual(
-                (file2_target1_t + file2_target2_t),
-                file2.translated_source_count,
-            )
-            self.assertEqual(
-                (file2_target1_c + file2_target2_c), file2.checked_source_count
-            )
-            file2_target1.reload()
-            self.assertEqual(file2_target1_t, file2_target1.translated_source_count)
-            self.assertEqual(file2_target1_c, file2_target1.checked_source_count)
-            file2_target2.reload()
-            self.assertEqual(file2_target2_t, file2_target2.translated_source_count)
-            self.assertEqual(file2_target2_c, file2_target2.checked_source_count)
-            # dir1 和他两个Cache
-            dir1.reload()
-            self.assertEqual(
-                dir1_target1_t + dir1_target2_t, dir1.translated_source_count
-            )
-            self.assertEqual(dir1_target1_c + dir1_target2_c, dir1.checked_source_count)
-            dir1_target1.reload()
-            self.assertEqual(dir1_target1_t, dir1_target1.translated_source_count)
-            self.assertEqual(dir1_target1_c, dir1_target1.checked_source_count)
-            dir1_target2.reload()
-            self.assertEqual(dir1_target2_t, dir1_target2.translated_source_count)
-            self.assertEqual(dir1_target2_c, dir1_target2.checked_source_count)
-            # dir2 和他两个Cache
-            dir2.reload()
-            self.assertEqual(
-                dir2_target1_t + dir2_target2_t, dir2.translated_source_count
-            )
-            self.assertEqual(dir2_target1_c + dir2_target2_c, dir2.checked_source_count)
-            dir2_target1.reload()
-            self.assertEqual(dir2_target1_t, dir2_target1.translated_source_count)
-            self.assertEqual(dir2_target1_c, dir2_target1.checked_source_count)
-            dir2_target2.reload()
-            self.assertEqual(dir2_target2_t, dir2_target2.translated_source_count)
-            self.assertEqual(dir2_target2_c, dir2_target2.checked_source_count)
 
         # == 创建测试数据 ==
         self.create_user("11", "1@1.com", "111111").generate_token()
@@ -3747,91 +2825,38 @@ class MultiTargetCacheTestCase(MoeAPITestCase):
         ):
             # 验证数量
             # Project 和 Target
-            project.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                project.translated_source_count,
+            self._assert_cache_counts(
+                project,
+                (target1, target2),
+                files=(
+                    (
+                        file1,
+                        (file1.cache(target1), file1.cache(target2)),
+                        (file1_target1_t, file1_target2_t),
+                        (file1_target1_c, file1_target2_c),
+                    ),
+                    (
+                        file2,
+                        (file2.cache(target1), file2.cache(target2)),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
+                folders=(
+                    (
+                        dir1,
+                        (dir1_target1, dir1_target2),
+                        (dir1_target1_t, dir1_target2_t),
+                        (dir1_target1_c, dir1_target2_c),
+                    ),
+                    (
+                        dir2,
+                        (dir2_target1, dir2_target2),
+                        (dir2_target1_t, dir2_target2_t),
+                        (dir2_target1_c, dir2_target2_c),
+                    ),
+                ),
             )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                project.checked_source_count,
-            )
-            target1.reload()
-            self.assertEqual(
-                (file1_target1_t + file2_target1_t),
-                target1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file2_target1_c),
-                target1.checked_source_count,
-            )
-            target2.reload()
-            self.assertEqual(
-                (file1_target2_t + file2_target2_t),
-                target2.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target2_c + file2_target2_c),
-                target2.checked_source_count,
-            )
-            # file1和它的两个Cache
-            file1.reload()
-            file1_target1 = file1.cache(target1)
-            file1_target2 = file1.cache(target2)
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t),
-                file1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c), file1.checked_source_count
-            )
-            file1_target1.reload()
-            self.assertEqual(file1_target1_t, file1_target1.translated_source_count)
-            self.assertEqual(file1_target1_c, file1_target1.checked_source_count)
-            file1_target2.reload()
-            self.assertEqual(file1_target2_t, file1_target2.translated_source_count)
-            self.assertEqual(file1_target2_c, file1_target2.checked_source_count)
-            # file2和它的两个Cache
-            file2.reload()
-            file2_target1 = file2.cache(target1)
-            file2_target2 = file2.cache(target2)
-            self.assertEqual(
-                (file2_target1_t + file2_target2_t),
-                file2.translated_source_count,
-            )
-            self.assertEqual(
-                (file2_target1_c + file2_target2_c), file2.checked_source_count
-            )
-            file2_target1.reload()
-            self.assertEqual(file2_target1_t, file2_target1.translated_source_count)
-            self.assertEqual(file2_target1_c, file2_target1.checked_source_count)
-            file2_target2.reload()
-            self.assertEqual(file2_target2_t, file2_target2.translated_source_count)
-            self.assertEqual(file2_target2_c, file2_target2.checked_source_count)
-            # dir1 和他两个Cache
-            dir1.reload()
-            self.assertEqual(
-                dir1_target1_t + dir1_target2_t, dir1.translated_source_count
-            )
-            self.assertEqual(dir1_target1_c + dir1_target2_c, dir1.checked_source_count)
-            dir1_target1.reload()
-            self.assertEqual(dir1_target1_t, dir1_target1.translated_source_count)
-            self.assertEqual(dir1_target1_c, dir1_target1.checked_source_count)
-            dir1_target2.reload()
-            self.assertEqual(dir1_target2_t, dir1_target2.translated_source_count)
-            self.assertEqual(dir1_target2_c, dir1_target2.checked_source_count)
-            # dir2 和他两个Cache
-            dir2.reload()
-            self.assertEqual(
-                dir2_target1_t + dir2_target2_t, dir2.translated_source_count
-            )
-            self.assertEqual(dir2_target1_c + dir2_target2_c, dir2.checked_source_count)
-            dir2_target1.reload()
-            self.assertEqual(dir2_target1_t, dir2_target1.translated_source_count)
-            self.assertEqual(dir2_target1_c, dir2_target1.checked_source_count)
-            dir2_target2.reload()
-            self.assertEqual(dir2_target2_t, dir2_target2.translated_source_count)
-            self.assertEqual(dir2_target2_c, dir2_target2.checked_source_count)
 
         # == 创建测试数据 ==
         self.create_user("11", "1@1.com", "111111").generate_token()
@@ -4473,105 +3498,38 @@ class MultiTargetCacheTestCase(MoeAPITestCase):
         ):
             # 验证数量
             # Project 和 Target
-            project.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                project.translated_source_count,
+            self._assert_cache_counts(
+                project,
+                (target1, target2),
+                files=(
+                    (
+                        file1,
+                        (file1_target1, file1_target2),
+                        (file1_target1_t, file1_target2_t),
+                        (file1_target1_c, file1_target2_c),
+                    ),
+                    (
+                        file2,
+                        (file2_target1, file2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
+                folders=(
+                    (
+                        dir1,
+                        (dir1_target1, dir1_target2),
+                        (file1_target1_t + file2_target1_t, file1_target2_t + file2_target2_t),
+                        (file1_target1_c + file2_target1_c, file1_target2_c + file2_target2_c),
+                    ),
+                    (
+                        dir2,
+                        (dir2_target1, dir2_target2),
+                        (file2_target1_t, file2_target2_t),
+                        (file2_target1_c, file2_target2_c),
+                    ),
+                ),
             )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                project.checked_source_count,
-            )
-            target1.reload()
-            self.assertEqual(
-                (file1_target1_t + file2_target1_t),
-                target1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file2_target1_c),
-                target1.checked_source_count,
-            )
-            target2.reload()
-            self.assertEqual(
-                (file1_target2_t + file2_target2_t),
-                target2.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target2_c + file2_target2_c),
-                target2.checked_source_count,
-            )
-            # file1和它的两个Cache
-            file1.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t),
-                file1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c), file1.checked_source_count
-            )
-            file1_target1.reload()
-            self.assertEqual(file1_target1_t, file1_target1.translated_source_count)
-            self.assertEqual(file1_target1_c, file1_target1.checked_source_count)
-            file1_target2.reload()
-            self.assertEqual(file1_target2_t, file1_target2.translated_source_count)
-            self.assertEqual(file1_target2_c, file1_target2.checked_source_count)
-            # file2和它的两个Cache
-            file2.reload()
-            self.assertEqual(
-                (file2_target1_t + file2_target2_t),
-                file2.translated_source_count,
-            )
-            self.assertEqual(
-                (file2_target1_c + file2_target2_c), file2.checked_source_count
-            )
-            file2_target1.reload()
-            self.assertEqual(file2_target1_t, file2_target1.translated_source_count)
-            self.assertEqual(file2_target1_c, file2_target1.checked_source_count)
-            file2_target2.reload()
-            self.assertEqual(file2_target2_t, file2_target2.translated_source_count)
-            self.assertEqual(file2_target2_c, file2_target2.checked_source_count)
-            # dir1 和他两个Cache
-            dir1.reload()
-            self.assertEqual(
-                (file1_target1_t + file1_target2_t + file2_target1_t + file2_target2_t),
-                dir1.translated_source_count,
-            )
-            self.assertEqual(
-                (file1_target1_c + file1_target2_c + file2_target1_c + file2_target2_c),
-                dir1.checked_source_count,
-            )
-            dir1_target1.reload()
-            self.assertEqual(
-                file1_target1_t + file2_target1_t,
-                dir1_target1.translated_source_count,
-            )
-            self.assertEqual(
-                file1_target1_c + file2_target1_c,
-                dir1_target1.checked_source_count,
-            )
-            dir1_target2.reload()
-            self.assertEqual(
-                file1_target2_t + file2_target2_t,
-                dir1_target2.translated_source_count,
-            )
-            self.assertEqual(
-                file1_target2_c + file2_target2_c,
-                dir1_target2.checked_source_count,
-            )
-            # dir2 和他两个Cache
-            dir2.reload()
-            self.assertEqual(
-                file2_target1_t + file2_target2_t, dir2.translated_source_count
-            )
-            self.assertEqual(
-                file2_target1_c + file2_target2_c, dir2.checked_source_count
-            )
-            dir2_target1.reload()
-            self.assertEqual(file2_target1_t, dir2_target1.translated_source_count)
-            self.assertEqual(file2_target1_c, dir2_target1.checked_source_count)
-            dir2_target2.reload()
-            self.assertEqual(file2_target2_t, dir2_target2.translated_source_count)
-            self.assertEqual(file2_target2_c, dir2_target2.checked_source_count)
 
         # == 创建测试数据 ==
         self.create_user("11", "1@1.com", "111111").generate_token()

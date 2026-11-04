@@ -2,6 +2,7 @@ from app.models.file import File
 from app.models.project import Project
 import json
 from unittest import TestCase
+from unittest.mock import patch
 
 import os
 from mongoengine import connection
@@ -41,6 +42,14 @@ class MoeTestCase(TestCase):
         self.app_context = self.app.app_context()
         self.app_context.push()
         self.client = self.app.test_client(use_cookies=True)
+        # TESTING already executes tasks synchronously; no live broker is needed
+        # to choose the Labelplus import fallback in this in-memory test suite.
+        if self.app.testing:
+            worker_ping = patch(
+                "app.tasks.import_from_labelplus.celery.control.ping", return_value=[]
+            )
+            worker_ping.start()
+            self.addCleanup(worker_ping.stop)
         self.disable_whitelist()
         self.disable_only_allow_admin_create_team()
 

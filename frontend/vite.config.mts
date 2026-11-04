@@ -40,7 +40,7 @@ const apiProxy = bareBackendProxy;
 export default defineConfig({
   // root: 'src',
   build: {
-    sourcemap: true,
+    sourcemap: process.env.GENERATE_SOURCEMAP === 'true',
     outDir: path.join(__dirname, './build'),
     emptyOutDir: true,
     rollupOptions: {
@@ -126,12 +126,3 @@ export default defineConfig({
     },
   },
 });
-
-function hashModuleId(id: string): string {
-  const palette = '01234567';
-  let s = 0;
-  for (let i = 0; i < id.length; i++) {
-    s += id.charCodeAt(i);
-  }
-  return palette[s % palette.length];
-}

@@ -69,6 +69,7 @@ from app.tasks.thumbnail import create_thumbnail
 from app.utils import default
 from app.utils.file import get_file_size
 from app.utils.hash import get_file_md5
+from app.utils.image import ensure_image_codec
 from app.utils.mongo import mongo_order, mongo_slice
 from app.utils.type import is_number
 
@@ -768,6 +769,7 @@ class File(Document):
         """
         上传源文件
         """
+        ensure_image_codec(self.name)
         # 尝试删除源文件
         self.delete_real_file()
         # 重置安全检测数据
@@ -1205,7 +1207,7 @@ class File(Document):
         else:
             return data
 
-    def to_labelplus(self, /, *, target):
+    def to_labelplus(self, /, *, target, export_path=None):
         """将翻译导出成labelplus格式"""
         data = ""
         if len(self.ancestors) > 0:
@@ -1213,7 +1215,7 @@ class File(Document):
         else:
             path = ""
         # 文件路径行
-        data += ">>>>>>>>[" + path + self.name + "]<<<<<<<<\r\n"
+        data += ">>>>>>>>[" + (export_path or path + self.name) + "]<<<<<<<<\r\n"
         # 遍历所有原文
         for id, source in enumerate(self.sources(), start=1):
             # 作者信息固定导出为第 3 组（框内=1、框外=2、作者信息=3）

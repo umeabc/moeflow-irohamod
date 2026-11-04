@@ -28,7 +28,6 @@ import projectSet from './projectSet';
 import source from './source';
 import target from './target';
 import team from './team';
-import tip from './tip';
 import translation from './translation';
 import type from './type';
 import user from './user';
@@ -344,7 +343,6 @@ export const api = {
   source,
   target,
   team,
-  tip,
   translation,
   type,
   user,
@@ -369,7 +367,6 @@ export default {
   ...file,
   ...source,
   ...translation,
-  ...tip,
   ...output,
   ...insight,
   ...siteSetting,

@@ -134,28 +134,6 @@ class ChangePasswordSchema(DefaultSchema):
         password_validator(self.context["email"], data["old_password"], "old_password")
 
 
-class ResetPasswordSchema(DefaultSchema):
-    """重置密码验证"""
-
-    email = fields.Email(
-        required=True,
-        validate=[UserValidate.exist_email],
-        error_messages={**required_message, **email_invalid_message},
-    )
-    v_code = fields.Str(required=True, error_messages={**required_message})
-    password = fields.Str(
-        required=True,
-        validate=[UserValidate.password_length],
-        error_messages={**required_message},
-    )
-
-    @validates_schema
-    def verify_v_code(self, data):
-        v_code_validator(
-            VCodeType.RESET_PASSWORD, data["email"].lower(), data["v_code"]
-        )
-
-
 class AdminRegisterSchema(DefaultSchema):
     """注册验证"""
 

@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Python dependencies
 ARG PIP_INDEX_URL=https://pypi.org/simple
 ENV PIP_INDEX_URL=${PIP_INDEX_URL}
-COPY requirements*.txt /tmp/
+COPY requirements.txt requirements-oss.txt requirements-r2.txt requirements-google-ocr.txt requirements-storage-all.txt /tmp/
 ARG STORAGE_TYPE=LOCAL_STORAGE
 ARG ENABLE_GOOGLE_OCR=auto
 RUN pip install --no-cache-dir --user -r /tmp/requirements.txt && \
@@ -29,16 +29,18 @@ RUN pip install --no-cache-dir --user -r /tmp/requirements.txt && \
     elif [ "$STORAGE_TYPE" != "LOCAL_STORAGE" ] && [ "$STORAGE_TYPE" != "REMOTE_HTTP" ]; then \
         echo "Unsupported STORAGE_TYPE: $STORAGE_TYPE" >&2; exit 1; \
     fi && \
-    if [ "$ENABLE_GOOGLE_OCR" = "true" ] || [ "$STORAGE_TYPE" = "ALL" ]; then \
+    if [ "$ENABLE_GOOGLE_OCR" = "true" ] && [ "$STORAGE_TYPE" != "ALL" ]; then \
         pip install --no-cache-dir --user -r /tmp/requirements-google-ocr.txt; \
     fi
 
-# Copy application code
-COPY . /app
+# Copy only translation build inputs and runtime code/resources.
+COPY app /app/app
+COPY files/fonts /app/files/fonts
+COPY manage.py Makefile babel.cfg /app/
 WORKDIR /app
 
 # Compile translation files (.po -> .mo)
-RUN BIN_PREFIX=/root/.local/bin make babel-update-mo
+RUN BIN_PREFIX=/root/.local/bin make babel-compile-mo
 
 # ============================================================================
 # Stage 2: Runtime - Minimal production image
@@ -57,11 +59,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy Python packages from builder
 COPY --from=builder /root/.local /root/.local
 
-# Copy application code (excluding tests)
-COPY --from=builder /app /app
-
-# Remove test directory to save space
-RUN rm -rf /app/tests /app/.pytest_cache /app/.ruff_cache
+# Build tools, locks, test fixtures and reports never enter the runtime image.
+COPY --from=builder /app/app /app/app
+COPY --from=builder /app/files/fonts /app/files/fonts
+COPY --from=builder /app/manage.py /app/manage.py
+RUN mkdir -p /app/storage /app/files/tmp
 
 WORKDIR /app
 

@@ -14,6 +14,20 @@ from tests import MoeAPITestCase
 
 
 class SourceAPITestCase(MoeAPITestCase):
+    def _create_source_fixture(self):
+        token = self.create_user("11", "1@1.com", "111111").generate_token()
+        user = User.objects(email="1@1.com").first()
+        token2 = self.create_user("22", "2@2.com", "111111").generate_token()
+        User.objects(email="2@2.com").first()
+        team = Team.create("t1", creator=user)
+        project = Project.create("p1", team=team, creator=user)
+        text_file = project.create_file("f1.txt")
+        image_file = project.create_file("f1.jpg")
+        return project, token, token2, text_file, image_file
+
+    def _assert_source_fields(self, source, expected):
+        self.assertEqual(expected, (source.content, source.x, source.y, source.position_type))
+
     def test_get_sources(self):
         """测试获取文件的原文"""
         # === 创建测试数据 ===
@@ -86,14 +100,7 @@ class SourceAPITestCase(MoeAPITestCase):
     def test_create_image_sources(self):
         """测试创建原文【仅图片可用】"""
         # === 创建测试数据 ===
-        token = self.create_user("11", "1@1.com", "111111").generate_token()
-        user = User.objects(email="1@1.com").first()
-        token2 = self.create_user("22", "2@2.com", "111111").generate_token()
-        User.objects(email="2@2.com").first()
-        team = Team.create("t1", creator=user)
-        project = Project.create("p1", team=team, creator=user)
-        text_file = project.create_file("f1.txt")
-        image_file = project.create_file("f1.jpg")
+        project, token, token2, text_file, image_file = self._create_source_fixture()
         with self.app.test_request_context():
             # === 错误测试 ===
             # 没登录不能获取
@@ -109,81 +116,24 @@ class SourceAPITestCase(MoeAPITestCase):
                 "/v1/files/{}/sources".format(text_file.id), json={}, token=token
             )
             self.assertErrorEqual(data, FileTypeNotSupportError)
-            # === 什么都不携带为空source ===
-            data = self.post(
-                "/v1/files/{}/sources".format(image_file.id), json={}, token=token
+            cases = (
+                ({}, ("", 0, 0, 1)),
+                ({"content": "con"}, ("con", 0, 0, 1)),
+                ({"x": 0.1111111, "y": 0.666666}, ("", 0.1111111, 0.666666, 1)),
+                ({"position_type": 2}, ("", 0, 0, 2)),
+                ({"content": "con", "x": 0.1111111, "y": 0.666666, "position_type": 2},
+                 ("con", 0.1111111, 0.666666, 2)),
             )
-            self.assertErrorEqual(data)
-            source = Source.by_id(data.json["id"])
-            self.assertEqual("", source.content)
-            self.assertEqual(0, source.x)
-            self.assertEqual(0, source.y)
-            self.assertEqual(1, source.position_type)
-            # === 仅携带content ===
-            data = self.post(
-                "/v1/files/{}/sources".format(image_file.id),
-                token=token,
-                json={"content": "con"},
-            )
-            self.assertErrorEqual(data)
-            source = Source.by_id(data.json["id"])
-            self.assertEqual("con", source.content)
-            self.assertEqual(0, source.x)
-            self.assertEqual(0, source.y)
-            self.assertEqual(1, source.position_type)
-            # === 仅携带x y ===
-            data = self.post(
-                "/v1/files/{}/sources".format(image_file.id),
-                token=token,
-                json={"x": 0.1111111, "y": 0.666666},
-            )
-            self.assertErrorEqual(data)
-            source = Source.by_id(data.json["id"])
-            self.assertEqual("", source.content)
-            self.assertEqual(0.1111111, source.x)
-            self.assertEqual(0.666666, source.y)
-            self.assertEqual(1, source.position_type)
-            # === 仅携带 position_type ===
-            data = self.post(
-                "/v1/files/{}/sources".format(image_file.id),
-                token=token,
-                json={"position_type": 2},
-            )
-            self.assertErrorEqual(data)
-            source = Source.by_id(data.json["id"])
-            self.assertEqual("", source.content)
-            self.assertEqual(0, source.x)
-            self.assertEqual(0, source.y)
-            self.assertEqual(2, source.position_type)
-            # === 完整的参数 ===
-            data = self.post(
-                "/v1/files/{}/sources".format(image_file.id),
-                token=token,
-                json={
-                    "content": "con",
-                    "x": 0.1111111,
-                    "y": 0.666666,
-                    "position_type": 2,
-                },
-            )
-            self.assertErrorEqual(data)
-            source = Source.by_id(data.json["id"])
-            self.assertEqual("con", source.content)
-            self.assertEqual(0.1111111, source.x)
-            self.assertEqual(0.666666, source.y)
-            self.assertEqual(2, source.position_type)
+            for payload, expected in cases:
+                with self.subTest(payload=payload):
+                    data = self.post(f"/v1/files/{image_file.id}/sources", token=token, json=payload)
+                    self.assertErrorEqual(data)
+                    self._assert_source_fields(Source.by_id(data.json["id"]), expected)
 
     def test_edit_image_sources(self):
         """测试修改原文【仅图片可用】"""
         # === 创建测试数据 ===
-        token = self.create_user("11", "1@1.com", "111111").generate_token()
-        user = User.objects(email="1@1.com").first()
-        token2 = self.create_user("22", "2@2.com", "111111").generate_token()
-        User.objects(email="2@2.com").first()
-        team = Team.create("t1", creator=user)
-        project = Project.create("p1", team=team, creator=user)
-        text_file = project.create_file("f1.txt")
-        image_file = project.create_file("f1.jpg")
+        project, token, token2, text_file, image_file = self._create_source_fixture()
         # 创建原文
         source = image_file.create_source("1")
         text_source = text_file.create_source("1")
@@ -223,66 +173,23 @@ class SourceAPITestCase(MoeAPITestCase):
             self.assertEqual(0, source.x)
             self.assertEqual(0, source.y)
             self.assertEqual(1, source.position_type)
-            # === 仅携带content ===
-            data = self.put(
-                "/v1/sources/{}".format(source.id),
-                token=token,
-                json={"content": "con"},
+            # 顺序修改同一条原文，逐步验证未提交字段保持上一状态。
+            cases = (
+                ({"content": "con"}, ("con", 0, 0, 1)),
+                ({"x": 0.1111111, "y": 0.666666}, ("con", 0.1111111, 0.666666, 1)),
+                ({"position_type": 2}, ("con", 0.1111111, 0.666666, 2)),
+                ({"content": "", "x": 0.000, "y": 1.000, "position_type": 1}, ("", 0, 1, 1)),
             )
-            self.assertErrorEqual(data)
-            source.reload()
-            self.assertEqual("con", source.content)
-            self.assertEqual(0, source.x)
-            self.assertEqual(0, source.y)
-            self.assertEqual(1, source.position_type)
-            # === 仅携带x y ===
-            data = self.put(
-                "/v1/sources/{}".format(source.id),
-                token=token,
-                json={"x": 0.1111111, "y": 0.666666},
-            )
-            self.assertErrorEqual(data)
-            source.reload()
-            self.assertEqual("con", source.content)
-            self.assertEqual(0.1111111, source.x)
-            self.assertEqual(0.666666, source.y)
-            self.assertEqual(1, source.position_type)
-            # === 仅携带 position_type ===
-            data = self.put(
-                "/v1/sources/{}".format(source.id),
-                token=token,
-                json={"position_type": 2},
-            )
-            self.assertErrorEqual(data)
-            source.reload()
-            self.assertEqual("con", source.content)
-            self.assertEqual(0.1111111, source.x)
-            self.assertEqual(0.666666, source.y)
-            self.assertEqual(2, source.position_type)
-            # === 完整的参数 ===
-            data = self.put(
-                "/v1/sources/{}".format(source.id),
-                token=token,
-                json={"content": "", "x": 0.000, "y": 1.000, "position_type": 1},
-            )
-            self.assertErrorEqual(data)
-            source.reload()
-            self.assertEqual("", source.content)
-            self.assertEqual(0, source.x)
-            self.assertEqual(1, source.y)
-            self.assertEqual(1, source.position_type)
+            for payload, expected in cases:
+                with self.subTest(payload=payload):
+                    data = self.put(f"/v1/sources/{source.id}", token=token, json=payload)
+                    self.assertErrorEqual(data)
+                    self._assert_source_fields(source.reload(), expected)
 
     def test_delete_image_sources(self):
         """测试删除原文【仅图片可用】"""
         # === 创建测试数据 ===
-        token = self.create_user("11", "1@1.com", "111111").generate_token()
-        user = User.objects(email="1@1.com").first()
-        token2 = self.create_user("22", "2@2.com", "111111").generate_token()
-        User.objects(email="2@2.com").first()
-        team = Team.create("t1", creator=user)
-        project = Project.create("p1", team=team, creator=user)
-        text_file = project.create_file("f1.txt")
-        image_file = project.create_file("f1.jpg")
+        project, token, token2, text_file, image_file = self._create_source_fixture()
         # 创建原文
         source = image_file.create_source("1")
         text_source = text_file.create_source("1")
@@ -310,14 +217,7 @@ class SourceAPITestCase(MoeAPITestCase):
     def test_edit_image_source_rank(self):
         """测试修改原文排序【仅图片可用】"""
         # === 创建测试数据 ===
-        token = self.create_user("11", "1@1.com", "111111").generate_token()
-        user = User.objects(email="1@1.com").first()
-        token2 = self.create_user("22", "2@2.com", "111111").generate_token()
-        User.objects(email="2@2.com").first()
-        team = Team.create("t1", creator=user)
-        project = Project.create("p1", team=team, creator=user)
-        text_file = project.create_file("f1.txt")
-        image_file = project.create_file("f1.jpg")
+        project, token, token2, text_file, image_file = self._create_source_fixture()
         # 创建原文
         source1 = image_file.create_source("1")
         source2 = image_file.create_source("2")

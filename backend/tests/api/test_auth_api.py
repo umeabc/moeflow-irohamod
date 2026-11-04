@@ -1,5 +1,3 @@
-import unittest
-
 from mongomock import ObjectId
 from app.constants.locale import Locale
 from app.exceptions import BadTokenError, NeedTokenError, UserBannedError
@@ -56,320 +54,71 @@ class AuthAPITestCase(MoeAPITestCase):
         self.assertErrorEqual(data, InvalidInviteCodeError)
         self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 1)
 
-    @unittest.skip("旧邮箱验证码注册已移除；改用 test_register_with_invite_code")
-    def test_register1(self):
-        """测试注册API"""
-        # 缺少验证码无法注册
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 0)
-        # 申请人机验证码
-        captcha_info, captcha = self.get_captcha()
-        # 申请邮件验证码
-        self.post(
-            "/v1/confirm-email-codes",
-            json={
-                "email": "AAA@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        # 获取验证码内容
-        content2 = VCode.objects(
-            type=VCodeType.CONFIRM_EMAIL, info="aaa@a.com"
-        ).first()["content"]
-        # 申请人机验证码
-        captcha_info, captcha = self.get_captcha()
-        # 申请错误的邮件验证码
-        self.post(
-            "/v1/confirm-email-codes",
-            json={
-                "email": "2@1.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        # 获取验证码内容
-        wrong_content2 = VCode.objects(
-            type=VCodeType.CONFIRM_EMAIL, info="2@1.com"
-        ).first()["content"]
-        # == 使用错误的邮件验证码注册 ==
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "AAA@a.com",
-                "name": "12134",
-                "password": "111111",
-                "age": "123",
-                "v_code": wrong_content2,
-            },
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 0)
-        # == 错误的邮箱注册 ==
-        # 获取验证码内容
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "2@1.com",
-                "name": "12134",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 0)
-        # == 正确的注册 ==
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "AAA@a.com",
-                "name": "12134",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 1)
-        # == 注册过的邮箱不能再次注册 ==
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "AAA@a.com",
-                "name": "12134",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 1)
-        # == 注册了的邮箱,不能申请邮箱确认验证码 ==
-        # 申请邮件验证码
-        data = self.post("/v1/confirm-email-codes", json={"email": "AAA@a.com"})
-        self.assertErrorEqual(data, ValidateError)
-        # 用户邮箱记录的是小写
-        user = User.get_by_email("AAA@a.com")
-        self.assertEqual(user.email, "aaa@a.com")
 
-    @unittest.skip("旧邮箱验证码注册已移除；字段清洗规则由邀请码注册测试覆盖")
-    def test_register_rejects_surrounding_whitespace_and_invalid_names(self):
-        """测试注册API，注册邮箱和名称不能以空格开头"""
-        # == 邮箱前加空格 ==
-        # 申请人机验证码
-        captcha_info, captcha = self.get_captcha()
-        # 申请邮件验证码
-        self.post(
-            "/v1/confirm-email-codes",
-            json={
-                "email": "1@1.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
+    def test_invite_registration_field_validation(self):
+        """现行邀请码注册保留邮箱、名称和密码的字段校验。"""
+        invite = InvitationCode(code="FIELDS", team=Team.objects().first()).save()
+        payload = {
+            "email": "fields@example.com",
+            "name": "valid_name",
+            "password": "111111",
+            "invite_code": invite.code,
+        }
+        invalid_fields = (
+            ("email", " fields@example.com"),
+            ("email", "fields@example.com "),
+            ("email", "field s@example.com"),
+            ("email", "invalid-email"),
+            ("name", " valid_name"),
+            ("name", "valid_name "),
+            ("name", "valid name"),
+            ("name", "valid,name"),
+            ("password", "123"),
         )
-        # 获取验证码内容
-        content2 = VCode.objects(type=VCodeType.CONFIRM_EMAIL, info="1@1.com").first()[
-            "content"
-        ]
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": " 1@1.com",
-                "name": "12134",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 0)
-        # == 邮箱后加空格 ==
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "1@1.com ",
-                "name": "12134",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 0)
-        # == 邮箱中间加空格 ==
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "1 1@11.com",
-                "name": "12134",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 0)
-        # == 名称前加空格 ==
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "1@1.com",
-                "name": " 12134",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 0)
-        # == 名称后加空格 ==
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "1@1.com",
-                "name": "12134 ",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 0)
-        # == 名称中间加空格 ==
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "1@1.com",
-                "name": "121 34",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 0)
-        # == 名称加符号 ==
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "1@1.com",
-                "name": "121,34",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 0)
-        # == 符合要求的名称 ==
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "1@1.com",
-                "name": "中い다Aa1_",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
+        for field, value in invalid_fields:
+            with self.subTest(field=field, value=value):
+                data = self.post("/v1/users", json={**payload, field: value})
+                self.assertErrorEqual(data, ValidateError)
+                self.assertIn(field, data.json["message"])
+                self.assertEqual(DEFAULT_USERS_COUNT, User.objects.count())
+                self.assertEqual(0, invite.reload().use_count)
+        for field in ("email", "name", "password", "invite_code"):
+            with self.subTest(missing=field):
+                data = self.post("/v1/users", json={k: v for k, v in payload.items() if k != field})
+                self.assertErrorEqual(data, ValidateError)
+                self.assertEqual(DEFAULT_USERS_COUNT, User.objects.count())
+        data = self.post("/v1/users", json={**payload, "name": "中い다Aa1_"})
         self.assertErrorEqual(data)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 1)
-        # 用户邮箱记录的是小写
-        user = User.get_by_email("1@1.com")
-        self.assertEqual(user.email, "1@1.com")
+        self.assertEqual(DEFAULT_USERS_COUNT + 1, User.objects.count())
+        self.assertEqual("中い다Aa1_", User.by_email(payload["email"]).name)
+        data = self.post("/v1/users", json={**payload, "name": "another_name"})
+        self.assertErrorEqual(data, ValidateError)
+        self.assertEqual(DEFAULT_USERS_COUNT + 1, User.objects.count())
+        self.assertEqual(1, invite.reload().use_count)
 
-    @unittest.skip("旧邮箱验证码注册已移除")
-    def test_register2(self):
-        """测试注册API（邮件确认验证码使用大写）"""
-        # == 邮箱前加空格 ==
-        # 申请人机验证码
-        captcha_info, captcha = self.get_captcha()
-        # 申请邮件验证码
-        self.post(
-            "/v1/confirm-email-codes",
-            json={
-                "email": "aaa@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        # 获取验证码内容
-        content2 = VCode.objects(
-            type=VCodeType.CONFIRM_EMAIL, info="aaa@a.com"
-        ).first()["content"]
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": " AAA@a.com",
-                "name": "12134",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 0)
-        # == 符合要求的名称 ==
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "aaa@a.com",
-                "name": "中い다Aa1_",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 1)
-
-    @unittest.skip("旧邮箱验证码注册已移除")
-    def test_register3(self):
-        """测试注册API（注册请求使用大写）"""
-        # == 邮箱前加空格 ==
-        # 申请人机验证码
-        captcha_info, captcha = self.get_captcha()
-        # 申请邮件验证码
-        self.post(
-            "/v1/confirm-email-codes",
-            json={
-                "email": "aaa@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        # 获取验证码内容
-        content2 = VCode.objects(
-            type=VCodeType.CONFIRM_EMAIL, info="aaa@a.com"
-        ).first()["content"]
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": " aaa@a.com",
-                "name": "12134",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 0)
-        # == 符合要求的名称 ==
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "AAA@a.com",
-                "name": "中い다Aa1_",
-                "password": "111111",
-                "age": "123",
-                "v_code": content2,
-            },
-        )
-        self.assertErrorEqual(data)
-        self.assertEqual(User.objects.count(), DEFAULT_USERS_COUNT + 1)
-        # 用户邮箱记录的是小写
-        user = User.get_by_email("AAA@a.com")
-        self.assertEqual(user.email, "aaa@a.com")
+    def test_invite_registration_and_login_email_case(self):
+        """注册后的邮箱保存为小写，登录接受不同大小写。"""
+        invite = InvitationCode(code="LOGINCASE", team=Team.objects().first()).save()
+        for index, (registered, login) in enumerate((
+            ("lower@example.com", "lower@example.com"),
+            ("UPPER@EXAMPLE.COM", "UPPER@EXAMPLE.COM"),
+            ("MIXED@EXAMPLE.COM", "Mixed@Example.Com"),
+        )):
+            with self.subTest(registered=registered, login=login):
+                data = self.post("/v1/users", json={
+                    "email": registered, "name": f"case_{index}",
+                    "password": "111111", "invite_code": invite.code,
+                })
+                self.assertErrorEqual(data)
+                self.assertEqual(registered.lower(), User.by_email(registered).email)
+                captcha_info, captcha = self.get_captcha()
+                data = self.post("/v1/user/token", json={
+                    "email": login, "password": "111111",
+                    "captcha_info": captcha_info, "captcha": captcha,
+                })
+                self.assertErrorEqual(data)
+                self.assertTrue(data.json["token"])
+        self.assertEqual(3, invite.reload().use_count)
 
     def test_login(self):
         """测试登录API"""
@@ -519,13 +268,17 @@ class AuthAPITestCase(MoeAPITestCase):
         )
         self.assertErrorEqual(data)
         # 获取个人资料进行对比
-        data = self.get("/v1/user/info", token=token1)
+        data = self.get(
+            "/v1/user/info",
+            token=token1,
+            headers={"Origin": "https://example.com", "Accept-Language": "en"},
+        )
         self.assertErrorEqual(data)
         self.assertEqual(data.json["name"], "11")
         self.assertEqual(data.json["signature"], "222")
         self.assertEqual(
             data.json["locale"],
-            {"id": "auto", "name": "自动", "intro": "遵循浏览器设置"},
+            {"id": "auto", "name": "Auto", "intro": "Follow browser settings."},
         )
         # 设置资料
         data = self.put(
@@ -535,12 +288,16 @@ class AuthAPITestCase(MoeAPITestCase):
         )
         self.assertErrorEqual(data)
         # 获取个人资料进行对比
-        data = self.get("/v1/user/info", token=token1)
+        data = self.get(
+            "/v1/user/info",
+            token=token1,
+            headers={"Origin": "https://example.com", "Accept-Language": "en"},
+        )
         self.assertErrorEqual(data)
         self.assertEqual(data.json["name"], "111")
         self.assertEqual(data.json["signature"], "111")
         self.assertEqual(
-            data.json["locale"], {"id": "zh_CN", "name": "中文（简体）", "intro": ""}
+            data.json["locale"], {"id": "zh_CN", "name": "Chinese (Simplified)", "intro": ""}
         )
         # 再次设置资料，将一些值设为空
         data = self.put(
@@ -550,12 +307,16 @@ class AuthAPITestCase(MoeAPITestCase):
         )
         self.assertErrorEqual(data)
         # 获取个人资料进行对比
-        data = self.get("/v1/user/info", token=token1)
+        data = self.get(
+            "/v1/user/info",
+            token=token1,
+            headers={"Origin": "https://example.com", "Accept-Language": "en"},
+        )
         self.assertErrorEqual(data)
         self.assertEqual(data.json["name"], "111")
         self.assertEqual(data.json["signature"], "")
         self.assertEqual(
-            data.json["locale"], {"id": "zh_CN", "name": "中文（简体）", "intro": ""}
+            data.json["locale"], {"id": "zh_CN", "name": "Chinese (Simplified)", "intro": ""}
         )
         # 设置成已经存在的名称，出错
         data = self.put(
@@ -638,229 +399,6 @@ class AuthAPITestCase(MoeAPITestCase):
         self.assertErrorEqual(data)
         self.assertIsNotNone(data.json.get("token"))
 
-    @unittest.skip("自助重置密码已移除，改为联系站点管理员")
-    def test_reset_password1(self):
-        """测试重置密码"""
-        # 创建用户
-        self.create_user("11", "AAA@a.com", "111111").generate_token()
-        # 测试登录
-        captcha_info, captcha = self.get_captcha()
-        data = self.post(
-            "/v1/user/token",
-            json={
-                "email": "AAA@a.com",
-                "password": "111111",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-        self.assertIsNotNone(data.json.get("token"))
-        # 尝试重置不存在的邮箱
-        data = self.delete(
-            "/v1/user/password",
-            json={"email": "2@1.com", "v_code": "1", "password": "111111"},
-        )
-        self.assertErrorEqual(data, ValidateError)
-        # 获取人机验证码
-        captcha_info, captcha = self.get_captcha()
-        # 获取重置密码邮件
-        data = self.post(
-            "/v1/reset-password-codes",
-            json={
-                "email": "AAA@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-        content = VCode.objects(
-            type=VCodeType.RESET_PASSWORD, info="aaa@a.com"
-        ).first()["content"]
-        # 使用错误的vCode
-        data = self.delete(
-            "/v1/user/password",
-            json={"email": "AAA@a.com", "v_code": "1", "password": "222222"},
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertIsNotNone(data.json["message"].get("v_code"))
-        # 使用错误的密码格式
-        data = self.delete(
-            "/v1/user/password",
-            json={"email": "AAA@a.com", "v_code": content, "password": "2"},
-        )
-        self.assertErrorEqual(data, ValidateError)
-        self.assertIsNotNone(data.json["message"].get("password"))
-        # 正确的修改
-        data = self.delete(
-            "/v1/user/password",
-            json={"email": "AAA@a.com", "v_code": content, "password": "222222"},
-        )
-        self.assertErrorEqual(data)
-        # 测试登录，只能用222222登录了
-        captcha_info, captcha = self.get_captcha()
-        data = self.post(
-            "/v1/user/token",
-            json={
-                "email": "AAA@a.com",
-                "password": "111111",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        captcha_info, captcha = self.get_captcha()
-        self.assertErrorEqual(data, ValidateError)
-        data = self.post(
-            "/v1/user/token",
-            json={
-                "email": "AAA@a.com",
-                "password": "222222",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-        self.assertIsNotNone(data.json.get("token"))
-
-    @unittest.skip("自助重置密码已移除，改为联系站点管理员")
-    def test_reset_password2(self):
-        """测试重置密码（重置密码邮件使用大写）"""
-        # 创建用户
-        self.create_user("11", "aaa@a.com", "111111").generate_token()
-        # 测试登录
-        captcha_info, captcha = self.get_captcha()
-        data = self.post(
-            "/v1/user/token",
-            json={
-                "email": "aaa@a.com",
-                "password": "111111",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-        self.assertIsNotNone(data.json.get("token"))
-        # 尝试重置不存在的邮箱
-        data = self.delete(
-            "/v1/user/password",
-            json={"email": "2@1.com", "v_code": "1", "password": "111111"},
-        )
-        self.assertErrorEqual(data, ValidateError)
-        # 获取人机验证码
-        captcha_info, captcha = self.get_captcha()
-        # 获取重置密码邮件
-        data = self.post(
-            "/v1/reset-password-codes",
-            json={
-                "email": "AAA@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-        content = VCode.objects(
-            type=VCodeType.RESET_PASSWORD, info="aaa@a.com"
-        ).first()["content"]
-        # 正确的修改
-        data = self.delete(
-            "/v1/user/password",
-            json={"email": "aaa@a.com", "v_code": content, "password": "222222"},
-        )
-        self.assertErrorEqual(data)
-        # 测试登录，只能用222222登录了
-        captcha_info, captcha = self.get_captcha()
-        data = self.post(
-            "/v1/user/token",
-            json={
-                "email": "aaa@a.com",
-                "password": "111111",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        captcha_info, captcha = self.get_captcha()
-        self.assertErrorEqual(data, ValidateError)
-        data = self.post(
-            "/v1/user/token",
-            json={
-                "email": "aaa@a.com",
-                "password": "222222",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-        self.assertIsNotNone(data.json.get("token"))
-
-    @unittest.skip("自助重置密码已移除，改为联系站点管理员")
-    def test_reset_password3(self):
-        """测试重置密码（重置请求使用大写）"""
-        # 创建用户
-        self.create_user("11", "aaa@a.com", "111111").generate_token()
-        # 测试登录
-        captcha_info, captcha = self.get_captcha()
-        data = self.post(
-            "/v1/user/token",
-            json={
-                "email": "aaa@a.com",
-                "password": "111111",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-        self.assertIsNotNone(data.json.get("token"))
-        # 尝试重置不存在的邮箱
-        data = self.delete(
-            "/v1/user/password",
-            json={"email": "2@1.com", "v_code": "1", "password": "111111"},
-        )
-        self.assertErrorEqual(data, ValidateError)
-        # 获取人机验证码
-        captcha_info, captcha = self.get_captcha()
-        # 获取重置密码邮件
-        data = self.post(
-            "/v1/reset-password-codes",
-            json={
-                "email": "aaa@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-        content = VCode.objects(
-            type=VCodeType.RESET_PASSWORD, info="aaa@a.com"
-        ).first()["content"]
-        # 正确的修改
-        data = self.delete(
-            "/v1/user/password",
-            json={"email": "AAA@a.com", "v_code": content, "password": "222222"},
-        )
-        self.assertErrorEqual(data)
-        # 测试登录，只能用222222登录了
-        captcha_info, captcha = self.get_captcha()
-        data = self.post(
-            "/v1/user/token",
-            json={
-                "email": "aaa@a.com",
-                "password": "111111",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        captcha_info, captcha = self.get_captcha()
-        self.assertErrorEqual(data, ValidateError)
-        data = self.post(
-            "/v1/user/token",
-            json={
-                "email": "aaa@a.com",
-                "password": "222222",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-        self.assertIsNotNone(data.json.get("token"))
 
     def test_change_email1(self):
         """测试修改邮箱"""
@@ -1320,275 +858,6 @@ class AuthAPITestCase(MoeAPITestCase):
         data = self.get("/v1/user/info", token=token)
         self.assertErrorEqual(data, UserBannedError)
 
-    @unittest.skip("旧邮箱验证码注册已移除；改用 test_register_with_invite_code")
-    def test_register_and_login1(self):
-        """测试注册的可以登陆"""
-        captcha_info, captcha = self.get_captcha()
-        # 申请验证码
-        self.post(
-            "/v1/confirm-email-codes",
-            json={
-                "email": "aaa@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        # 获取验证码内容
-        v_code = VCode.objects(type=VCodeType.CONFIRM_EMAIL, info="aaa@a.com").first()[
-            "content"
-        ]
-        # 注册
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "aaa@a.com",
-                "name": "aaa",
-                "password": "111111",
-                "v_code": v_code,
-            },
-        )
-        self.assertErrorEqual(data)
-        # 登陆
-        captcha_info, captcha = self.get_captcha()
-        data = self.post(
-            "/v1/user/token",
-            json={
-                "email": "aaa@a.com",
-                "password": "111111",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-
-    @unittest.skip("旧邮箱验证码注册已移除")
-    def test_register_and_login2(self):
-        """测试注册的可以登陆"""
-        captcha_info, captcha = self.get_captcha()
-        # 申请验证码
-        self.post(
-            "/v1/confirm-email-codes",
-            json={
-                "email": "AAA@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        # 获取验证码内容
-        v_code = VCode.objects(type=VCodeType.CONFIRM_EMAIL, info="aaa@a.com").first()[
-            "content"
-        ]
-        # 注册
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "AAA@a.com",
-                "name": "aaa",
-                "password": "111111",
-                "v_code": v_code,
-            },
-        )
-        self.assertErrorEqual(data)
-        # 登陆
-        captcha_info, captcha = self.get_captcha()
-        data = self.post(
-            "/v1/user/token",
-            json={
-                "email": "AAA@a.com",
-                "password": "111111",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-
-    @unittest.skip("旧邮箱验证码注册已移除")
-    def test_register_and_login3(self):
-        """测试注册的可以登陆（大小写不同）"""
-        captcha_info, captcha = self.get_captcha()
-        # 申请验证码
-        self.post(
-            "/v1/confirm-email-codes",
-            json={
-                "email": "AAA@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        # 获取验证码内容
-        v_code = VCode.objects(type=VCodeType.CONFIRM_EMAIL, info="aaa@a.com").first()[
-            "content"
-        ]
-        # 注册
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "AAA@a.com",
-                "name": "aaa",
-                "password": "111111",
-                "v_code": v_code,
-            },
-        )
-        self.assertErrorEqual(data)
-        # 登陆
-        captcha_info, captcha = self.get_captcha()
-        data = self.post(
-            "/v1/user/token",
-            json={
-                "email": "Aaa@A.Com",
-                "password": "111111",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-
-    @unittest.skip("自助重置密码已移除，改为联系站点管理员")
-    def test_register_and_reset_password1(self):
-        """测试注册的可以修改密码"""
-        captcha_info, captcha = self.get_captcha()
-        # 申请验证码
-        self.post(
-            "/v1/confirm-email-codes",
-            json={
-                "email": "aaa@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        # 获取验证码内容
-        v_code = VCode.objects(type=VCodeType.CONFIRM_EMAIL, info="aaa@a.com").first()[
-            "content"
-        ]
-        # 注册
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "aaa@a.com",
-                "name": "aaa",
-                "password": "111111",
-                "v_code": v_code,
-            },
-        )
-        self.assertErrorEqual(data)
-        # 获取人机验证码
-        captcha_info, captcha = self.get_captcha()
-        # 获取重置密码邮件
-        data = self.post(
-            "/v1/reset-password-codes",
-            json={
-                "email": "aaa@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-        content = VCode.objects(
-            type=VCodeType.RESET_PASSWORD, info="aaa@a.com"
-        ).first()["content"]
-        data = self.delete(
-            "/v1/user/password",
-            json={"email": "aaa@a.com", "v_code": content, "password": "222222"},
-        )
-        self.assertErrorEqual(data)
-
-    @unittest.skip("自助重置密码已移除，改为联系站点管理员")
-    def test_register_and_reset_password2(self):
-        """测试注册的可以修改密码"""
-        captcha_info, captcha = self.get_captcha()
-        # 申请验证码
-        self.post(
-            "/v1/confirm-email-codes",
-            json={
-                "email": "AAA@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        # 获取验证码内容
-        v_code = VCode.objects(type=VCodeType.CONFIRM_EMAIL, info="aaa@a.com").first()[
-            "content"
-        ]
-        # 注册
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "AAA@a.com",
-                "name": "aaa",
-                "password": "111111",
-                "v_code": v_code,
-            },
-        )
-        self.assertErrorEqual(data)
-        # 获取人机验证码
-        captcha_info, captcha = self.get_captcha()
-        # 获取重置密码邮件
-        data = self.post(
-            "/v1/reset-password-codes",
-            json={
-                "email": "AAA@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-        content = VCode.objects(
-            type=VCodeType.RESET_PASSWORD, info="aaa@a.com"
-        ).first()["content"]
-        data = self.delete(
-            "/v1/user/password",
-            json={"email": "AAA@a.com", "v_code": content, "password": "222222"},
-        )
-        self.assertErrorEqual(data)
-
-    @unittest.skip("自助重置密码已移除，改为联系站点管理员")
-    def test_register_and_reset_password3(self):
-        """测试注册的可以修改密码（大小写不同）"""
-        captcha_info, captcha = self.get_captcha()
-        # 申请验证码
-        self.post(
-            "/v1/confirm-email-codes",
-            json={
-                "email": "AAA@a.com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        # 获取验证码内容
-        v_code = VCode.objects(type=VCodeType.CONFIRM_EMAIL, info="aaa@a.com").first()[
-            "content"
-        ]
-        # 注册
-        data = self.post(
-            "/v1/users",
-            json={
-                "email": "AAA@a.com",
-                "name": "aaa",
-                "password": "111111",
-                "v_code": v_code,
-            },
-        )
-        self.assertErrorEqual(data)
-        # 获取人机验证码
-        captcha_info, captcha = self.get_captcha()
-        # 获取重置密码邮件
-        data = self.post(
-            "/v1/reset-password-codes",
-            json={
-                "email": "Aaa@A.Com",
-                "captcha_info": captcha_info,
-                "captcha": captcha,
-            },
-        )
-        self.assertErrorEqual(data)
-        content = VCode.objects(
-            type=VCodeType.RESET_PASSWORD, info="aaa@a.com"
-        ).first()["content"]
-        data = self.delete(
-            "/v1/user/password",
-            json={"email": "Aaa@A.Com", "v_code": content, "password": "222222"},
-        )
-        self.assertErrorEqual(data)
 
     def test_admin_register(self):
         """测试管理后台注册API"""

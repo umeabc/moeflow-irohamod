@@ -32,7 +32,6 @@
   - why-did-you-render // 性能优化
   - lodash // 工具库
   - uuid
-  - fontmin // 字体剪切
 
 ## 本地开发
 

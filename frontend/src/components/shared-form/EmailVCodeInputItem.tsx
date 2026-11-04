@@ -18,7 +18,7 @@ import { FormItem } from './FormItem';
 /** 获取邮箱验证码输入框的属性接口 */
 interface EmailVCodeInputItemProps extends Omit<FormItemProps, 'children'> {
   /** 获取邮件的类型 */
-  vCodeType: 'confirmEmail' | 'resetPassword' | 'resetEmail';
+  vCodeType: 'confirmEmail' | 'resetEmail';
   /** 默认邮箱 */
   defaultEmail?: string;
   /** waiting=true 发送成功但在等待中，没有发出新邮件 */
@@ -155,14 +155,6 @@ export const EmailVCodeInputItem: FC<EmailVCodeInputItemProps> = (
     // 根据不同类型，请求不同接口
     if (vCodeType === 'confirmEmail') {
       getEmailVCode = api.getConfirmEmailVCode({
-        data: {
-          email,
-          captcha: captchaValue,
-          captchaInfo,
-        },
-      });
-    } else if (vCodeType === 'resetPassword') {
-      getEmailVCode = api.getResetPasswordVCode({
         data: {
           email,
           captcha: captchaValue,

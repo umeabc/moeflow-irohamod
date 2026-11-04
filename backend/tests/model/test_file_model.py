@@ -33,6 +33,50 @@ class FileModelTestCase(MoeTestCase):
         team = Team.create("1")
         self.tmp_project = Project.create("1", team)
 
+    def _create_text_project(self):
+        team = Team.create("t1")
+        project = Project.create(
+            name="p1",
+            team=team,
+            source_language=Language.by_code("ja"),
+            target_languages=Language.by_code("zh-CN"),
+        )
+        return team, project
+
+    def _assert_file_counts(self, model, size, files, folders):
+        self.assertEqual(size, model.file_size)
+        self.assertEqual(files, model.file_count)
+        self.assertEqual(folders, model.folder_count)
+
+    def _assert_source_contents(self, revision, collection, expected):
+        self.assertEqual(
+            expected,
+            [
+                [item.content for item in getattr(source, collection)()]
+                for source in revision.sources()
+            ],
+        )
+
+    def _create_file_tree(self, project, file, file4_name="file4.txt", dir5_name="dir5"):
+        file1 = project.upload("file1.txt", file)
+        project.reload()
+        # 创建两个文件夹
+        dir1 = project.create_folder("dir1")
+        dir2 = project.create_folder("dir2", parent=dir1)
+        # 向dir2上传文件
+        file2 = project.upload("file2.txt", file, parent=dir2)
+        # 向dir1上传文件
+        file3 = project.upload("file3.txt", file, parent=dir1)
+        dir3 = project.create_folder("dir3", parent=dir1)
+        # 为dir3再创建个文件夹,上传文件
+        # 为dir2创建个文件夹
+        # 为None创建个文件夹
+        dir4 = project.create_folder("dir4", parent=dir3)
+        file4 = project.upload(file4_name, file, parent=dir3)
+        dir5 = project.create_folder(dir5_name, parent=dir2)
+        dir6 = project.create_folder("dir6")
+        return file1, file2, file3, file4, dir1, dir2, dir3, dir4, dir5, dir6
+
     def check_sort_name(self, dir_sort_name, sort_name, file):
         """[帮助函数]用于同时检查两个sort_name"""
         self.assertEqual(dir_sort_name, file.dir_sort_name)
@@ -286,13 +330,7 @@ class FileModelTestCase(MoeTestCase):
         """测试md5的获取"""
         with open(os.path.join(TEST_FILE_PATH, "1kbA.txt"), "rb") as file:
             # 测试用项目、团队
-            team = Team.create("t1")
-            project = Project.create(
-                name="p1",
-                team=team,
-                source_language=Language.by_code("ja"),
-                target_languages=Language.by_code("zh-CN"),
-            )
+            team, project = self._create_text_project()
             md5sum = "d47b127bc2de2d687ddc82dac354c415"
             # 上传文件
             file1 = project.upload("1.txt", file)
@@ -312,13 +350,7 @@ class FileModelTestCase(MoeTestCase):
         测试原文不会被覆盖
         """
         # 测试用项目、团队
-        team = Team.create("t1")
-        project = Project.create(
-            name="p1",
-            team=team,
-            source_language=Language.by_code("ja"),
-            target_languages=Language.by_code("zh-CN"),
-        )
+        team, project = self._create_text_project()
         dir = project.create_folder("dir3")
         # 打开两张图片
         with open(os.path.join(TEST_FILE_PATH, "2kb.png"), "rb") as png2kb_file:
@@ -398,13 +430,7 @@ class FileModelTestCase(MoeTestCase):
         测试同名文件的，创建了新修订版，并且新的为激活的
         测试是否成功复制Translation和Tip(包括含有多个的情况)
         """
-        team = Team.create("t1")
-        project = Project.create(
-            name="p1",
-            team=team,
-            source_language=Language.by_code("ja"),
-            target_languages=Language.by_code("zh-CN"),
-        )
+        team, project = self._create_text_project()
         target = project.targets().first()
         project.create_folder("dir3")
         user = User(name="u1", email="u1").save()
@@ -428,19 +454,13 @@ class FileModelTestCase(MoeTestCase):
                 source.create_tip(str(i), target, user=user)
             revision_a.reload()
             self.assertEqual(4, revision_a.translated_source_count)  # 不含空格有4行
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_a, "translations",
                 [["0"], ["1"], ["2"], ["3"], ["4"]],
-                [
-                    [item.content for item in source.translations()]
-                    for source in revision_a.sources()
-                ],
             )
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_a, "tips",
                 [["0"], ["1"], ["2"], ["3"], ["4"]],
-                [
-                    [item.content for item in source.tips()]
-                    for source in revision_a.sources()
-                ],
             )
             # 检查激活修订版
             self.assertTrue(revision_a.activated)
@@ -459,19 +479,13 @@ class FileModelTestCase(MoeTestCase):
             self.assertEqual(7, revision_b.sources().count())  # 新的翻译，含空格有7行
             # 之前有翻译且能找到一模一样原文的有3行
             self.assertEqual(3, revision_b.translated_source_count)
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_b, "translations",
                 [["0"], ["1"], [], ["3"], [], [], []],
-                [
-                    [item.content for item in source.translations()]
-                    for source in revision_b.sources()
-                ],
             )
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_b, "tips",
                 [["0"], ["1"], [], ["3"], [], [], []],
-                [
-                    [item.content for item in source.tips()]
-                    for source in revision_b.sources()
-                ],
             )
             # 给“五”增加翻译
             revision_b.sources()[5].create_translation("5-1", target, user=user)
@@ -511,19 +525,13 @@ class FileModelTestCase(MoeTestCase):
             self.assertEqual(8, revision_c.sources().count())  # 新的翻译，含空格有8行
             # 之前有翻译且能找到一模一样原文的有5行
             self.assertEqual(5, revision_c.translated_source_count)
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_c, "translations",
                 [["0"], ["1"], [], ["3"], [], [], ["5-3", "5-2"], ["1"]],
-                [
-                    [item.content for item in source.translations()]
-                    for source in revision_c.sources()
-                ],
             )
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_c, "tips",
                 [["0"], ["1"], [], ["3"], [], [], ["5-3", "5-2", "5-1"], ["1"]],
-                [
-                    [item.content for item in source.tips()]
-                    for source in revision_c.sources()
-                ],
             )
             # 检查激活修订版
             revision_a.reload()
@@ -552,13 +560,7 @@ class FileModelTestCase(MoeTestCase):
         除文件会删除文件及相应修订版（文件夹下）
         删除文件会删除文件及相应修订版（根目录）
         """
-        team = Team.create("t1")
-        project = Project.create(
-            name="p1",
-            team=team,
-            source_language=Language.by_code("ja"),
-            target_languages=Language.by_code("zh-CN"),
-        )
+        team, project = self._create_text_project()
         target = project.targets().first()
         dir1 = project.create_folder("dir1")
         dir2 = project.create_folder("dir2", parent=dir1)
@@ -582,19 +584,13 @@ class FileModelTestCase(MoeTestCase):
                 source.create_tip(str(i), target, user=user)
             revision_a.reload()
             self.assertEqual(4, revision_a.translated_source_count)  # 不含空格有4行
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_a, "translations",
                 [["0"], ["1"], ["2"], ["3"], ["4"]],
-                [
-                    [item.content for item in source.translations()]
-                    for source in revision_a.sources()
-                ],
             )
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_a, "tips",
                 [["0"], ["1"], ["2"], ["3"], ["4"]],
-                [
-                    [item.content for item in source.tips()]
-                    for source in revision_a.sources()
-                ],
             )
             # 检查激活修订版
             self.assertTrue(revision_a.activated)
@@ -609,19 +605,13 @@ class FileModelTestCase(MoeTestCase):
             self.assertEqual(7, revision_b.sources().count())  # 新的翻译，含空格有7行
             # 之前有翻译且能找到一模一样原文的有3行
             self.assertEqual(3, revision_b.translated_source_count)
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_b, "translations",
                 [["0"], ["1"], [], ["3"], [], [], []],
-                [
-                    [item.content for item in source.translations()]
-                    for source in revision_b.sources()
-                ],
             )
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_b, "tips",
                 [["0"], ["1"], [], ["3"], [], [], []],
-                [
-                    [item.content for item in source.tips()]
-                    for source in revision_b.sources()
-                ],
             )
             # 检查激活修订版
             revision_a.reload()
@@ -642,19 +632,13 @@ class FileModelTestCase(MoeTestCase):
             self.assertEqual(7, revision_c.sources().count())  # 新的翻译，含空格有7行
             # 之前有翻译且能找到一模一样原文的有3行
             self.assertEqual(3, revision_c.translated_source_count)
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_b, "translations",
                 [["0"], ["1"], [], ["3"], [], [], []],
-                [
-                    [item.content for item in source.translations()]
-                    for source in revision_b.sources()
-                ],
             )
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_b, "tips",
                 [["0"], ["1"], [], ["3"], [], [], []],
-                [
-                    [item.content for item in source.tips()]
-                    for source in revision_b.sources()
-                ],
             )
             # 检查激活修订版
             revision_a.reload()
@@ -706,19 +690,13 @@ class FileModelTestCase(MoeTestCase):
                 source.create_tip(str(i), target, user=user)
             revision_a.reload()
             self.assertEqual(4, revision_a.translated_source_count)  # 不含空格有4行
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_a, "translations",
                 [["0"], ["1"], ["2"], ["3"], ["4"]],
-                [
-                    [item.content for item in source.translations()]
-                    for source in revision_a.sources()
-                ],
             )
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_a, "tips",
                 [["0"], ["1"], ["2"], ["3"], ["4"]],
-                [
-                    [item.content for item in source.tips()]
-                    for source in revision_a.sources()
-                ],
             )
             # 检查激活修订版
             self.assertTrue(revision_a.activated)
@@ -733,19 +711,13 @@ class FileModelTestCase(MoeTestCase):
             self.assertEqual(7, revision_b.sources().count())  # 新的翻译，含空格有7行
             # 之前有翻译且能找到一模一样原文的有3行
             self.assertEqual(3, revision_b.translated_source_count)
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_b, "translations",
                 [["0"], ["1"], [], ["3"], [], [], []],
-                [
-                    [item.content for item in source.translations()]
-                    for source in revision_b.sources()
-                ],
             )
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_b, "tips",
                 [["0"], ["1"], [], ["3"], [], [], []],
-                [
-                    [item.content for item in source.tips()]
-                    for source in revision_b.sources()
-                ],
             )
             # 检查激活修订版
             revision_a.reload()
@@ -789,19 +761,13 @@ class FileModelTestCase(MoeTestCase):
                 source.create_tip(str(i), target, user=user)
             revision_a.reload()
             self.assertEqual(4, revision_a.translated_source_count)  # 不含空格有4行
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_a, "translations",
                 [["0"], ["1"], ["2"], ["3"], ["4"]],
-                [
-                    [item.content for item in source.translations()]
-                    for source in revision_a.sources()
-                ],
             )
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_a, "tips",
                 [["0"], ["1"], ["2"], ["3"], ["4"]],
-                [
-                    [item.content for item in source.tips()]
-                    for source in revision_a.sources()
-                ],
             )
             # 检查激活修订版
             self.assertTrue(revision_a.activated)
@@ -816,19 +782,13 @@ class FileModelTestCase(MoeTestCase):
             self.assertEqual(7, revision_b.sources().count())  # 新的翻译，含空格有7行
             # 之前有翻译且能找到一模一样原文的有3行
             self.assertEqual(3, revision_b.translated_source_count)
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_b, "translations",
                 [["0"], ["1"], [], ["3"], [], [], []],
-                [
-                    [item.content for item in source.translations()]
-                    for source in revision_b.sources()
-                ],
             )
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_b, "tips",
                 [["0"], ["1"], [], ["3"], [], [], []],
-                [
-                    [item.content for item in source.tips()]
-                    for source in revision_b.sources()
-                ],
             )
             # 检查激活修订版
             revision_a.reload()
@@ -873,19 +833,13 @@ class FileModelTestCase(MoeTestCase):
                 source.create_tip(str(i), target, user=user)
             revision_a.reload()
             self.assertEqual(4, revision_a.translated_source_count)  # 不含空格有4行
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_a, "translations",
                 [["0"], ["1"], ["2"], ["3"], ["4"]],
-                [
-                    [item.content for item in source.translations()]
-                    for source in revision_a.sources()
-                ],
             )
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_a, "tips",
                 [["0"], ["1"], ["2"], ["3"], ["4"]],
-                [
-                    [item.content for item in source.tips()]
-                    for source in revision_a.sources()
-                ],
             )
             # 检查激活修订版
             self.assertTrue(revision_a.activated)
@@ -900,19 +854,13 @@ class FileModelTestCase(MoeTestCase):
             self.assertEqual(7, revision_b.sources().count())  # 新的翻译，含空格有7行
             # 之前有翻译且能找到一模一样原文的有3行
             self.assertEqual(3, revision_b.translated_source_count)
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_b, "translations",
                 [["0"], ["1"], [], ["3"], [], [], []],
-                [
-                    [item.content for item in source.translations()]
-                    for source in revision_b.sources()
-                ],
             )
-            self.assertEqual(
+            self._assert_source_contents(
+                revision_b, "tips",
                 [["0"], ["1"], [], ["3"], [], [], []],
-                [
-                    [item.content for item in source.tips()]
-                    for source in revision_b.sources()
-                ],
             )
             # 检查激活修订版
             revision_a.reload()
@@ -956,31 +904,11 @@ class FileModelTestCase(MoeTestCase):
             with open(os.path.join(TEST_FILE_PATH, "1kbA.txt"), "rb") as file:
                 # =======创建测试用文件夹=======
                 # 测试用项目、团队
-                team = Team.create("t1")
-                project = Project.create(
-                    name="p1",
-                    team=team,
-                    source_language=Language.by_code("ja"),
-                    target_languages=Language.by_code("zh-CN"),
-                )
+                team, project = self._create_text_project()
                 # 上传文件
-                file1 = project.upload("file1.txt", file)
-                project.reload()
-                # 创建两个文件夹
-                dir1 = project.create_folder("dir1")
-                dir2 = project.create_folder("dir2", parent=dir1)
-                # 向dir2上传文件
-                file2 = project.upload("file2.txt", file, parent=dir2)
-                # 向dir1上传文件
-                file3 = project.upload("file3.txt", file, parent=dir1)
-                dir3 = project.create_folder("dir3", parent=dir1)
-                # 为dir3再创建个文件夹,上传文件
-                # 为dir2创建个文件夹
-                # 为None创建个文件夹
-                dir4 = project.create_folder("dir4", parent=dir3)
-                file4 = project.upload("file4.txt", file, parent=dir3)
-                dir5 = project.create_folder("dir5", parent=dir2)
-                dir6 = project.create_folder("dir6")
+                file1, file2, file3, file4, dir1, dir2, dir3, dir4, dir5, dir6 = (
+                    self._create_file_tree(project, file)
+                )
                 # 刷新
                 project.reload()
                 dir1.reload()
@@ -994,27 +922,13 @@ class FileModelTestCase(MoeTestCase):
                 file3.reload()
                 file4.reload()
                 # 校对cache
-                self.assertEqual(4, project.file_size)
-                self.assertEqual(4, project.file_count)
-                self.assertEqual(6, project.folder_count)
-                self.assertEqual(3, dir1.file_size)
-                self.assertEqual(3, dir1.file_count)
-                self.assertEqual(4, dir1.folder_count)
-                self.assertEqual(1, dir2.file_size)
-                self.assertEqual(1, dir2.file_count)
-                self.assertEqual(1, dir2.folder_count)
-                self.assertEqual(1, dir3.file_size)
-                self.assertEqual(1, dir3.file_count)
-                self.assertEqual(1, dir3.folder_count)
-                self.assertEqual(0, dir4.file_size)
-                self.assertEqual(0, dir4.file_count)
-                self.assertEqual(0, dir4.folder_count)
-                self.assertEqual(0, dir5.file_size)
-                self.assertEqual(0, dir5.file_count)
-                self.assertEqual(0, dir5.folder_count)
-                self.assertEqual(0, dir6.file_size)
-                self.assertEqual(0, dir6.file_count)
-                self.assertEqual(0, dir6.folder_count)
+                self._assert_file_counts(project, 4, 4, 6)
+                self._assert_file_counts(dir1, 3, 3, 4)
+                self._assert_file_counts(dir2, 1, 1, 1)
+                self._assert_file_counts(dir3, 1, 1, 1)
+                self._assert_file_counts(dir4, 0, 0, 0)
+                self._assert_file_counts(dir5, 0, 0, 0)
+                self._assert_file_counts(dir6, 0, 0, 0)
                 # 校对祖先
                 self.assertEqual(None, file1.parent)
                 self.assertEqual([], file1.ancestors)
@@ -1109,27 +1023,13 @@ class FileModelTestCase(MoeTestCase):
                 file3.reload()
                 file4.reload()
                 # 校对cache
-                self.assertEqual(3, project.file_size)
-                self.assertEqual(3, project.file_count)
-                self.assertEqual(6, project.folder_count)
-                self.assertEqual(2, dir1.file_size)
-                self.assertEqual(2, dir1.file_count)
-                self.assertEqual(4, dir1.folder_count)
-                self.assertEqual(0, dir2.file_size)
-                self.assertEqual(0, dir2.file_count)
-                self.assertEqual(1, dir2.folder_count)
-                self.assertEqual(1, dir3.file_size)
-                self.assertEqual(1, dir3.file_count)
-                self.assertEqual(1, dir3.folder_count)
-                self.assertEqual(0, dir4.file_size)
-                self.assertEqual(0, dir4.file_count)
-                self.assertEqual(0, dir4.folder_count)
-                self.assertEqual(0, dir5.file_size)
-                self.assertEqual(0, dir5.file_count)
-                self.assertEqual(0, dir5.folder_count)
-                self.assertEqual(0, dir6.file_size)
-                self.assertEqual(0, dir6.file_count)
-                self.assertEqual(0, dir6.folder_count)
+                self._assert_file_counts(project, 3, 3, 6)
+                self._assert_file_counts(dir1, 2, 2, 4)
+                self._assert_file_counts(dir2, 0, 0, 1)
+                self._assert_file_counts(dir3, 1, 1, 1)
+                self._assert_file_counts(dir4, 0, 0, 0)
+                self._assert_file_counts(dir5, 0, 0, 0)
+                self._assert_file_counts(dir6, 0, 0, 0)
                 # == 删除文件夹下空文件夹 ==
                 """
                  |         |
@@ -1169,24 +1069,12 @@ class FileModelTestCase(MoeTestCase):
                 file3.reload()
                 file4.reload()
                 # 校对cache
-                self.assertEqual(3, project.file_size)
-                self.assertEqual(3, project.file_count)
-                self.assertEqual(5, project.folder_count)
-                self.assertEqual(2, dir1.file_size)
-                self.assertEqual(2, dir1.file_count)
-                self.assertEqual(3, dir1.folder_count)
-                self.assertEqual(0, dir2.file_size)
-                self.assertEqual(0, dir2.file_count)
-                self.assertEqual(0, dir2.folder_count)
-                self.assertEqual(1, dir3.file_size)
-                self.assertEqual(1, dir3.file_count)
-                self.assertEqual(1, dir3.folder_count)
-                self.assertEqual(0, dir4.file_size)
-                self.assertEqual(0, dir4.file_count)
-                self.assertEqual(0, dir4.folder_count)
-                self.assertEqual(0, dir6.file_size)
-                self.assertEqual(0, dir6.file_count)
-                self.assertEqual(0, dir6.folder_count)
+                self._assert_file_counts(project, 3, 3, 5)
+                self._assert_file_counts(dir1, 2, 2, 3)
+                self._assert_file_counts(dir2, 0, 0, 0)
+                self._assert_file_counts(dir3, 1, 1, 1)
+                self._assert_file_counts(dir4, 0, 0, 0)
+                self._assert_file_counts(dir6, 0, 0, 0)
                 # == 删除文件夹下包含文件的文件夹 ==
                 """
                  |         |
@@ -1225,18 +1113,10 @@ class FileModelTestCase(MoeTestCase):
                 with self.assertRaises(DoesNotExist):
                     file4.reload()
                 # 校对cache
-                self.assertEqual(2, project.file_size)
-                self.assertEqual(2, project.file_count)
-                self.assertEqual(3, project.folder_count)
-                self.assertEqual(1, dir1.file_size)
-                self.assertEqual(1, dir1.file_count)
-                self.assertEqual(1, dir1.folder_count)
-                self.assertEqual(0, dir2.file_size)
-                self.assertEqual(0, dir2.file_count)
-                self.assertEqual(0, dir2.folder_count)
-                self.assertEqual(0, dir6.file_size)
-                self.assertEqual(0, dir6.file_count)
-                self.assertEqual(0, dir6.folder_count)
+                self._assert_file_counts(project, 2, 2, 3)
+                self._assert_file_counts(dir1, 1, 1, 1)
+                self._assert_file_counts(dir2, 0, 0, 0)
+                self._assert_file_counts(dir6, 0, 0, 0)
                 # == 删除None下文件 ==
                 """
                  |         |
@@ -1276,18 +1156,10 @@ class FileModelTestCase(MoeTestCase):
                 with self.assertRaises(DoesNotExist):
                     file4.reload()
                 # 校对cache
-                self.assertEqual(1, project.file_size)
-                self.assertEqual(1, project.file_count)
-                self.assertEqual(3, project.folder_count)
-                self.assertEqual(1, dir1.file_size)
-                self.assertEqual(1, dir1.file_count)
-                self.assertEqual(1, dir1.folder_count)
-                self.assertEqual(0, dir2.file_size)
-                self.assertEqual(0, dir2.file_count)
-                self.assertEqual(0, dir2.folder_count)
-                self.assertEqual(0, dir6.file_size)
-                self.assertEqual(0, dir6.file_count)
-                self.assertEqual(0, dir6.folder_count)
+                self._assert_file_counts(project, 1, 1, 3)
+                self._assert_file_counts(dir1, 1, 1, 1)
+                self._assert_file_counts(dir2, 0, 0, 0)
+                self._assert_file_counts(dir6, 0, 0, 0)
                 # == 删除None下空文件夹 ==
                 """
                            |
@@ -1328,15 +1200,9 @@ class FileModelTestCase(MoeTestCase):
                 with self.assertRaises(DoesNotExist):
                     file4.reload()
                 # 校对cache
-                self.assertEqual(1, project.file_size)
-                self.assertEqual(1, project.file_count)
-                self.assertEqual(2, project.folder_count)
-                self.assertEqual(1, dir1.file_size)
-                self.assertEqual(1, dir1.file_count)
-                self.assertEqual(1, dir1.folder_count)
-                self.assertEqual(0, dir2.file_size)
-                self.assertEqual(0, dir2.file_count)
-                self.assertEqual(0, dir2.folder_count)
+                self._assert_file_counts(project, 1, 1, 2)
+                self._assert_file_counts(dir1, 1, 1, 1)
+                self._assert_file_counts(dir2, 0, 0, 0)
                 # == 删除None下包含文件的文件夹 ==
                 """
                 删光啦
@@ -1376,9 +1242,7 @@ class FileModelTestCase(MoeTestCase):
                 with self.assertRaises(DoesNotExist):
                     file4.reload()
                 # 校对cache
-                self.assertEqual(0, project.file_size)
-                self.assertEqual(0, project.file_count)
-                self.assertEqual(0, project.folder_count)
+                self._assert_file_counts(project, 0, 0, 0)
 
     def test_create_file_name_duplicate(self):
         """
@@ -1387,13 +1251,7 @@ class FileModelTestCase(MoeTestCase):
         """
         with self.app.test_request_context():
             # 测试用项目、团队
-            team = Team.create("t1")
-            project = Project.create(
-                name="p1",
-                team=team,
-                source_language=Language.by_code("ja"),
-                target_languages=Language.by_code("zh-CN"),
-            )
+            team, project = self._create_text_project()
             # 创建测试文件夹、文件
             text_file = project.create_file("1.txt")
             image_file = project.create_file("1.jpg")
@@ -1479,13 +1337,7 @@ class FileModelTestCase(MoeTestCase):
         """测试创建文件夹，名称重复"""
         with self.app.test_request_context():
             # 测试用项目、团队
-            team = Team.create("t1")
-            project = Project.create(
-                name="p1",
-                team=team,
-                source_language=Language.by_code("ja"),
-                target_languages=Language.by_code("zh-CN"),
-            )
+            team, project = self._create_text_project()
             # 创建测试用文件、文件夹
             file1 = project.create_file("1.txt")
             dir1 = project.create_folder("dir.txt")
@@ -1530,13 +1382,7 @@ class FileModelTestCase(MoeTestCase):
         """测试上传文件/创建文件夹是否改变相关cache"""
         with open(os.path.join(TEST_FILE_PATH, "1kbA.txt"), "rb") as file:
             # 测试用项目、团队
-            team = Team.create("t1")
-            project = Project.create(
-                name="p1",
-                team=team,
-                source_language=Language.by_code("ja"),
-                target_languages=Language.by_code("zh-CN"),
-            )
+            team, project = self._create_text_project()
             """
              |
              - file1
@@ -1545,9 +1391,7 @@ class FileModelTestCase(MoeTestCase):
             file1 = project.upload("1.txt", file)
             project.reload()
             # 校对cache
-            self.assertEqual(1, project.file_size)
-            self.assertEqual(1, project.file_count)
-            self.assertEqual(0, project.folder_count)
+            self._assert_file_counts(project, 1, 1, 0)
             # 校对祖先
             self.assertEqual(None, file1.parent)
             self.assertEqual([], file1.ancestors)
@@ -1571,15 +1415,9 @@ class FileModelTestCase(MoeTestCase):
             file1.reload()
             file2.reload()
             # 校对cache
-            self.assertEqual(2, project.file_size)
-            self.assertEqual(2, project.file_count)
-            self.assertEqual(2, project.folder_count)
-            self.assertEqual(1, dir1.file_size)
-            self.assertEqual(1, dir1.file_count)
-            self.assertEqual(1, dir1.folder_count)
-            self.assertEqual(1, dir2.file_size)
-            self.assertEqual(1, dir2.file_count)
-            self.assertEqual(0, dir2.folder_count)
+            self._assert_file_counts(project, 2, 2, 2)
+            self._assert_file_counts(dir1, 1, 1, 1)
+            self._assert_file_counts(dir2, 1, 1, 0)
             # 校对祖先
             self.assertEqual(None, file1.parent)
             self.assertEqual([], file1.ancestors)
@@ -1608,15 +1446,9 @@ class FileModelTestCase(MoeTestCase):
             file2.reload()
             file3.reload()
             # 校对cache
-            self.assertEqual(3, project.file_size)
-            self.assertEqual(3, project.file_count)
-            self.assertEqual(2, project.folder_count)
-            self.assertEqual(2, dir1.file_size)
-            self.assertEqual(2, dir1.file_count)
-            self.assertEqual(1, dir1.folder_count)
-            self.assertEqual(1, dir2.file_size)
-            self.assertEqual(1, dir2.file_count)
-            self.assertEqual(0, dir2.folder_count)
+            self._assert_file_counts(project, 3, 3, 2)
+            self._assert_file_counts(dir1, 2, 2, 1)
+            self._assert_file_counts(dir2, 1, 1, 0)
             # 校对祖先
             self.assertEqual(None, file1.parent)
             self.assertEqual([], file1.ancestors)
@@ -1649,18 +1481,10 @@ class FileModelTestCase(MoeTestCase):
             file2.reload()
             file3.reload()
             # 校对cache
-            self.assertEqual(3, project.file_size)
-            self.assertEqual(3, project.file_count)
-            self.assertEqual(3, project.folder_count)
-            self.assertEqual(2, dir1.file_size)
-            self.assertEqual(2, dir1.file_count)
-            self.assertEqual(2, dir1.folder_count)
-            self.assertEqual(1, dir2.file_size)
-            self.assertEqual(1, dir2.file_count)
-            self.assertEqual(0, dir2.folder_count)
-            self.assertEqual(0, dir3.file_size)
-            self.assertEqual(0, dir3.file_count)
-            self.assertEqual(0, dir3.folder_count)
+            self._assert_file_counts(project, 3, 3, 3)
+            self._assert_file_counts(dir1, 2, 2, 2)
+            self._assert_file_counts(dir2, 1, 1, 0)
+            self._assert_file_counts(dir3, 0, 0, 0)
             # 校对祖先
             self.assertEqual(None, file1.parent)
             self.assertEqual([], file1.ancestors)
@@ -1708,18 +1532,10 @@ class FileModelTestCase(MoeTestCase):
             file3.reload()
             file4.reload()
             # 校对cache
-            self.assertEqual(4, project.file_size)
-            self.assertEqual(4, project.file_count)
-            self.assertEqual(6, project.folder_count)
-            self.assertEqual(3, dir1.file_size)
-            self.assertEqual(3, dir1.file_count)
-            self.assertEqual(4, dir1.folder_count)
-            self.assertEqual(1, dir2.file_size)
-            self.assertEqual(1, dir2.file_count)
-            self.assertEqual(1, dir2.folder_count)
-            self.assertEqual(1, dir3.file_size)
-            self.assertEqual(1, dir3.file_count)
-            self.assertEqual(1, dir3.folder_count)
+            self._assert_file_counts(project, 4, 4, 6)
+            self._assert_file_counts(dir1, 3, 3, 4)
+            self._assert_file_counts(dir2, 1, 1, 1)
+            self._assert_file_counts(dir3, 1, 1, 1)
             # 校对祖先
             self.assertEqual(None, file1.parent)
             self.assertEqual([], file1.ancestors)
@@ -1746,31 +1562,11 @@ class FileModelTestCase(MoeTestCase):
         with self.app.test_request_context():
             with open(os.path.join(TEST_FILE_PATH, "1kbA.txt"), "rb") as file:
                 # 测试用项目、团队
-                team = Team.create("t1")
-                project = Project.create(
-                    name="p1",
-                    team=team,
-                    source_language=Language.by_code("ja"),
-                    target_languages=Language.by_code("zh-CN"),
-                )
+                team, project = self._create_text_project()
                 # 上传文件
-                file1 = project.upload("file1.txt", file)
-                project.reload()
-                # 创建两个文件夹
-                dir1 = project.create_folder("dir1")
-                dir2 = project.create_folder("dir2", parent=dir1)
-                # 向dir2上传文件
-                file2 = project.upload("file2.txt", file, parent=dir2)
-                # 向dir1上传文件
-                file3 = project.upload("file3.txt", file, parent=dir1)
-                dir3 = project.create_folder("dir3", parent=dir1)
-                # 为dir3再创建个文件夹,上传文件
-                # 为dir2创建个文件夹
-                # 为None创建个文件夹
-                dir4 = project.create_folder("dir4", parent=dir3)
-                file4 = project.upload("1.txt", file, parent=dir3)
-                dir5 = project.create_folder("1.txt", parent=dir2)
-                dir6 = project.create_folder("dir6")
+                file1, file2, file3, file4, dir1, dir2, dir3, dir4, dir5, dir6 = (
+                    self._create_file_tree(project, file, file4_name="1.txt", dir5_name="1.txt")
+                )
                 # 刷新
                 project.reload()
                 dir1.reload()
@@ -1784,18 +1580,10 @@ class FileModelTestCase(MoeTestCase):
                 file3.reload()
                 file4.reload()
                 # 校对cache
-                self.assertEqual(4, project.file_size)
-                self.assertEqual(4, project.file_count)
-                self.assertEqual(6, project.folder_count)
-                self.assertEqual(3, dir1.file_size)
-                self.assertEqual(3, dir1.file_count)
-                self.assertEqual(4, dir1.folder_count)
-                self.assertEqual(1, dir2.file_size)
-                self.assertEqual(1, dir2.file_count)
-                self.assertEqual(1, dir2.folder_count)
-                self.assertEqual(1, dir3.file_size)
-                self.assertEqual(1, dir3.file_count)
-                self.assertEqual(1, dir3.folder_count)
+                self._assert_file_counts(project, 4, 4, 6)
+                self._assert_file_counts(dir1, 3, 3, 4)
+                self._assert_file_counts(dir2, 1, 1, 1)
+                self._assert_file_counts(dir3, 1, 1, 1)
                 """
                 初始文件结构
                  |         |
@@ -1840,18 +1628,10 @@ class FileModelTestCase(MoeTestCase):
                 file3.reload()
                 file4.reload()
                 # 校对cache
-                self.assertEqual(4, project.file_size)
-                self.assertEqual(4, project.file_count)
-                self.assertEqual(6, project.folder_count)
-                self.assertEqual(3, dir1.file_size)
-                self.assertEqual(3, dir1.file_count)
-                self.assertEqual(4, dir1.folder_count)
-                self.assertEqual(1, dir2.file_size)
-                self.assertEqual(1, dir2.file_count)
-                self.assertEqual(1, dir2.folder_count)
-                self.assertEqual(1, dir3.file_size)
-                self.assertEqual(1, dir3.file_count)
-                self.assertEqual(1, dir3.folder_count)
+                self._assert_file_counts(project, 4, 4, 6)
+                self._assert_file_counts(dir1, 3, 3, 4)
+                self._assert_file_counts(dir2, 1, 1, 1)
+                self._assert_file_counts(dir3, 1, 1, 1)
 
     def test_move_to_other_project_error(self):
         """测试移动到错误的parent"""
@@ -1891,31 +1671,11 @@ class FileModelTestCase(MoeTestCase):
         with open(os.path.join(TEST_FILE_PATH, "1kbA.txt"), "rb") as file:
             # =======创建测试用文件夹=======
             # 测试用项目、团队
-            team = Team.create("t1")
-            project = Project.create(
-                name="p1",
-                team=team,
-                source_language=Language.by_code("ja"),
-                target_languages=Language.by_code("zh-CN"),
-            )
+            team, project = self._create_text_project()
             # 上传文件
-            file1 = project.upload("file1.txt", file)
-            project.reload()
-            # 创建两个文件夹
-            dir1 = project.create_folder("dir1")
-            dir2 = project.create_folder("dir2", parent=dir1)
-            # 向dir2上传文件
-            file2 = project.upload("file2.txt", file, parent=dir2)
-            # 向dir1上传文件
-            file3 = project.upload("file3.txt", file, parent=dir1)
-            dir3 = project.create_folder("dir3", parent=dir1)
-            # 为dir3再创建个文件夹,上传文件
-            # 为dir2创建个文件夹
-            # 为None创建个文件夹
-            dir4 = project.create_folder("dir4", parent=dir3)
-            file4 = project.upload("file4.txt", file, parent=dir3)
-            dir5 = project.create_folder("dir5", parent=dir2)
-            dir6 = project.create_folder("dir6")
+            file1, file2, file3, file4, dir1, dir2, dir3, dir4, dir5, dir6 = (
+                self._create_file_tree(project, file)
+            )
             # 刷新
             project.reload()
             dir1.reload()
@@ -1929,27 +1689,13 @@ class FileModelTestCase(MoeTestCase):
             file3.reload()
             file4.reload()
             # 校对cache
-            self.assertEqual(4, project.file_size)
-            self.assertEqual(4, project.file_count)
-            self.assertEqual(6, project.folder_count)
-            self.assertEqual(3, dir1.file_size)
-            self.assertEqual(3, dir1.file_count)
-            self.assertEqual(4, dir1.folder_count)
-            self.assertEqual(1, dir2.file_size)
-            self.assertEqual(1, dir2.file_count)
-            self.assertEqual(1, dir2.folder_count)
-            self.assertEqual(1, dir3.file_size)
-            self.assertEqual(1, dir3.file_count)
-            self.assertEqual(1, dir3.folder_count)
-            self.assertEqual(0, dir4.file_size)
-            self.assertEqual(0, dir4.file_count)
-            self.assertEqual(0, dir4.folder_count)
-            self.assertEqual(0, dir5.file_size)
-            self.assertEqual(0, dir5.file_count)
-            self.assertEqual(0, dir5.folder_count)
-            self.assertEqual(0, dir6.file_size)
-            self.assertEqual(0, dir6.file_count)
-            self.assertEqual(0, dir6.folder_count)
+            self._assert_file_counts(project, 4, 4, 6)
+            self._assert_file_counts(dir1, 3, 3, 4)
+            self._assert_file_counts(dir2, 1, 1, 1)
+            self._assert_file_counts(dir3, 1, 1, 1)
+            self._assert_file_counts(dir4, 0, 0, 0)
+            self._assert_file_counts(dir5, 0, 0, 0)
+            self._assert_file_counts(dir6, 0, 0, 0)
             # 校对祖先
             self.check_ancestors([], file1)
             self.check_ancestors([], dir1)
@@ -2005,27 +1751,13 @@ class FileModelTestCase(MoeTestCase):
             file3.reload()
             file4.reload()
             # 校对cache
-            self.assertEqual(4, project.file_size)
-            self.assertEqual(4, project.file_count)
-            self.assertEqual(6, project.folder_count)
-            self.assertEqual(2, dir1.file_size)
-            self.assertEqual(2, dir1.file_count)
-            self.assertEqual(4, dir1.folder_count)
-            self.assertEqual(1, dir2.file_size)
-            self.assertEqual(1, dir2.file_count)
-            self.assertEqual(1, dir2.folder_count)
-            self.assertEqual(1, dir3.file_size)
-            self.assertEqual(1, dir3.file_count)
-            self.assertEqual(1, dir3.folder_count)
-            self.assertEqual(0, dir4.file_size)
-            self.assertEqual(0, dir4.file_count)
-            self.assertEqual(0, dir4.folder_count)
-            self.assertEqual(0, dir5.file_size)
-            self.assertEqual(0, dir5.file_count)
-            self.assertEqual(0, dir5.folder_count)
-            self.assertEqual(0, dir6.file_size)
-            self.assertEqual(0, dir6.file_count)
-            self.assertEqual(0, dir6.folder_count)
+            self._assert_file_counts(project, 4, 4, 6)
+            self._assert_file_counts(dir1, 2, 2, 4)
+            self._assert_file_counts(dir2, 1, 1, 1)
+            self._assert_file_counts(dir3, 1, 1, 1)
+            self._assert_file_counts(dir4, 0, 0, 0)
+            self._assert_file_counts(dir5, 0, 0, 0)
+            self._assert_file_counts(dir6, 0, 0, 0)
             # 校对祖先
             self.check_ancestors([], file1)
             self.check_ancestors([], dir1)
@@ -2065,27 +1797,13 @@ class FileModelTestCase(MoeTestCase):
             file3.reload()
             file4.reload()
             # 校对cache
-            self.assertEqual(4, project.file_size)
-            self.assertEqual(4, project.file_count)
-            self.assertEqual(6, project.folder_count)
-            self.assertEqual(2, dir1.file_size)
-            self.assertEqual(2, dir1.file_count)
-            self.assertEqual(4, dir1.folder_count)
-            self.assertEqual(2, dir2.file_size)
-            self.assertEqual(2, dir2.file_count)
-            self.assertEqual(1, dir2.folder_count)
-            self.assertEqual(0, dir3.file_size)
-            self.assertEqual(0, dir3.file_count)
-            self.assertEqual(1, dir3.folder_count)
-            self.assertEqual(0, dir4.file_size)
-            self.assertEqual(0, dir4.file_count)
-            self.assertEqual(0, dir4.folder_count)
-            self.assertEqual(0, dir5.file_size)
-            self.assertEqual(0, dir5.file_count)
-            self.assertEqual(0, dir5.folder_count)
-            self.assertEqual(0, dir6.file_size)
-            self.assertEqual(0, dir6.file_count)
-            self.assertEqual(0, dir6.folder_count)
+            self._assert_file_counts(project, 4, 4, 6)
+            self._assert_file_counts(dir1, 2, 2, 4)
+            self._assert_file_counts(dir2, 2, 2, 1)
+            self._assert_file_counts(dir3, 0, 0, 1)
+            self._assert_file_counts(dir4, 0, 0, 0)
+            self._assert_file_counts(dir5, 0, 0, 0)
+            self._assert_file_counts(dir6, 0, 0, 0)
             # 校对祖先
             self.check_ancestors([], file1)
             self.check_ancestors([], dir1)
@@ -2127,27 +1845,13 @@ class FileModelTestCase(MoeTestCase):
             file3.reload()
             file4.reload()
             # 校对cache
-            self.assertEqual(4, project.file_size)
-            self.assertEqual(4, project.file_count)
-            self.assertEqual(6, project.folder_count)
-            self.assertEqual(3, dir1.file_size)
-            self.assertEqual(3, dir1.file_count)
-            self.assertEqual(4, dir1.folder_count)
-            self.assertEqual(2, dir2.file_size)
-            self.assertEqual(2, dir2.file_count)
-            self.assertEqual(1, dir2.folder_count)
-            self.assertEqual(1, dir3.file_size)
-            self.assertEqual(1, dir3.file_count)
-            self.assertEqual(1, dir3.folder_count)
-            self.assertEqual(0, dir4.file_size)
-            self.assertEqual(0, dir4.file_count)
-            self.assertEqual(0, dir4.folder_count)
-            self.assertEqual(0, dir5.file_size)
-            self.assertEqual(0, dir5.file_count)
-            self.assertEqual(0, dir5.folder_count)
-            self.assertEqual(1, dir6.file_size)
-            self.assertEqual(1, dir6.file_count)
-            self.assertEqual(0, dir6.folder_count)
+            self._assert_file_counts(project, 4, 4, 6)
+            self._assert_file_counts(dir1, 3, 3, 4)
+            self._assert_file_counts(dir2, 2, 2, 1)
+            self._assert_file_counts(dir3, 1, 1, 1)
+            self._assert_file_counts(dir4, 0, 0, 0)
+            self._assert_file_counts(dir5, 0, 0, 0)
+            self._assert_file_counts(dir6, 1, 1, 0)
             # 校对祖先
             self.check_ancestors([dir6], file1)
             self.check_ancestors([], dir1)
@@ -2194,27 +1898,13 @@ class FileModelTestCase(MoeTestCase):
             file3.reload()
             file4.reload()
             # 校对cache
-            self.assertEqual(4, project.file_size)
-            self.assertEqual(4, project.file_count)
-            self.assertEqual(7, project.folder_count)
-            self.assertEqual(4, dir1.file_size)
-            self.assertEqual(4, dir1.file_count)
-            self.assertEqual(6, dir1.folder_count)
-            self.assertEqual(2, dir2.file_size)
-            self.assertEqual(2, dir2.file_count)
-            self.assertEqual(1, dir2.folder_count)
-            self.assertEqual(1, dir3.file_size)
-            self.assertEqual(1, dir3.file_count)
-            self.assertEqual(1, dir3.folder_count)
-            self.assertEqual(0, dir4.file_size)
-            self.assertEqual(0, dir4.file_count)
-            self.assertEqual(0, dir4.folder_count)
-            self.assertEqual(0, dir5.file_size)
-            self.assertEqual(0, dir5.file_count)
-            self.assertEqual(0, dir5.folder_count)
-            self.assertEqual(1, dir6.file_size)
-            self.assertEqual(1, dir6.file_count)
-            self.assertEqual(1, dir6.folder_count)
+            self._assert_file_counts(project, 4, 4, 7)
+            self._assert_file_counts(dir1, 4, 4, 6)
+            self._assert_file_counts(dir2, 2, 2, 1)
+            self._assert_file_counts(dir3, 1, 1, 1)
+            self._assert_file_counts(dir4, 0, 0, 0)
+            self._assert_file_counts(dir5, 0, 0, 0)
+            self._assert_file_counts(dir6, 1, 1, 1)
             # 校对祖先
             self.check_ancestors([dir1, dir6], file1)
             self.check_ancestors([dir1, dir6], dir7)
@@ -2256,27 +1946,13 @@ class FileModelTestCase(MoeTestCase):
             file3.reload()
             file4.reload()
             # 校对cache
-            self.assertEqual(4, project.file_size)
-            self.assertEqual(4, project.file_count)
-            self.assertEqual(7, project.folder_count)
-            self.assertEqual(2, dir1.file_size)
-            self.assertEqual(2, dir1.file_count)
-            self.assertEqual(4, dir1.folder_count)
-            self.assertEqual(2, dir2.file_size)
-            self.assertEqual(2, dir2.file_count)
-            self.assertEqual(1, dir2.folder_count)
-            self.assertEqual(1, dir3.file_size)
-            self.assertEqual(1, dir3.file_count)
-            self.assertEqual(1, dir3.folder_count)
-            self.assertEqual(0, dir4.file_size)
-            self.assertEqual(0, dir4.file_count)
-            self.assertEqual(0, dir4.folder_count)
-            self.assertEqual(0, dir5.file_size)
-            self.assertEqual(0, dir5.file_count)
-            self.assertEqual(0, dir5.folder_count)
-            self.assertEqual(1, dir6.file_size)
-            self.assertEqual(1, dir6.file_count)
-            self.assertEqual(1, dir6.folder_count)
+            self._assert_file_counts(project, 4, 4, 7)
+            self._assert_file_counts(dir1, 2, 2, 4)
+            self._assert_file_counts(dir2, 2, 2, 1)
+            self._assert_file_counts(dir3, 1, 1, 1)
+            self._assert_file_counts(dir4, 0, 0, 0)
+            self._assert_file_counts(dir5, 0, 0, 0)
+            self._assert_file_counts(dir6, 1, 1, 1)
             # 校对祖先
             self.check_ancestors([dir1, dir6], file1)
             self.check_ancestors([dir1, dir6], dir7)
@@ -2317,27 +1993,13 @@ class FileModelTestCase(MoeTestCase):
             file3.reload()
             file4.reload()
             # 校对cache
-            self.assertEqual(4, project.file_size)
-            self.assertEqual(4, project.file_count)
-            self.assertEqual(7, project.folder_count)
-            self.assertEqual(1, dir1.file_size)
-            self.assertEqual(1, dir1.file_count)
-            self.assertEqual(2, dir1.folder_count)
-            self.assertEqual(3, dir2.file_size)
-            self.assertEqual(3, dir2.file_count)
-            self.assertEqual(3, dir2.folder_count)
-            self.assertEqual(1, dir3.file_size)
-            self.assertEqual(1, dir3.file_count)
-            self.assertEqual(1, dir3.folder_count)
-            self.assertEqual(0, dir4.file_size)
-            self.assertEqual(0, dir4.file_count)
-            self.assertEqual(0, dir4.folder_count)
-            self.assertEqual(0, dir5.file_size)
-            self.assertEqual(0, dir5.file_count)
-            self.assertEqual(0, dir5.folder_count)
-            self.assertEqual(1, dir6.file_size)
-            self.assertEqual(1, dir6.file_count)
-            self.assertEqual(1, dir6.folder_count)
+            self._assert_file_counts(project, 4, 4, 7)
+            self._assert_file_counts(dir1, 1, 1, 2)
+            self._assert_file_counts(dir2, 3, 3, 3)
+            self._assert_file_counts(dir3, 1, 1, 1)
+            self._assert_file_counts(dir4, 0, 0, 0)
+            self._assert_file_counts(dir5, 0, 0, 0)
+            self._assert_file_counts(dir6, 1, 1, 1)
             # 校对祖先
             self.check_ancestors([dir2, dir6], file1)
             self.check_ancestors([dir2, dir6], dir7)
@@ -2354,13 +2016,7 @@ class FileModelTestCase(MoeTestCase):
     def test_revision_file_size_change(self):
         """测试创建新修订版时，文件大小缓存的变化是否正确"""
         # 测试用项目、团队
-        team = Team.create("t1")
-        project = Project.create(
-            name="p1",
-            team=team,
-            source_language=Language.by_code("ja"),
-            target_languages=Language.by_code("zh-CN"),
-        )
+        team, project = self._create_text_project()
         with open(os.path.join(TEST_FILE_PATH, "1kbA.txt"), "rb") as file:
             """
              |
@@ -2396,23 +2052,9 @@ class FileModelTestCase(MoeTestCase):
             team = Team.create("t1")
             project = Project.create("p1", team=team)
             # 上传文件
-            file1 = project.upload("file1.txt", file)
-            project.reload()
-            # 创建两个文件夹
-            dir1 = project.create_folder("dir1")
-            dir2 = project.create_folder("dir2", parent=dir1)
-            # 向dir2上传文件
-            file2 = project.upload("file2.txt", file, parent=dir2)
-            # 向dir1上传文件
-            file3 = project.upload("file3.txt", file, parent=dir1)
-            dir3 = project.create_folder("dir3", parent=dir1)
-            # 为dir3再创建个文件夹,上传文件
-            # 为dir2创建个文件夹
-            # 为None创建个文件夹
-            dir4 = project.create_folder("dir4", parent=dir3)
-            file4 = project.upload("file4.txt", file, parent=dir3)
-            dir5 = project.create_folder("dir5", parent=dir2)
-            dir6 = project.create_folder("dir6")
+            file1, file2, file3, file4, dir1, dir2, dir3, dir4, dir5, dir6 = (
+                self._create_file_tree(project, file)
+            )
             # 刷新
             project.reload()
             dir1.reload()
@@ -2426,27 +2068,13 @@ class FileModelTestCase(MoeTestCase):
             file3.reload()
             file4.reload()
             # 校对cache
-            self.assertEqual(4, project.file_size)
-            self.assertEqual(4, project.file_count)
-            self.assertEqual(6, project.folder_count)
-            self.assertEqual(3, dir1.file_size)
-            self.assertEqual(3, dir1.file_count)
-            self.assertEqual(4, dir1.folder_count)
-            self.assertEqual(1, dir2.file_size)
-            self.assertEqual(1, dir2.file_count)
-            self.assertEqual(1, dir2.folder_count)
-            self.assertEqual(1, dir3.file_size)
-            self.assertEqual(1, dir3.file_count)
-            self.assertEqual(1, dir3.folder_count)
-            self.assertEqual(0, dir4.file_size)
-            self.assertEqual(0, dir4.file_count)
-            self.assertEqual(0, dir4.folder_count)
-            self.assertEqual(0, dir5.file_size)
-            self.assertEqual(0, dir5.file_count)
-            self.assertEqual(0, dir5.folder_count)
-            self.assertEqual(0, dir6.file_size)
-            self.assertEqual(0, dir6.file_count)
-            self.assertEqual(0, dir6.folder_count)
+            self._assert_file_counts(project, 4, 4, 6)
+            self._assert_file_counts(dir1, 3, 3, 4)
+            self._assert_file_counts(dir2, 1, 1, 1)
+            self._assert_file_counts(dir3, 1, 1, 1)
+            self._assert_file_counts(dir4, 0, 0, 0)
+            self._assert_file_counts(dir5, 0, 0, 0)
+            self._assert_file_counts(dir6, 0, 0, 0)
             # 校对祖先
             self.check_ancestors([], file1)
             self.check_ancestors([], dir1)
@@ -2824,23 +2452,9 @@ class FileModelTestCase(MoeTestCase):
                 team = Team.create("t1")
                 project = Project.create("p1", team=team)
                 # 上传文件
-                file1 = project.upload("file1.txt", file)
-                project.reload()
-                # 创建两个文件夹
-                dir1 = project.create_folder("dir1")
-                dir2 = project.create_folder("dir2", parent=dir1)
-                # 向dir2上传文件
-                file2 = project.upload("file2.txt", file, parent=dir2)
-                # 向dir1上传文件
-                file3 = project.upload("file3.txt", file, parent=dir1)
-                dir3 = project.create_folder("dir3", parent=dir1)
-                # 为dir3再创建个文件夹,上传文件
-                # 为dir2创建个文件夹
-                # 为None创建个文件夹
-                dir4 = project.create_folder("dir4", parent=dir3)
-                file4 = project.upload("file4.txt", file, parent=dir3)
-                dir5 = project.create_folder("dir5", parent=dir2)
-                dir6 = project.create_folder("dir6")
+                file1, file2, file3, file4, dir1, dir2, dir3, dir4, dir5, dir6 = (
+                    self._create_file_tree(project, file)
+                )
                 # 刷新
                 project.reload()
                 dir1.reload()
@@ -2854,27 +2468,13 @@ class FileModelTestCase(MoeTestCase):
                 file3.reload()
                 file4.reload()
                 # 校对cache
-                self.assertEqual(4, project.file_size)
-                self.assertEqual(4, project.file_count)
-                self.assertEqual(6, project.folder_count)
-                self.assertEqual(3, dir1.file_size)
-                self.assertEqual(3, dir1.file_count)
-                self.assertEqual(4, dir1.folder_count)
-                self.assertEqual(1, dir2.file_size)
-                self.assertEqual(1, dir2.file_count)
-                self.assertEqual(1, dir2.folder_count)
-                self.assertEqual(1, dir3.file_size)
-                self.assertEqual(1, dir3.file_count)
-                self.assertEqual(1, dir3.folder_count)
-                self.assertEqual(0, dir4.file_size)
-                self.assertEqual(0, dir4.file_count)
-                self.assertEqual(0, dir4.folder_count)
-                self.assertEqual(0, dir5.file_size)
-                self.assertEqual(0, dir5.file_count)
-                self.assertEqual(0, dir5.folder_count)
-                self.assertEqual(0, dir6.file_size)
-                self.assertEqual(0, dir6.file_count)
-                self.assertEqual(0, dir6.folder_count)
+                self._assert_file_counts(project, 4, 4, 6)
+                self._assert_file_counts(dir1, 3, 3, 4)
+                self._assert_file_counts(dir2, 1, 1, 1)
+                self._assert_file_counts(dir3, 1, 1, 1)
+                self._assert_file_counts(dir4, 0, 0, 0)
+                self._assert_file_counts(dir5, 0, 0, 0)
+                self._assert_file_counts(dir6, 0, 0, 0)
                 # 校对祖先
                 self.check_ancestors([], file1)
                 self.check_ancestors([], dir1)
@@ -3033,13 +2633,7 @@ class FileModelTestCase(MoeTestCase):
 
     def test_next_source_rank(self):
         """next_source_rank 返回至比最大的 rank 大 1"""
-        team = Team.create("t1")
-        project = Project.create(
-            name="p1",
-            team=team,
-            source_language=Language.by_code("ja"),
-            target_languages=Language.by_code("zh-CN"),
-        )
+        team, project = self._create_text_project()
         file = project.create_file("f1.png")
         file2 = project.create_file("f2.png")
         file.create_source("1", x=0, y=0, rank=1)

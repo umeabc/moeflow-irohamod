@@ -472,7 +472,7 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
               {formatMessage({ id: tipId })}
             </span>
             <Upload
-              accept="image/png,image/jpeg,image/webp,image/gif"
+              accept="image/png,image/jpeg,image/webp,image/avif,image/gif"
               showUploadList={false}
               beforeUpload={(file) => {
                 handleUploadBrandAsset(type, file as File);

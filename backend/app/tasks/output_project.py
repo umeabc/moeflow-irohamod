@@ -10,13 +10,14 @@ from app.services.oss import NoSuchKey
 import shutil
 from zipfile import ZipFile
 
-from app import FILE_PATH, TMP_PATH, celery
+from app import TMP_PATH, celery
 
 from app.constants.output import OutputStatus, OutputTypes
 from app.constants.file import FileType
 from app import oss
 from app.models import connect_db
 from app.regexs import SAFE_FILENAME_REGEX
+from app.utils.image import build_export_paths, convert_to_jpeg, needs_jpeg_export
 from . import SyncResult, _FORCE_SYNC_TASK
 from celery.utils.log import get_task_logger
 
@@ -67,13 +68,6 @@ def output_project_task(output_id):
     zip_download_name = download_name + ".zip"
     txt_name = str(output.id) + ".txt"  # 翻译文本名（当仅导出翻译文本的时候使用）
     txt_download_name = download_name + ".txt"
-    # PS脚本和其资源文件夹 原位置
-    ps_script_path = os.path.abspath(
-        os.path.join(FILE_PATH, "ps_script", "ps_script.jsx")
-    )
-    ps_script_res_folder_path = os.path.abspath(
-        os.path.join(FILE_PATH, "ps_script", "ps_script_res")
-    )
     # tmp中存放zip的临时文件夹
     zips_tmp_folder_path = os.path.abspath(os.path.join(TMP_PATH, "zips"))
     # 压缩文件路径
@@ -82,12 +76,6 @@ def output_project_task(output_id):
         os.path.join(zips_tmp_folder_path, zip_tmp_folder_name)
     )
 
-    zip_ps_script_path = os.path.abspath(
-        os.path.join(zip_tmp_folder_path, "ps_script.jsx")
-    )
-    zip_ps_script_res_folder_path = os.path.abspath(
-        os.path.join(zip_tmp_folder_path, "ps_script_res")
-    )
     zip_images_folder_path = os.path.abspath(
         os.path.join(zip_tmp_folder_path, "images")
     )
@@ -105,12 +93,31 @@ def output_project_task(output_id):
     try:
         # 创建图片临时文件夹
         os.makedirs(zip_images_folder_path, exist_ok=True)
+        files = list(
+            project.files(
+                type_only=FileType.IMAGE,
+                file_ids_include=file_ids_include,
+                file_ids_exclude=file_ids_exclude,
+            )
+        )
+        export_paths = build_export_paths(files) if type == OutputTypes.ALL else None
+        # Existing formats retain their legacy LabelPlus paths and ZIP layout.
+        converted_paths = (
+            {
+                str(file.id): export_paths[str(file.id)]
+                for file in files
+                if needs_jpeg_export(file.name)
+            }
+            if export_paths is not None
+            else None
+        )
         # 导出 Labelplus 翻译文本
         output.update(status=OutputStatus.TRANSLATION_OUTPUTING)
         labelplus = project.to_labelplus(
             target=target,
             file_ids_include=file_ids_include,
             file_ids_exclude=file_ids_exclude,
+            export_paths=converted_paths,
         )
         with open(zip_translations_txt_path, "w", encoding="utf-8") as txt:
             txt.write(labelplus)
@@ -137,22 +144,28 @@ def output_project_task(output_id):
             with open(project_json_path, "w", encoding="utf-8") as json_file:
                 json.dump(project_json, json_file)
             # 下载项目图片
-            files = project.files(
-                type_only=FileType.IMAGE,
-                file_ids_include=file_ids_include,
-                file_ids_exclude=file_ids_exclude,
-            )
             for file in files:
                 file_path = os.path.abspath(
-                    os.path.join(zip_images_folder_path, file.name)
+                    os.path.join(zip_images_folder_path, export_paths[str(file.id)])
+                )
+                convert = needs_jpeg_export(file.name)
+                source_path = (
+                    os.path.join(zip_tmp_folder_path, str(file.id) + ".source")
+                    if convert
+                    else file_path
                 )
                 try:
+                    os.makedirs(os.path.dirname(file_path), exist_ok=True)
                     oss.download(
                         oss_file_prefix,
                         file.save_name,
-                        local_path=file_path,
+                        local_path=source_path,
                         bucket_name=file.storage_bucket or None,
                     )
+                    if convert:
+                        convert_to_jpeg(
+                            source_path, file_path, source_filename=file.name
+                        )
                 except NoSuchKey:
                     errors += (
                         f"File {file.name}<{str(file.id)}> is not found in server.\r\n"
@@ -164,13 +177,9 @@ def output_project_task(output_id):
                     errors += f"File {file.name}<{str(file.id)}> download error.\r\n"
                     if os.path.exists(file_path):
                         os.remove(file_path)
-            # 放入PS脚本和其资源文件夹
-            # if os.path.exists(ps_script_path):
-            #     shutil.copy(ps_script_path, zip_ps_script_path)
-            # if os.path.exists(ps_script_res_folder_path):
-            #     shutil.copytree(
-            #         ps_script_res_folder_path, zip_ps_script_res_folder_path
-            #     )
+                finally:
+                    if convert and os.path.exists(source_path):
+                        os.remove(source_path)
             # 记录错误
             if errors:
                 with open(zip_errors_txt_path, "w") as txt:

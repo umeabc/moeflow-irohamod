@@ -36,28 +36,6 @@ const getConfirmEmailVCode = ({
   });
 };
 
-/** 获取验证邮件请求的请求数据 */
-interface GetResetPasswordVCodeData {
-  email: string;
-  captcha: string;
-  captchaInfo: string;
-}
-/** 获取验证邮件 */
-const getResetPasswordVCode = ({
-  data,
-  configs,
-}: {
-  data: GetResetPasswordVCodeData;
-  configs?: AxiosRequestConfig;
-}) => {
-  return request({
-    method: 'POST',
-    url: `/v1/reset-password-codes`,
-    data: toUnderScoreCase(data),
-    ...configs,
-  });
-};
-
 /** 获取验证邮件 */
 const getResetEmailVCode = ({
   configs,
@@ -72,7 +50,7 @@ const getResetEmailVCode = ({
 };
 
 /** 注册的请求数据 */
-interface RegisterData {
+export interface RegisterData {
   email: string;
   inviteCode: string;
   name: string;
@@ -86,31 +64,9 @@ const register = ({
   data: RegisterData;
   configs?: AxiosRequestConfig;
 }) => {
-  return request({
+  return request<{ token: string }>({
     method: 'POST',
     url: `/v1/users`,
-    data: toUnderScoreCase(data),
-    ...configs,
-  });
-};
-
-/** 登陆的请求数据 */
-interface ResetPasswordData {
-  email: string;
-  password: string;
-  vCode: string;
-}
-/** 获取验证邮件 */
-const resetPassword = ({
-  data,
-  configs,
-}: {
-  data: ResetPasswordData;
-  configs?: AxiosRequestConfig;
-}) => {
-  return request({
-    method: 'DELETE',
-    url: `/v1/user/password`,
     data: toUnderScoreCase(data),
     ...configs,
   });
@@ -171,9 +127,7 @@ const getUserInfo = ({
 export default {
   getCAPTCHA,
   getConfirmEmailVCode,
-  getResetPasswordVCode,
   getResetEmailVCode,
-  resetPassword,
   register,
   login,
   getUserInfo,

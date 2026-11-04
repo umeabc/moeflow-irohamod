@@ -136,23 +136,6 @@ class JoinValidate:
     message_length = COMMON_VALIDATORS['short_text']
 
 
-# #####角色部分#####
-class RoleValidate:
-    name_length = COMMON_VALIDATORS['short_name']
-    intro_length = COMMON_VALIDATORS['short_text']
-
-    @staticmethod
-    def valid_level(level, min=0, max=500, field_name=None):
-        """团队名唯一"""
-        if not (min < level < max):
-            raise ValidationError(
-                gettext(
-                    "等级需要大于{min}，小于{max}(您的等级)".format(min=min, max=max)
-                ),
-                field_names=field_name,
-            )
-
-
 # ##### 术语库部分 #####
 class TermBankValidate:
     name_length = COMMON_VALIDATORS['name']

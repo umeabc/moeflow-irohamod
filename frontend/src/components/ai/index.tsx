@@ -3,14 +3,9 @@ import { File as MFile, Target } from '@/interfaces';
 import { createDebugLogger } from '@/utils/debug-logger';
 import { ModalStaticFunctions } from 'antd/lib/modal/confirm';
 
-import { ModelConfigForm, TranslateModeAvailability } from './ModelConfigForm';
-import { BatchTranslateModalContent } from './BatchTranslateModal';
+import type { TranslateModeAvailability } from './ModelConfigForm';
 import { useMemo } from 'react';
-import {
-  LLMConf,
-  llmPresets,
-  TranslateMode,
-} from '@/services/ai/llm_preprocess';
+import type { LLMConf, TranslateMode } from '@/services/ai/llm_preprocess';
 import { api } from '@/apis';
 import { llmConfStorage } from '@/utils/storage';
 import { toLowerCamelCase } from '@/utils';
@@ -45,10 +40,18 @@ function bind(
 ): TranslatorApi {
   const availability = computeAvailability(files);
   return {
-    start,
+    start: (callbacks) =>
+      start(callbacks).catch((error) => {
+        debugLogger('load AI translation failed', error);
+        modal.error({ content: formatMessage({ id: 'api.networkError' }) });
+      }),
     // testModel,
   };
   async function start(callbacks: TranslationCallbacks) {
+    const [{ ModelConfigForm }, { llmPresets }] = await Promise.all([
+      import('./ModelConfigForm'),
+      import('@/services/ai/llm_preprocess'),
+    ]);
     // 预设由管理后台「站点设置」维护；拉取失败或无预设时回退到内置预设
     let presets: LLMConf[] = [...llmPresets];
     try {
@@ -62,9 +65,10 @@ function bind(
       debugLogger('load llm presets failed, fallback to builtin', error);
     }
 
-    const llmConfAndMode = await new Promise<
-      { config: LLMConf; mode: TranslateMode } | null
-    >((resolve, reject) => {
+    const llmConfAndMode = await new Promise<{
+      config: LLMConf;
+      mode: TranslateMode;
+    } | null>((resolve, reject) => {
       let confValue: LLMConf = llmConfStorage.load() ?? {
         ...presets.at(0)!,
       };
@@ -116,6 +120,9 @@ function bind(
     const { config: llmConf, mode } = llmConfAndMode;
     llmConfStorage.save(llmConf);
 
+    const { BatchTranslateModalContent } = await import(
+      './BatchTranslateModal'
+    );
     await new Promise<boolean>((resolve) => {
       let handle: ModalHandle | null = null;
       handle = modal.confirm({

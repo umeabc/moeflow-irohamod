@@ -99,24 +99,8 @@ const dealApplication = ({
   });
 };
 
-/** 删除申请 */
-const deleteApplication = ({
-  applicationID,
-  configs,
-}: {
-  applicationID: string;
-  configs?: AxiosRequestConfig;
-}) => {
-  return request({
-    method: 'DELETE',
-    url: `/v1/applications/${applicationID}`,
-    ...configs,
-  });
-};
-
 export default {
   getApplications,
   createApplication,
   dealApplication,
-  deleteApplication,
 };

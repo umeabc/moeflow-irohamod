@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Header } from '../components';
 import { Spin } from 'antd';
-import defaultBrandJump from '../images/brand/mascot-jump1.png';
+import defaultBrandJump from '../images/brand/mascot-jump1.webp';
 import { FC } from '../interfaces';
 import { useTitle, useBrandMascot } from '../hooks';
 import { api } from '../apis';

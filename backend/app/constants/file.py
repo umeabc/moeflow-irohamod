@@ -20,6 +20,8 @@ class FileType(IntType):
             "png": FileType.IMAGE,
             "bmp": FileType.IMAGE,
             "gif": FileType.IMAGE,
+            "webp": FileType.IMAGE,
+            "avif": FileType.IMAGE,
             "txt": FileType.TEXT,
         }
         t = suffix_type_map.get(suffix.lower(), FileType.UNKNOWN)

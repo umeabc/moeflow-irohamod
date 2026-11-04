@@ -32,7 +32,6 @@ For non-developers, it is recommended to refer to [moeflow-deploy](https://githu
   - why-did-you-render // Performance optimization
   - lodash // Utility library
   - uuid
-  - fontmin // Font minification
 
 ## Local Development
 

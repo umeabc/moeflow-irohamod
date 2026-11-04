@@ -1,3 +1,19 @@
+export const IMAGE_UPLOAD_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/bmp',
+  'image/gif',
+  'image/webp',
+  'image/avif',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.bmp',
+  '.gif',
+  '.webp',
+  '.avif',
+];
+
 // 文件类型
 export const FILE_TYPE = {
   UNKNOWN: 0 as 0, // 未知

@@ -996,6 +996,7 @@ class Project(GroupMixin, Document):
         target,
         file_ids_include: List[str] = None,
         file_ids_exclude: List[str] = None,
+        export_paths=None,
     ):
         """将图片文件的翻译导出成Labelplus格式"""
         # 标签分组：1=框内、2=框外；启用原作者的项目追加第 3 组「作者信息」
@@ -1017,7 +1018,10 @@ class Project(GroupMixin, Document):
             file_ids_include=file_ids_include,
             file_ids_exclude=file_ids_exclude,
         ):
-            data += file.to_labelplus(target=target)
+            data += file.to_labelplus(
+                target=target,
+                export_path=(export_paths or {}).get(str(file.id)),
+            )
         return data
 
     def to_output_json(self):

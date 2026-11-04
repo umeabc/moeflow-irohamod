@@ -244,7 +244,7 @@
   "file.uploadSuccess": "上传成功",
   "file.uploadFail": "{name} 上传失败",
   "file.uploadTip1": "点击“上传”按钮 或 拖放、黏贴文件到这来上传吧",
-  "file.uploadTip2": "支持单个或批量文件上传，目前支持这些后缀的文件 .jpg, .jpeg, .png, .bmp, .gif（不区分大小写）",
+  "file.uploadTip2": "支持单个或批量文件上传，目前支持这些后缀的文件 .jpg, .jpeg, .png, .bmp, .gif, .webp, .avif（不区分大小写）",
   "file.emptyTip": "还没有文件，现在上传一个吧！",
   "file.emptySearchTip": "没有名称含有 “{word}” 的文件，请换个搜索词试试。",
   "file.searchPlaceholder": "搜索所有组中的文件",

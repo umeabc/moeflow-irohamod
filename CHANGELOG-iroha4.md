@@ -1,12 +1,70 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha16）
+# MoeFlow 自定义改动 CHANGELOG（iroha16-fix7）
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 镜像 tag：`moeflow-frontend:1.1.7-iroha14` / `moeflow-backend:1.1.8-iroha14`（后续进一步定制沿用 irohaN 约定；历史 `iroha4`…`iroha13` 镜像保留各自版本 tag）。当前版本：**iroha16-fix6**（前端 `v1.1.7-iroha16-fix6` / 后端 `v1.1.8-iroha16-fix6`，已部署测试机与正式机并推送 GHCR latest）。
+> 当前源码版本：**iroha16-fix7，已实现待验收/待部署**。前端基线 `v1.1.7` / 后端基线 `v1.1.8`；fix7 尚未构建镜像、部署或推送 GHCR。历史版本记录保留。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：以 `docker save` 导出镜像 tar → 生产侧 `docker load` 导入（仅替换前端/后端镜像，勿改动 env / compose）。
 
 ---
+
+## iroha16-fix7（2026-11-05，已实现待验收/待部署）
+
+本轮仅修改本地源码、资源、依赖声明与测试；未 commit、未构建/部署镜像、未操作测试机/正式机/GHCR。此前 fix6 部署记录保留为历史，不能视为 fix7 已部署。
+
+- **批次 1**：删除未注册的旧角色 API 链、不可达同步用户媒体下载、无入口自助重置密码、异步 `wait_result` 与直接 `asgiref` 依赖；保留 RBAC/角色模型、逐图线程导入、改密 PUT、管理员重置和联系管理员页面。删除无消费者的前端包装、验证码列表、模板组件与 `mascot-jump2.png`。
+- **批次 2**：生产、开发、OSS/R2/Google OCR 根依赖分离；新的锁文件生成器使用独立 venv 和现有精确版本约束，成功解析及 `pip check` 后才替换文件，避免测试工具进入生产。补全 `curl_cffi` 和 AVIF 依赖；删除 `fontmin` 脚本、无用类型/工具依赖，更新 npm lock。
+- **批次 3**：默认关闭前端 source map，需要排障时用 `GENERATE_SOURCEMAP=true npm run build` 显式生成；Docker context 白名单、后端仅复制运行代码/验证码字体，Babel 使用只编译 MO 的目标，ALL 不重复安装 Google 依赖。移除停用的 PS 脚本和模板，保留 LabelPlus 导出及外部脚本说明。立绘改无损 WebP：1,118,098 → 509,882 字节（减少 54.4%，RGBA 像素一致）。
+- **图片链路**：新增 WebP/AVIF 接受类型和后端解码支持；保持 Pillow 9.5.0，AVIF 固定 `pillow-avif-plugin==1.5.5`。完整 ZIP 导出只把这两种格式转成 JPEG（quality=95、透明白底），图片名与 LabelPlus 引用使用同一映射，并为同名冲突生成后缀。JPG/PNG/GIF 原有格式、内容和扁平 ZIP 布局保留；仅文本导出保留源图片名。
+- **批次 4**：合并创建/导入项目校验、三个用户媒体任务启动分支、登录/注册共用字段与动作、重复 cache/file/source/output 测试逻辑；将旧邮箱流程中有效字段断言迁入邀请码注册，删除 13+1 个永久 skip 测试体；修复上传测试夹具内容重复，保留生产去重。
+- **批次 5**：管理页与 ImageTranslator 路由拆包，ZIP/AI 操作按需加载；清理未使用的 HTML/Jest/Vite 配置残留。
+- **保留/延后**：项目 API 包装均有消费者，继续保留；保留 ImageOCRProgress、debug-logger、locale YAML、默认头像、Label-Number 字体与 OFL。antd-mobile/Tailwind 和计划完结/删除 API 仍有业务或样式依赖，延后；四份子项目 `.github/workflows` 不迁移到根目录，不改变发布行为。`imgstore/` 未修改。
+
+依赖维护（在 `backend/` 下）：`python scripts/lock_requirements.py production --check` 可离线核对声明；去掉 `--check` 会在隔离环境重新解析，保持已有精确版本，需能访问包源。其余 profile 为 `dev`、`oss`、`r2`、`google-ocr`。Linux 也可使用原 `make requirements.txt` 等目标。Babel `make babel-compile-mo` 仅编译现有 PO；`make babel-update-mo` 保留提取/更新 PO 的开发流程。
+
+AVIF 上游 wheel 信息：[pillow-avif-plugin 1.5.5](https://pypi.org/project/pillow-avif-plugin/1.5.5/) 提供 CPython 3.11 Windows/Linux wheel；本轮实际编解码是否通过以本节最终测试记录为准。
+
+
+### fix7 最终相关验证（本地）
+
+- 后端统一运行 15 个相关测试文件：**146 passed、4 failed、0 skipped，83.83s**。所要求的 admin_stats/file/admin/output/auth/v_code/file_model/multi_target_cache 全部通过；另覆盖 source/project API、project model、媒体启动/schema/依赖隔离。原 `test_upload_project_file` 已通过。
+- 新图片回归：**7 passed、4 failed**。WebP 实际上传、原图/封面/预览解码、JPEG 文件头与白底、ZIP/LabelPlus 文件名对应、现有 JPEG 碰名、旧 JPG/PNG/GIF 字节不变均通过。4 个新增 AVIF 用例实际执行后均报 `ImportError: AVIF support requires pillow-avif-plugin==1.5.5`；没有 skip 或模拟图片解码。
+- AVIF 安装命令因环境禁止 pip 网络套接字而失败（`WinError 10013`），本地 pip 缓存无该 wheel。**AVIF 在 Pillow 9.5 下的真实编解码仍未验证，属于本轮环境阻断，不可据此认定已验收。** 缺插件时记录明确警告，AVIF 操作报错，其它格式可正常运行。
+- 前端 `npm.cmd run typecheck` 通过（修复 FilePond element 可空类型错误后重跑）；`npm.cmd test -- --runInBand`：**4 suites / 24 tests passed**；`npm.cmd run lint`：**0 errors / 243 warnings**；`npm.cmd run build` 通过。保留既有第三方 `eval` 与大 chunk 提示。产物 48 个文件、3,665,735 字节、**0 个 source map**，已检查 Admin/子页、ImageTranslator、AI 和 ZIP 独立 chunk。
+- `npm.cmd install --package-lock-only --ignore-scripts --no-audit --no-fund` 成功；lock 节点 1201 → 974，删除 227 项，没有升级保留包版本。存在原有可选 peer 提示。
+- 五种后端 lock profile 的 `--check` 通过；已安装依赖的 `pip check` 通过（不代表缺失的 AVIF 已安装）；从既有缓存补齐测试环境 `jmespath==0.10.0`、`execnet==2.1.1`。因包源不可访问，未重新执行完整联网锁解析。
+- 直接执行 Babel compile，英文/中文 MO 均编译成功、PO 未改写。Docker 安装分支以 shell 替身核对 LOCAL_STORAGE/REMOTE_HTTP/OSS/R2/ALL × Google auto/true 共 10 种组合，ALL 无重复 Google pip 调用；**未构建镜像，不能代替真实镜像构建验收**。
+- AST 比较确认 cache 测试 15 个方法和 69 次中间 `check_cache` 调用及参数未变；file_model 22 个测试方法完整保留。source/output 改用子场景参数化，导出保留 7 种场景，不能仅按测试方法数量判断覆盖变化。
+- `git diff --check` 通过。仅工作树修改，HEAD 保持 `6789d32`，未暂存、未 commit、未部署。`imgstore/` 和四份 workflow 未变。
+
+后端复现（工作目录 `backend/`，只加载本地测试配置）：
+
+```powershell
+$env:PYTHONPATH="$PWD/.review-minimal;$PWD/.review-deps"
+$env:TEMP="$PWD/.review-minimal/tmp"; $env:TMP=$env:TEMP
+New-Item -ItemType Directory -Force -Path $env:TEMP | Out-Null
+$tests = @(
+  'tests/api/test_admin_stats_api.py', 'tests/api/test_file_api.py',
+  'tests/api/test_admin_api.py', 'tests/api/test_output_api.py',
+  'tests/api/test_auth_api.py', 'tests/api/test_v_code_api.py',
+  'tests/api/test_source_api.py', 'tests/api/test_project_api.py',
+  'tests/api/test_media_import_api.py', 'tests/api/test_image_formats_api.py',
+  'tests/model/test_file_model.py', 'tests/model/test_project_model.py',
+  'tests/other/test_multi_target_cache.py', 'tests/base/test_project_schema.py',
+  'tests/other/test_lock_requirements.py'
+)
+python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample', override=True); import pytest, sys; raise SystemExit(pytest.main(['-o','addopts=','-q'] + sys.argv[1:]))" @tests
+```
+
+在可访问包源的同等环境补齐 AVIF 后，必须重跑真实图片测试；保持 Pillow 9.5，不能通过跳过 AVIF 用例验收：
+
+```powershell
+python -m pip install --target .review-minimal --no-deps pillow-avif-plugin==1.5.5
+python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample', override=True); import pytest; raise SystemExit(pytest.main(['-o','addopts=','-q','tests/api/test_image_formats_api.py']))"
+```
+
+前端在 `frontend/` 下依次执行 `npm.cmd run typecheck`、`npm.cmd test -- --runInBand`、`npm.cmd run lint`、`npm.cmd run build`。本机 build 使用工作区临时目录（`$env:TEMP="$PWD/.fix6-tmp"; $env:TMP=$env:TEMP`），验证后已清理缓存；默认产物不含 source map。
+
 
 ## iroha16-fix6（2026-11-02，已部署测试机与正式机）
 
