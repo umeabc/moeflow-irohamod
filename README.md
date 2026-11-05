@@ -1,8 +1,23 @@
-# MoeFlow 定制版（iroha16-fix7）备份仓库
+# MoeFlow 定制版（iroha16-fix8）备份仓库
 
 > 本仓库为 MoeFlow（彩翻 / 萌翻）**内部定制版本**的源码备份仓库（私有）。
-> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前源码 **iroha16-fix7，已部署测试机与正式机**。fix7 版本标签及 latest 已推送 GHCR，测试机与正式机验收通过；历史 fix6 部署记录见下方。
+> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前测试机 **iroha16-fix8（已部署，待验收）**，正式机仍为 **iroha16-fix7**；fix8 版本标签已推送 GHCR，`latest` 仍为 fix7。历史 fix7/fix6 部署记录见下方。
 > 本文档为**脱敏版**，不含具体主机、域名、端口、代理与凭据信息。
+
+---
+
+## iroha16-fix8（2026-11-06，测试机，待验收）
+
+本轮只发测试机；正式机与 GHCR `latest` 未动。测试机镜像为前端 `v1.1.7-iroha16-fix8` / 后端 `v1.1.8-iroha16-fix8`，后端 build ID `iroha16-fix8`，构建目录 `/opt/build/moeflow-iroha16-fix8`。
+
+- **作者标号顺序**：前端在 Redux source 层统一稳定排序，作者 Source 永远固定在最后；画布标号与全能模式列表使用同一顺序，普通标号 1..n、作者 n+1，新增标号时作者编号实时递增。只改展示顺序，不改数据库 `rank`、LabelPlus 作者分组、作者只读和统计排除语义；重排锚点避开作者，翻译/校对模式继续过滤作者。
+- **PS 脚本本地下载**：`/api/v1/site/ps-scripts/labelplus` 与 `/api/v1/site/ps-scripts/llm` 同源下载；内置 LabelPlus `1.8.0` 7z（94,536 字节）和 PS LLM 擦字脚本 `v6.5.1` zip（1,623,369 字节），返回带版本文件名，`Cache-Control: no-store`。
+- **后台更新**：新增 `GET /v1/admin/ps-scripts` 与 `POST /v1/admin/ps-scripts/labelplus/update`；从 GitHub `LabelPlus/PS-Script` latest release 取 7z，校验发布域名、大小、7z magic 和 SHA-256，原子写入 `STORAGE_PATH/static/ps-scripts`（保留当前及最近两个历史版本），失败保留旧文件。站点设置新增「PS 脚本」区块，导出页「其他资源」改为两行本地下载。当前 latest 仍为 1.8.0，后台按钮实测返回「已是最新版本」；真实下载更新路径由 72 个模拟 HTTP 测试覆盖。
+- **测试机镜像**：源码提交 `f64d1d3`；前端本地镜像 `sha256:94f25d4273874e970581070c192cef10bab2449286f73f1ffdc4290aa6cdeb92`，后端本地镜像 `sha256:eb95a8b8b9f2b4ff7a56fea97316cd522d31fc1d95231ee0c5647d5328f360b8`。
+- **验证**：新增 PS 后端测试 **72 passed**，相关 source/output 回归 **28 passed**（合计 100）；前端 **7 suites / 46 tests passed**；`typecheck`、`lint`、`build` 通过。前端产物 **48 个文件 / 3,671,667 字节 / 0 个 source map**，`index.html` SHA256 `835776aeb7249ae158af9c04beb85360aaa48e614989595ba0a19aca4c00c6cc`。测试机首页、`/api/ping`、`/admin` 均 200；两个下载文件 SHA256 与内置值一致；管理员状态/更新接口 200；Celery `pong`，backend/celery/frontend 日志无 error。
+- **浏览器实测**：测试项目图片原有 2 个普通标号 + 作者时，翻译模式右侧序号为 1/2、画布紫色作者号为 3；全能模式为 1/2/3。通过 API 临时新增一个标号后为 1/2/3/4、作者为 4，删除后恢复 1/2/3；`source_count` 回到 2。管理员「站点设置 → PS 脚本」区块、项目导出页两行本地下载均实测；UI 下载文件名与 SHA-256 正确。后台按钮返回「已是最新版本」；容器内临时把内置版本降为 0.0.0 后，实际从 GitHub 下载 1.8.0 并通过 SHA-256 校验。
+- **回退**：测试机 compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix8-20261106-012227`；旧 `latest` 镜像保留标签 `pre-fix8-20261106-012227`（仍指向 fix7）。正式机未变。
+- **限制**：正式机未发、GHCR `latest` 未推（fix8 版本标签已推送）；本地全量后端测试仍有 7 个既有/环境性失败（4 个缺少 `pillow-avif-plugin`、3 个既有测试），发布镜像内 AVIF 插件已验证正常。测试机当前未复现真实新版本下载，因为 GitHub latest 与内置版本相同。
 
 ---
 
