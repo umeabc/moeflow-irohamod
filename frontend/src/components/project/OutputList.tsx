@@ -180,6 +180,9 @@ export const OutputList: FC<OutputListProps> = ({
         .OutputList__ResourceTitle {
           padding: 10px 24px 4px;
         }
+        .OutputList__ResourceButton .Button__Content {
+          justify-content: flex-start;
+        }
         .OutputList__Tip {
           width: 100%;
           padding-top: 16px;
@@ -244,15 +247,25 @@ export const OutputList: FC<OutputListProps> = ({
         </div>
         <Button
           className="OutputList__ResourceButton"
-          icon="link"
+          icon="download"
           type="link"
           linkProps={{
-            href: 'https://files.kozzzx.com/labelplus/LabelPlus_PS-Script_latest.zip',
-            target: '_blank',
-            rel: 'noopener noreferrer',
+            href: '/api/v1/site/ps-scripts/labelplus',
+            download: true,
           }}
         >
-          下载 PS 脚本
+          {formatMessage({ id: 'output.downloadPSScript' })}
+        </Button>
+        <Button
+          className="OutputList__ResourceButton"
+          icon="download"
+          type="link"
+          linkProps={{
+            href: '/api/v1/site/ps-scripts/llm',
+            download: true,
+          }}
+        >
+          {formatMessage({ id: 'output.downloadPSLlmScript' })}
         </Button>
       </div>
       <Modal

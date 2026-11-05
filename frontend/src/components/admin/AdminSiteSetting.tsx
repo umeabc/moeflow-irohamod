@@ -4,10 +4,11 @@ import TextArea from 'antd/lib/input/TextArea';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { api } from '@/apis';
+import { api, FailureResults, resultTypes } from '@/apis';
 import {
   APIBrandAssets,
   APILlmPreset,
+  APIPSScripts,
   APISiteSetting,
   BrandAssetType,
 } from '@/apis/siteSetting';
@@ -16,6 +17,7 @@ import { FC } from '@/interfaces';
 import { toLowerCamelCase } from '@/utils';
 import { Form } from '@/components/shared-form/Form';
 import { FormItem } from '@/components/shared-form/FormItem';
+import { Icon } from '@/components';
 import style from '@/style';
 
 /** 语言分区 key（与前端 matchLocale 返回值一致） */
@@ -66,7 +68,7 @@ interface AdminSiteSettingProps {
  * 站点设置
  */
 export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
-  const { formatMessage } = useIntl();
+  const { formatMessage, formatDate, formatTime } = useIntl();
 
   const [form] = AntdForm.useForm();
   const [loading, setLoading] = useState(true);
@@ -77,6 +79,55 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
   const [brandTexts, setBrandTexts] = useState<BrandTextDef[]>([]);
   const [brandTextSaving, setBrandTextSaving] = useState(false);
   const [llmPresets, setLlmPresets] = useState<APILlmPreset[]>([]);
+  const [psScripts, setPSScripts] = useState<APIPSScripts | null>(null);
+  const [psScriptsLoading, setPSScriptsLoading] = useState(true);
+  const [psScriptsLoadFailed, setPSScriptsLoadFailed] = useState(false);
+  const [psScriptsUpdating, setPSScriptsUpdating] = useState(false);
+
+  const refreshPSScripts = useCallback(async () => {
+    setPSScriptsLoading(true);
+    setPSScriptsLoadFailed(false);
+    try {
+      const result = await api.siteSetting.getPSScripts();
+      setPSScripts(toLowerCamelCase(result.data));
+    } catch {
+      setPSScriptsLoadFailed(true);
+    } finally {
+      setPSScriptsLoading(false);
+    }
+  }, []);
+
+  const handleUpdatePSScript = async () => {
+    setPSScriptsUpdating(true);
+    try {
+      const result = await api.siteSetting.updateLabelplusPSScript();
+      const data = toLowerCamelCase(result.data);
+      setPSScripts((current) =>
+        current ? { ...current, labelplus: data.labelplus } : current,
+      );
+      message.success(
+        formatMessage({
+          id: data.updated
+            ? 'admin.psScriptsUpdated'
+            : 'admin.psScriptsAlreadyLatest',
+        }),
+      );
+      await refreshPSScripts();
+    } catch (error) {
+      const failure = error as FailureResults;
+      if (failure.type === resultTypes.BASIC_FAILURE) {
+        failure.default();
+      } else {
+        message.error(formatMessage({ id: 'admin.psScriptsUpdateFailed' }));
+      }
+    } finally {
+      setPSScriptsUpdating(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshPSScripts();
+  }, [refreshPSScripts]);
 
   const updateLlmPreset = (index: number, patch: Partial<APILlmPreset>) => {
     setLlmPresets((prev) =>
@@ -292,6 +343,52 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
     <div
       className={classNames('AdminSiteSetting', className)}
       css={css`
+        .PSScripts {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          margin-bottom: 24px;
+          padding: 16px;
+          border: 1px solid ${style.borderColorLight};
+          border-radius: 10px;
+          background: var(--moeflow-surface);
+        }
+        .PSScripts__Title {
+          margin: 0;
+          font-size: 15px;
+          font-weight: 600;
+        }
+        .PSScripts__Desc,
+        .PSScripts__Status dt {
+          font-size: 12px;
+          color: ${style.textColorSecondary};
+        }
+        .PSScripts__Status {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 16px 32px;
+          margin: 0;
+          dd {
+            margin: 4px 0 0;
+            overflow-wrap: anywhere;
+          }
+        }
+        .PSScripts__Downloads {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 10px;
+          a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+          }
+        }
+        .PSScripts__Actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
         .BrandAssetUploader {
           display: flex;
           gap: 24px;
@@ -442,6 +539,75 @@ export const AdminSiteSetting: FC<AdminSiteSettingProps> = ({ className }) => {
         }
       `}
     >
+      <section className="PSScripts" aria-labelledby="PSScriptsTitle">
+        <h3 className="PSScripts__Title" id="PSScriptsTitle">
+          {formatMessage({ id: 'admin.psScripts' })}
+        </h3>
+        <span className="PSScripts__Desc">
+          {formatMessage({ id: 'admin.psScriptsDesc' })}
+        </span>
+        {psScriptsLoading && <Spin size="small" />}
+        {psScriptsLoadFailed && (
+          <span role="alert">
+            {formatMessage({ id: 'admin.psScriptsLoadFailed' })}
+          </span>
+        )}
+        {psScripts && (
+          <dl className="PSScripts__Status">
+            <div>
+              <dt>{formatMessage({ id: 'admin.psScriptsVersion' })}</dt>
+              <dd>{psScripts.labelplus.version}</dd>
+            </div>
+            <div>
+              <dt>{formatMessage({ id: 'admin.psScriptsUpdatedAt' })}</dt>
+              <dd>
+                {psScripts.labelplus.updatedAt
+                  ? `${formatDate(psScripts.labelplus.updatedAt)} ${formatTime(
+                      psScripts.labelplus.updatedAt,
+                      { hour: '2-digit', minute: '2-digit', second: '2-digit' },
+                    )}`
+                  : formatMessage({ id: 'admin.psScriptsNeverUpdated' })}
+              </dd>
+            </div>
+            <div>
+              <dt>{formatMessage({ id: 'admin.psScriptsStatus' })}</dt>
+              <dd>
+                {formatMessage({
+                  id:
+                    psScripts.labelplus.source === 'updated'
+                      ? 'admin.psScriptsStatusUpdated'
+                      : 'admin.psScriptsStatusBuiltin',
+                })}
+              </dd>
+            </div>
+          </dl>
+        )}
+        <div className="PSScripts__Actions">
+          <Button
+            type="primary"
+            loading={psScriptsUpdating}
+            disabled={psScriptsLoading}
+            onClick={handleUpdatePSScript}
+          >
+            {formatMessage({ id: 'admin.psScriptsCheckUpdate' })}
+          </Button>
+          {psScriptsLoadFailed && (
+            <Button disabled={psScriptsUpdating} onClick={refreshPSScripts}>
+              {formatMessage({ id: 'admin.psScriptsRetry' })}
+            </Button>
+          )}
+        </div>
+        <div className="PSScripts__Downloads">
+          <a href="/api/v1/site/ps-scripts/labelplus" download>
+            <Icon icon="download" />
+            {formatMessage({ id: 'output.downloadPSScript' })}
+          </a>
+          <a href="/api/v1/site/ps-scripts/llm" download>
+            <Icon icon="download" />
+            {formatMessage({ id: 'output.downloadPSLlmScript' })}
+          </a>
+        </div>
+      </section>
       <div className="BrandAssetUploader">
         {(
           [

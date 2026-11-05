@@ -70,7 +70,8 @@ export const Source: FC<SourceProps> = ({
     dispatch(
       rerankSourceSaga({
         id: source.id,
-        next_source_id: next2Source?.id ?? 'end',
+        next_source_id:
+          next2Source && next2Source.kind !== 'author' ? next2Source.id : 'end',
       }),
     );
   };
@@ -236,7 +237,7 @@ export const Source: FC<SourceProps> = ({
                 onClick={handleRerankUp}
               />
             )}
-            {!isAuthor && nextSource && (
+            {!isAuthor && nextSource && nextSource.kind !== 'author' && (
               <Button
                 className="Source__RerankButton"
                 elem="button"

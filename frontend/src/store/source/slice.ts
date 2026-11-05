@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { BatchSelectTranslationData } from '@/apis/translation';
 import { InputDebounceStatus, Source } from '@/interfaces';
 import { User } from '@/interfaces/user';
+import { orderSourcesForDisplay } from './order';
 
 export type SavingStatus = 'saving' | 'saveSuccessful' | 'saveFailed';
 export type FocusEffect = 'focusInput' | 'focusLabel' | 'scrollIntoView';
@@ -65,7 +66,7 @@ const slice = createSlice({
       state.batchSelecting = action.payload;
     },
     setSources(state, action: PayloadAction<Source[]>) {
-      state.sources = action.payload;
+      state.sources = orderSourcesForDisplay(action.payload);
     },
     createSourceSaga(
       state,
@@ -77,7 +78,7 @@ const slice = createSlice({
       }>,
     ) {},
     createSource(state, action: PayloadAction<Source>) {
-      state.sources.push(action.payload);
+      state.sources = orderSourcesForDisplay([...state.sources, action.payload]);
     },
     editSourceSaga(
       state,
@@ -106,6 +107,7 @@ const slice = createSlice({
           ...state.sources[index],
           ...newSource,
         };
+        state.sources = orderSourcesForDisplay(state.sources);
       }
     },
     editSourceMyTranslationContent(
@@ -167,6 +169,12 @@ const slice = createSlice({
         // should not happen
         return;
       }
+      if (
+        state.sources[index].kind === 'author' ||
+        action.payload.next_source_id === action.payload.id
+      ) {
+        return;
+      }
 
       if (action.payload.next_source_id === 'end') {
         const [source] = state.sources.splice(index, 1);
@@ -185,6 +193,7 @@ const slice = createSlice({
         );
         state.sources.splice(otherIndex, 0, source);
       }
+      state.sources = orderSourcesForDisplay(state.sources);
     },
     focusSource(
       state,

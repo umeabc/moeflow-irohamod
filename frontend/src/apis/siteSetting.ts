@@ -48,6 +48,42 @@ const editSiteSetting = ({
   });
 };
 
+export interface APIPSScript {
+  version: string;
+  filename: string;
+  size: number;
+  sha256: string;
+  updatedAt: string | null;
+  source: 'builtin' | 'updated';
+  downloadUrl: string;
+}
+
+export interface APIPSScripts {
+  labelplus: APIPSScript;
+  llm: APIPSScript;
+}
+
+const getPSScripts = ({ configs }: { configs?: AxiosRequestConfig } = {}) => {
+  return request<APIPSScripts>({
+    method: 'GET',
+    url: '/v1/admin/ps-scripts',
+    ...configs,
+  });
+};
+
+const updateLabelplusPSScript = ({
+  configs,
+}: {
+  configs?: AxiosRequestConfig;
+} = {}) => {
+  return request<{ updated: boolean; labelplus: APIPSScript }>({
+    method: 'POST',
+    url: '/v1/admin/ps-scripts/labelplus/update',
+    timeout: 0,
+    ...configs,
+  });
+};
+
 export interface APIHomepage {
   html: string;
   css: string;
@@ -208,6 +244,8 @@ const getLlmPresets = ({
 export default {
   getSiteSetting,
   editSiteSetting,
+  getPSScripts,
+  updateLabelplusPSScript,
   getHomepage,
   getStorageUsage,
   getR2Buckets,

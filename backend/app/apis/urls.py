@@ -98,6 +98,11 @@ from app.apis.notice import (
     NoticeReadAPI,
 )
 from app.apis.admin_stats import AdminContributionStatsAPI
+from app.apis.ps_scripts import (
+    AdminLabelPlusUpdateAPI,
+    AdminPSScriptsAPI,
+    PSScriptDownloadAPI,
+)
 from app.apis.admin_team import AdminTeamAPI, AdminTeamListAPI
 from app.apis.admin_log import (
     AdminActionLogAPI,
@@ -137,6 +142,11 @@ index.add_url_rule(
 )
 # site公开配置模块
 site = Blueprint("site", __name__, url_prefix=v1_prefix + "/site")
+site.add_url_rule(
+    "/ps-scripts/<kind>",
+    methods=["GET", "OPTIONS"],
+    view_func=PSScriptDownloadAPI.as_view("ps_script_download"),
+)
 site.add_url_rule(
     "/homepage", methods=["GET", "OPTIONS"], view_func=HomepageAPI.as_view("homepage")
 )
@@ -528,6 +538,16 @@ avatar.add_url_rule(
 
 # 管理员
 admin = Blueprint("admin", __name__, url_prefix=v1_prefix + "/admin")
+admin.add_url_rule(
+    "/ps-scripts",
+    methods=["GET", "OPTIONS"],
+    view_func=AdminPSScriptsAPI.as_view("admin_ps_scripts"),
+)
+admin.add_url_rule(
+    "/ps-scripts/labelplus/update",
+    methods=["POST", "OPTIONS"],
+    view_func=AdminLabelPlusUpdateAPI.as_view("admin_labelplus_update"),
+)
 admin.add_url_rule(
     "/contribution-stats",
     methods=["GET", "OPTIONS"],

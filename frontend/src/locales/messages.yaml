@@ -1495,6 +1495,12 @@ projectImportFromLabelplusStatus.running:
 output.otherResource:
   zhCn: 其他资源
   en: Other Resources
+output.downloadPSScript:
+  zhCn: 下载 PS 脚本
+  en: Download PS script
+output.downloadPSLlmScript:
+  zhCn: 下载 PS LLM 擦字脚本
+  en: Download PS LLM text-removal script
 output.at:
   zhCn: 导出所有文件{outputType}
   en: Export all files {outputType}
@@ -1875,6 +1881,48 @@ admin.brandAssetUploadFail:
 admin.downloadSettings:
   zhCn: 下载图片设置
   en: Image Download Settings
+admin.psScripts:
+  zhCn: PS 脚本
+  en: PS scripts
+admin.psScriptsDesc:
+  zhCn: 下载本站提供的 PS 脚本，或检查并更新 LabelPlus 脚本。
+  en: Download PS scripts hosted on this site, or check for and install LabelPlus updates.
+admin.psScriptsVersion:
+  zhCn: LabelPlus 版本
+  en: LabelPlus version
+admin.psScriptsUpdatedAt:
+  zhCn: 最后更新时间
+  en: Last updated
+admin.psScriptsNeverUpdated:
+  zhCn: 尚未更新
+  en: Never updated
+admin.psScriptsStatus:
+  zhCn: 脚本状态
+  en: Script status
+admin.psScriptsStatusBuiltin:
+  zhCn: 内置
+  en: Built-in
+admin.psScriptsStatusUpdated:
+  zhCn: 已更新
+  en: Updated
+admin.psScriptsCheckUpdate:
+  zhCn: 检查并更新
+  en: Check and update
+admin.psScriptsUpdated:
+  zhCn: LabelPlus 脚本已更新
+  en: LabelPlus script updated
+admin.psScriptsAlreadyLatest:
+  zhCn: LabelPlus 脚本已是最新版本
+  en: LabelPlus script is already up to date
+admin.psScriptsUpdateFailed:
+  zhCn: LabelPlus 脚本更新失败，请重试
+  en: Failed to update the LabelPlus script. Please try again.
+admin.psScriptsLoadFailed:
+  zhCn: 无法读取 PS 脚本状态，请重试
+  en: Failed to load PS script status. Please try again.
+admin.psScriptsRetry:
+  zhCn: 重新读取状态
+  en: Reload status
 admin.downloadSettingsDesc:
   zhCn: 用于「从社交媒体获取图片」功能（X/Twitter、外部链接）。测试环境访问 X 需填写 HTTP 代理。
   en: Used by the "Get image from social media" feature (X/Twitter, external links). A proxy is required for X in test environments.
