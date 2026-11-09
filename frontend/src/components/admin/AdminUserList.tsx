@@ -1,5 +1,5 @@
 import { css } from '@emotion/core';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import dayjs from 'dayjs';
 import { FC } from '@/interfaces';
@@ -15,7 +15,6 @@ import {
   TablePaginationConfig,
   Form as AntdForm,
 } from 'antd';
-import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import { api, FailureResults } from '@/apis';
 import { toLowerCamelCase } from '@/utils';
 import { APIUser } from '@/apis/user';
@@ -24,13 +23,6 @@ import { Form } from '@/components/shared-form/Form';
 import { EmailInput } from '@/components/shared-form/EmailInput';
 import { EMAIL_REGEX, USER_NAME_REGEX } from '@/utils/regex';
 import style from '@/style';
-
-interface TableParams {
-  pagination?: TablePaginationConfig;
-  sortField?: string;
-  sortOrder?: string;
-  filters?: Record<string, FilterValue>;
-}
 
 /** 用户列表管理的属性接口 */
 interface AdminUserListProps {
@@ -45,11 +37,14 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
   const [data, setData] = useState<APIUser[]>([]);
   const [word, setWord] = useState('');
   const [loading, setLoading] = useState(false);
-  const [pagination, setPagination] = useState<TablePaginationConfig>({
-    current: 1,
-    pageSize: 30,
-    total: 0,
-  });
+  // 分页只保存原始值：Table 的 pagination 由这些值拼出来。
+  // 早期把整个 pagination 对象放进 fetchData 依赖里，请求回包又 setPagination 新对象，
+  // 会导致 effect 无限重跑；配合闭包里过期的 current，翻页时会来回跳。
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(30);
+  const [total, setTotal] = useState(0);
+  // 只接受最后一次请求的结果，避免旧页面的慢响应覆盖新页面
+  const requestSeq = useRef(0);
   // 修改用户密码
   const [newPassword, setNewPassword] = useState('');
   const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
@@ -59,36 +54,50 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
   const [form] = AntdForm.useForm();
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
 
-  const paginationKey = JSON.stringify(pagination);
   const fetchData = useCallback(async () => {
+    const seq = requestSeq.current + 1;
+    requestSeq.current = seq;
     setLoading(true);
     try {
       const result = await api.user.adminGetUserList({
         params: {
-          page: pagination?.current,
-          limit: pagination?.pageSize,
+          page,
+          limit: pageSize,
           word,
         },
       });
-      const data = toLowerCamelCase(result.data);
-      setPagination({
-        ...pagination,
-        total: result.headers['x-pagination-count'],
-      });
-      setData(data);
+      if (seq !== requestSeq.current) {
+        return;
+      }
+      setData(toLowerCamelCase(result.data));
+      setTotal(Number(result.headers['x-pagination-count'] || 0));
     } catch (error) {
-      (error as FailureResults).default();
+      if (seq === requestSeq.current) {
+        (error as FailureResults).default();
+      }
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) {
+        setLoading(false);
+      }
     }
-  }, [pagination, word]);
+  }, [page, pageSize, word]);
 
   useEffect(() => {
     fetchData();
-  }, [paginationKey, fetchData]);
+  }, [fetchData]);
 
-  const handleTableChange = (pagination: TablePaginationConfig) => {
-    setPagination(pagination);
+  const handleTableChange = (next: TablePaginationConfig) => {
+    const nextPageSize = next.pageSize ?? pageSize;
+    if (nextPageSize !== pageSize) {
+      // 改变每页条数时回到第一页，避免停留在超出范围的页码
+      setPageSize(nextPageSize);
+      setPage(1);
+      return;
+    }
+    const nextPage = next.current ?? 1;
+    if (nextPage !== page) {
+      setPage(nextPage);
+    }
   };
 
   const handelChangeAdminStatus = async (record: APIUser) => {
@@ -262,6 +271,8 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
           value={word}
           onChange={(e) => {
             setWord(e.target.value);
+            // 搜索条件变化后回到第一页
+            setPage(1);
           }}
           placeholder={formatMessage({ id: 'admin.searchUser' })}
           css={css`
@@ -282,7 +293,12 @@ export const AdminUserList: FC<AdminUserListProps> = ({ className }) => {
           dataSource={data}
           rowKey={(record) => record.id}
           columns={columns}
-          pagination={pagination}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+          }}
           loading={loading}
           onChange={handleTableChange}
           scroll={{ x: 820 }}
