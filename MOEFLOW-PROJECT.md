@@ -1,8 +1,24 @@
-# MoeFlow 项目交接档案（iroha16-fix8 定制版）
+# MoeFlow 项目交接档案（iroha16-fix9 定制版）
 
-> 项目已有历史上线版本；本次 **iroha16-fix8 已部署测试机与正式机**；fix8 版本标签及 GHCR `latest` 均已发布。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
-> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。当前工作区版本 **iroha16-fix8（双机已部署）**。
+> 项目已有历史上线版本；本次 **iroha16-fix9 已部署测试机与正式机**（前端修复机翻依赖，后端沿用 fix8）；fix9 前端版本标签及 GHCR `latest` 已发布。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
+> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。当前工作区版本 **iroha16-fix9（双机已部署）**。
 > 注：本档案为**脱敏版**，不含具体主机 IP、域名、端口、代理与凭据；实际部署环境信息由部署方自理。
+
+---
+
+## iroha16-fix9（2026-11-09，双机已部署）
+
+自动翻译（机翻）全链路故障的修复版本。仅前端变更，后端沿用 `iroha16-fix8`。
+
+- **故障现象**：项目内「自动翻译」开始后，每张图都失败，控制台/错误详情出现 `xsschema: Missing zod v3 dependencies "zod-to-json-schema"`。
+- **根因**：fix4 依赖瘦身（提交 `026fa9f`）把 `zod-to-json-schema` 当作「未使用依赖」从 `frontend/package.json` 删除。它实际是 `xsschema` 的 optional peer dependency：`@xsai/tool` 把 zod v3 schema 转成 JSON Schema 时按需 `import`，缺失即抛错。fix7/fix8 构建产物里因此留下 Vite 的 optional-peer 抛错占位 chunk（`__vite-optional-peer-dep_zod-to-json-schema_xsschema_false-*.js`），所以凡走 `tool()` 的机翻路径全部不可用。该依赖为 optional peer，安装时 npm 不会自动补齐，删除后也不会报安装错误，属于隐性破坏。
+- **修复**：恢复 `zod-to-json-schema@^3.25.2` 依赖（lock 同步，仅新增该包），并新增 `frontend/src/services/ai/aiSchemaDeps.test.ts` 回归测试：直接校验该包存在且能把机翻用的 zod schema 转成 JSON Schema，防止再次被误删。
+- **验证**：前端 `typecheck`、`lint`（0 errors / 245 warnings）、`build` 通过；Jest **8 suites / 47 tests passed**（新增 1 项）。构建产物中 `__vite-optional-peer-dep_zod-to-json-schema` 占位 chunk 消失，改为真实转换模块。
+- **真实浏览器验证**：在测试机与正式机分别用管理员账号打开项目文件列表 → 自动翻译 → 自定义 API URL 指向本页 mock 地址（请求被浏览器拦截，不落到真实服务），确认发出的 `/chat/completions` 请求体含 `tools[0].function.name = "submit"`、`parameters.type = "object"`、`properties = ["texts"]`，页面与 console 均无 `Missing zod`；mock 返回 502 后流程按「翻译失败」正常收尾。正式机验证后核查 30 分钟内 `Source`/`Translation` 新增均为 0，未写入脏数据。
+- **镜像**：前端 `v1.1.7-iroha16-fix9`，registry digest `sha256:4bcb3e261099340e7b7db9c493031368c02b134205ec39f5311264693a9ecf72`，`latest` 已指向同一 digest；后端保持 `v1.1.8-iroha16-fix8`（digest `sha256:eb95a8b8…f360b8`）。
+- **测试机回退**：compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix9-20261109-140400`，旧 `latest` 前端镜像标签 `pre-fix9-20261109-140400`（fix8）。
+- **正式机回退**：compose 备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-fix9-20261109-142000`，旧 `latest` 前端镜像标签 `pre-fix9-20261109-142000`（fix8）。本次只重建 frontend，backend/celery/MongoDB/Redis 未重启，rabbitmq orphan 仍为 exited。
+- **限制**：本机 `zod-to-json-schema` 类型声明与 zod 3.25 类型存在轻微偏差，测试里对转换函数做了显式类型收窄；运行时转换已验证正确。
 
 ---
 
