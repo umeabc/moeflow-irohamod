@@ -1,8 +1,28 @@
-# MoeFlow 定制版（iroha16-fix9）备份仓库
+# MoeFlow 定制版（iroha16-fix10）备份仓库
 
 > 本仓库为 MoeFlow（彩翻 / 萌翻）**内部定制版本**的源码备份仓库（私有）。
-> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前测试机与正式机均已部署 **iroha16-fix9**（前端修复机翻依赖，后端仍为 fix8）；fix9 前端版本标签及 GHCR `latest` 已发布。历史 fix7/fix6 部署记录见下方。
+> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前测试机与正式机均已部署 **iroha16-fix10**（前端：机翻依赖修复 + 后台用户列表翻页修复，后端仍为 fix8）；fix10 前端版本标签及 GHCR `latest` 已发布。历史 fix7/fix6 部署记录见下方。
 > 本文档为**脱敏版**，不含具体主机、域名、端口、代理与凭据信息。
+
+---
+
+## iroha16-fix10（2026-11-10，双机已部署）
+
+后台「用户管理」翻页抽风的修复版本。仅前端变更，后端沿用 `iroha16-fix8`。
+
+- **故障现象**：`/admin/users` 用户超过一页时，点第 2 页后页面在两页之间来回跳；把每页 30 条改成 100 条也会同样抽风。
+- **根因**：`AdminUserList` 把整个 `pagination` 对象放进 `fetchData` 的 `useCallback` 依赖，而 `fetchData` 的回包又 `setPagination({ ...pagination, total })` 生成新对象：
+  1. `pagination` 变 → `fetchData` 身份变 → `useEffect([paginationKey, fetchData])` 再次执行 → 再请求 → 再生成新对象，形成无限请求循环（页面持续闪烁、loading 反复）；
+  2. 请求闭包里的 `pagination.current` 可能是过期值，慢响应回来会把页码改回上一页，于是表格在两页之间反复横跳；改每页条数走的是同一条 onChange/effect 链路，所以同样中招。
+- **修复**：分页状态拆成原始值 `page` / `pageSize` / `total`，`fetchData` 依赖这三个原始值，回包只更新 `data` 与 `total`（不再回写分页对象）；Table 的 `pagination` 由原始值拼出；新增 `requestSeq` 只接受最后一次请求的响应，避免旧页慢响应覆盖新页；切换每页条数时回到第 1 页；搜索词变化时也回到第 1 页。`x-pagination-count` 统一转成 `Number`。
+- **顺带清理**：删除该文件里已无用的 `TableParams` 接口与 `SorterResult` 类型导入（原有 2 条 lint warning）。
+- **测试**：新增 `frontend/src/components/admin/AdminUserList.test.tsx`，mock 用户列表接口（共 59 条）并断言：首屏只请求 1 次；点第 2 页只新增 1 次请求且分页高亮停在第 2 页；等待后请求数不再增长。旧实现下该用例会因无限请求而挂起，可稳定复现原 bug。
+- **验证**：前端 `typecheck` 通过；Jest **9 suites / 48 tests passed**；`lint` **0 errors / 242 warnings**（比 fix9 少 2 条）；`build` 通过（48 文件 / 3,693,387 字节 / 0 source map，`index.html` SHA256 `7e8ae9d6…9250`）。
+- **浏览器实测（测试机）**：拦截用户列表接口返回 59 条假数据 → 首屏 1 次请求；点第 2 页仅 1 次 `page=2` 请求、页码停在 2、等待 2 秒无新增请求；把每页改为 100 条仅 1 次 `page=1&limit=100` 请求、页码回到 1、稳定。
+- **浏览器实测（正式机，真实数据 59 个用户）**：首屏 `page=1&limit=30`、30 行；点第 2 页仅 1 次 `page=2&limit=30`、页码 2、首行为第 2 页用户、2.5 秒内无新增请求；改为 100 条仅 1 次 `page=1&limit=100`、页码 1、显示全部 59 行、稳定。全程只读，未修改任何用户。
+- **镜像**：前端 `v1.1.7-iroha16-fix10`，registry digest `sha256:4d397f8f86d9448450e0fe68f9760a07e87f110bc24414dd01bb623fa594af08`，`latest` 已指向同一 digest；后端保持 `v1.1.8-iroha16-fix8`。
+- **测试机回退**：compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix10-20261110-030500`，旧 `latest` 标签 `pre-fix10-20261110-030500`（fix9）。
+- **正式机回退**：compose 备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-fix10-20261110-031000`，旧 `latest` 标签 `pre-fix10-20261110-031000`（fix9）。只重建 frontend，backend/celery/MongoDB/Redis 未重启。
 
 ---
 
