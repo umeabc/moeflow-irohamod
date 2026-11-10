@@ -1,8 +1,22 @@
-# MoeFlow 定制版（iroha16-fix10）备份仓库
+# MoeFlow 定制版（iroha16-fix11）备份仓库
 
 > 本仓库为 MoeFlow（彩翻 / 萌翻）**内部定制版本**的源码备份仓库（私有）。
-> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前测试机与正式机均已部署 **iroha16-fix10**（前端：机翻依赖修复 + 后台用户列表翻页修复，后端仍为 fix8）；fix10 前端版本标签及 GHCR `latest` 已发布。历史 fix7/fix6 部署记录见下方。
+> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前测试机与正式机均已部署 **iroha16-fix11**（后端新增 `/v1/site/flavor` 并修复正式机 nginx 静态解析隐患；前端为 fix10）；fix11 后端版本标签及 GHCR `latest` 已发布。历史 fix7/fix6 部署记录见下方。
 > 本文档为**脱敏版**，不含具体主机、域名、端口、代理与凭据信息。
+
+---
+
+## iroha16-fix11（2026-11-11，双机已部署）
+
+新增公开站点标识端点，并修复正式机「只重建后端会 502」的隐患。后端 `iroha16-fix11`，前端沿用 `iroha16-fix10`。
+
+- **新端点**：`GET /v1/site/flavor`，无需登录，返回 `{"flavor": "irohamod", "name": <SITE_NAME>, "version": <MOEFLOW_BUILD_ID>}`，供桌面客户端识别站点并选择对应前端。源码提交 `0537bd8`。
+- **验证**：新增 `test_get_flavor_without_token`（**1 passed**）；`tests/api/test_site_setting_api.py` 为 2 passed / 1 failed，失败项仍是既有的 `test_put_site_setting`（白名单字段已停用，与本次无关）。两机实测：测试机 `{"flavor":"irohamod","name":"Moeflow-iroha10-test","version":"iroha16-fix11"}`、正式机 `{"flavor":"irohamod","name":"BASMC-Moeflow","version":"iroha16-fix11"}`，均 200。
+- **运维修复（正式机 nginx）**：重建 backend 后容器 IP 变化，而正式机 `nginx/templates/default.conf.template` 仍是静态 `proxy_pass http://moeflow-backend:5000/;`，nginx 启动时解析一次即缓存，导致 API 全部 502（首页仍 200）。已把 `/api` 改成与测试机一致的动态解析：`resolver 127.0.0.11 valid=10s ipv6=off;` + `set $moeflow_backend ...; rewrite ^/api/?(.*)$ /$1 break; proxy_pass $moeflow_backend;`，`nginx -t` 通过；实测容器 `/etc/hosts` 里已无 backend 条目时 `/api` 仍 200，确认走 Docker DNS 动态解析，后续单独重建 backend 不再 502。模板备份：`/var/dockers/moeflow/nginx/templates/default.conf.template.bak-pre-dynamic-dns-20261111`。
+- **镜像**：后端 `v1.1.8-iroha16-fix11`，digest `sha256:501e28c84f62f0af26ed73f3d559a593598f1ff64d59a07550d2cc2faa1f3e12`，`latest` 已指向同一 digest；前端保持 `v1.1.7-iroha16-fix10`。
+- **测试机回退**：compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix11-20261111-000700`，旧后端 `latest` 标签 `pre-fix11-20261111-000700`（fix8）。
+- **正式机回退**：compose 备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-fix11-20261111-001500`，旧后端 `latest` 标签 `pre-fix11-20261111-001500`（fix8）。本次只重建 backend/celery；MongoDB、Redis 未重启，redis/rabbitmq orphan 状态未变。
+- **运行状态**：两机 Celery 均 `pong`；backend/celery/frontend 日志无 error；首页、`/api/ping`、`/admin`、PS 脚本下载均 200。
 
 ---
 
