@@ -33,6 +33,7 @@ from app.apis.me import (
 )
 from app.apis.avatar import AvatarAPI
 from app.apis.site_setting import (
+    FlavorAPI,
     AdminBrandAssetAPI,
     AdminCustomMessagesAPI,
     BrandAssetAPI,
@@ -142,6 +143,7 @@ index.add_url_rule(
 )
 # site公开配置模块
 site = Blueprint("site", __name__, url_prefix=v1_prefix + "/site")
+site.add_url_rule("/flavor", view_func=FlavorAPI.as_view("site_flavor"))
 site.add_url_rule(
     "/ps-scripts/<kind>",
     methods=["GET", "OPTIONS"],

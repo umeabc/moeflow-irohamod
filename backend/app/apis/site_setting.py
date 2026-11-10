@@ -438,3 +438,21 @@ class SystemStatusAPI(MoeAPIView):
             "system_version": system_version,
             "storage_type": app_config["STORAGE_TYPE"],
         }
+
+
+class FlavorAPI(MoeAPIView):
+    def get(self):
+        """
+        @api {get} /v1/site/flavor 站点标识（供桌面客户端选择前端）
+        @apiVersion 1.0.0
+        @apiName getSiteFlavor
+        @apiGroup SiteSetting
+
+        @apiSuccessExample {json} 返回示例
+        {"flavor": "irohamod", "name": "MoeFlow", "version": "dev"}
+        """
+        return {
+            "flavor": "irohamod",
+            "name": app_config.get("SITE_NAME") or "MoeFlow",
+            "version": os.environ.get("MOEFLOW_BUILD_ID") or "dev",
+        }

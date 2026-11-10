@@ -4,6 +4,13 @@ from tests import MoeAPITestCase
 
 
 class TestSiteSettingAPI(MoeAPITestCase):
+    def test_get_flavor_without_token(self):
+        response = self.get("/v1/site/flavor")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["flavor"], "irohamod")
+        self.assertTrue(response.json["name"])
+        self.assertTrue(response.json["version"])
+
     def test_get_site_setting(self):
         admin_user = self.create_user("admin")
         admin_user.admin = True
