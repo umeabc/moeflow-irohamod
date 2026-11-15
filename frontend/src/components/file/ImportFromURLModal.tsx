@@ -623,19 +623,20 @@ export const ImportFromURLModal: FC<ImportFromURLModalProps> = ({
                 flex-direction: column;
                 gap: 6px;
                 padding: 10px;
-                border: 1px solid #ffccc7;
-                background: #fff2f0;
+                /* 错误明细面板底色/边框走主题变量（见 index.css --moeflow-errorPanel*） */
+                border: 1px solid var(--moeflow-errorPanelBorder);
+                background: var(--moeflow-errorPanelBg);
                 border-radius: 4px;
                 max-height: 200px;
                 overflow-y: auto;
                 .ImportFromURLModal__FailTitle {
                   font-size: 13px;
                   font-weight: 600;
-                  color: #cf1322;
+                  color: var(--moeflow-errorPanelTitle);
                 }
                 .ImportFromURLModal__FailItem {
                   font-size: 12px;
-                  color: #555;
+                  color: var(--moeflow-textColorSecondary);
                 }
               `}
             >

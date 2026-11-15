@@ -61,6 +61,23 @@
   --moeflow-progressTrack: #efefef;
   --moeflow-sliderRail: #e1e1e1;
   --moeflow-sliderThumb: #666666;
+  /* 登录页品牌配色（浅色保持原视觉） */
+  --moeflow-loginPageBg: linear-gradient(
+    135deg,
+    #fdf4f6 0%,
+    #ffffff 55%,
+    #fff7f0 100%
+  );
+  --moeflow-loginPaper: #fdf4f6;
+  --moeflow-loginCloud: #ffffff;
+  --moeflow-loginInk: #3d3a3a;
+  --moeflow-loginInkLight: #8a8585;
+  --moeflow-loginInkLighter: #b8b2b2;
+  /* 翻译器图片选择菜单 / 导入失败明细面板 */
+  --moeflow-menuBg: rgba(255, 255, 255, 0.92);
+  --moeflow-errorPanelBg: #fff2f0;
+  --moeflow-errorPanelBorder: #ffccc7;
+  --moeflow-errorPanelTitle: #cf1322;
 }
 
 html[data-theme='dark'] {
@@ -122,6 +139,23 @@ html[data-theme='dark'] {
   --moeflow-progressTrack: #2a2a2a;
   --moeflow-sliderRail: #3a3a3a;
   --moeflow-sliderThumb: #d0d0d0;
+  /* 登录页品牌配色（暗色） */
+  --moeflow-loginPageBg: linear-gradient(
+    135deg,
+    #1b1215 0%,
+    #121212 55%,
+    #16120f 100%
+  );
+  --moeflow-loginPaper: #2a2124;
+  --moeflow-loginCloud: #1f1f1f;
+  --moeflow-loginInk: rgba(255, 255, 255, 0.85);
+  --moeflow-loginInkLight: rgba(255, 255, 255, 0.55);
+  --moeflow-loginInkLighter: rgba(255, 255, 255, 0.4);
+  /* 翻译器图片选择菜单 / 导入失败明细面板（暗色） */
+  --moeflow-menuBg: rgba(31, 31, 31, 0.92);
+  --moeflow-errorPanelBg: rgba(245, 34, 45, 0.1);
+  --moeflow-errorPanelBorder: rgba(245, 34, 45, 0.35);
+  --moeflow-errorPanelTitle: #ff7875;
 }
 
 /* 暗色下保留四模式 Tag 的文字色：站内全局 .ant-tag 覆盖会把彩色 Tag 压成灰色 */

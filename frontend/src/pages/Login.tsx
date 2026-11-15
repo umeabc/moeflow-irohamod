@@ -33,15 +33,16 @@ interface LoginProps {
 }
 
 // 品牌配色（彩翻粉 + 金色点缀）
+// paper/cloud/ink 系列走 CSS 变量，暗色主题下自动切换（见 index.css --moeflow-login*）
 const BRAND = {
   primary: style.primaryColor, // #FF657C
   primaryDeep: '#e0506a',
   gold: '#f2b64b',
-  paper: '#fdf4f6', // 浅粉底
-  cloud: '#ffffff',
-  ink: '#3d3a3a',
-  inkLight: '#8a8585',
-  inkLighter: '#b8b2b2',
+  paper: 'var(--moeflow-loginPaper)', // 浅粉底
+  cloud: 'var(--moeflow-loginCloud)',
+  ink: 'var(--moeflow-loginInk)',
+  inkLight: 'var(--moeflow-loginInkLight)',
+  inkLighter: 'var(--moeflow-loginInkLighter)',
 };
 
 type AuthMode = 'login' | 'register';
@@ -170,12 +171,8 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
         min-height: 100vh;
         display: flex;
         align-items: stretch;
-        background: linear-gradient(
-          135deg,
-          ${BRAND.paper} 0%,
-          #fff 55%,
-          #fff7f0 100%
-        );
+        /* 整页品牌渐变走变量，暗色主题下换成深色底（见 index.css --moeflow-loginPageBg） */
+        background: var(--moeflow-loginPageBg);
         overflow: hidden;
 
         /* ===== 左：品牌区 ===== */

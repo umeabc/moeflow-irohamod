@@ -51,7 +51,8 @@ export const TabBarM: FC<TabBarProps> = ({ className }) => {
         position: fixed;
         width: 100%;
         bottom: 0;
-        background-color: #ffffff;
+        /* 底栏底色跟随主题；.am-tab-bar-bar 的内联白色由 App.tsx 暗色覆盖兜底 */
+        background-color: var(--moeflow-surface);
         padding-bottom: constant(safe-area-inset-bottom); /* iOS 11.0 */
         padding-bottom: env(safe-area-inset-bottom); /* iOS 11.2 */
         .tab-icon {
@@ -63,7 +64,7 @@ export const TabBarM: FC<TabBarProps> = ({ className }) => {
       <TabBar
         unselectedTintColor={style.textColorSecondary}
         tintColor={style.primaryColor}
-        barTintColor="white"
+        barTintColor="var(--moeflow-surface)"
         noRenderContent
       >
         <TabBar.Item

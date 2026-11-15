@@ -335,21 +335,22 @@ export const EmailVCodeInputItem: FC<EmailVCodeInputItemProps> = (
         <div
           css={css`
             border: 0;
-            background-color: #f5f5f5;
+            /* 跟随主题：浅色保持浅灰条，暗色用 surface2 */
+            background-color: var(--moeflow-surface2);
+            color: var(--moeflow-textColorSecondary);
             border-radius: ${`0 0 ${style.borderRadiusBase} ${style.borderRadiusBase}`};
-            color: #5f5f5f;
             text-align: center;
             height: 30px;
             line-height: 30px;
             ${clickEffect()}
             &.disabled {
               cursor: not-allowed;
-              color: #aaa;
+              color: var(--moeflow-textColorSecondaryLightest);
               &:hover {
-                background-color: #f5f5f5;
+                background-color: var(--moeflow-surface2);
               }
               &:active {
-                background-color: #f5f5f5;
+                background-color: var(--moeflow-surface2);
               }
             }
           `}

@@ -79,7 +79,8 @@ export const NavTabs: FC<NavTabsProps> = ({ className, children }) => {
           justify-content: center;
           align-items: center;
           box-shadow: -10px 0px 8px rgba(0, 0, 0, 0.2);
-          background-color: #fff;
+          /* 跟随主题，暗色下不再露出白块 */
+          background-color: var(--moeflow-surface);
           ${clickEffect()}
         }
         .ant-dropdown-menu-item > a:hover {

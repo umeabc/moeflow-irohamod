@@ -124,7 +124,9 @@ export const CAPTCHAModal: FC<CAPTCHAModalProps> = ({
           margin: 0 10px;
           padding: 21px 30px 25px 30px;
           max-width: 360px;
-          background-color: #fff;
+          /* 弹窗底色跟随主题，暗色下不再整块白色 */
+          background-color: var(--moeflow-surface);
+          color: var(--moeflow-textColor);
           border-radius: ${style.borderRadiusBase};
           box-shadow: ${style.boxShadowBase};
           .captcha-form-close {

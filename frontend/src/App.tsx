@@ -371,6 +371,64 @@ const App: React.FC = () => {
           html[data-theme='dark'] .ant-tooltip-inner {
             color: rgba(255, 255, 255, 0.85);
           }
+          /* Typography（重置密码页等处的 Paragraph 默认深色文字，暗色下不可见） */
+          html[data-theme='dark'] .ant-typography {
+            color: rgba(255, 255, 255, 0.85);
+          }
+          /* Radio.Button 分段按钮（创建团队/项目设置等表单） */
+          html[data-theme='dark'] .ant-radio-button-wrapper {
+            background-color: #1f1f1f !important;
+            border-color: #555 !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+          }
+          html[data-theme='dark'] .ant-radio-button-wrapper::before {
+            background-color: #555 !important;
+          }
+          html[data-theme='dark']
+            .ant-radio-button-wrapper-checked:not(
+              .ant-radio-button-wrapper-disabled
+            ) {
+            background-color: #2a2a2a !important;
+            border-color: var(--moeflow-primaryColor) !important;
+            color: var(--moeflow-primaryColorLighter) !important;
+          }
+          html[data-theme='dark']
+            .ant-radio-button-wrapper:hover:not(
+              .ant-radio-button-wrapper-checked
+            ) {
+            color: var(--moeflow-primaryColorLighter) !important;
+          }
+          /* 进度条轨道（管理员工作台硬盘占用等） */
+          html[data-theme='dark'] .ant-progress-line .ant-progress-inner {
+            background-color: #2a2a2a !important;
+          }
+          /* 输入框前缀附加块（登录页验证码图后面） */
+          html[data-theme='dark'] .ant-input-group-addon {
+            background-color: #262626 !important;
+            border-color: #333 !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+          }
+          /* 禁用按钮（antd 默认浅灰底在暗色下刺眼） */
+          html[data-theme='dark'] .ant-btn[disabled],
+          html[data-theme='dark'] .ant-btn[disabled]:hover {
+            background-color: #2a2a2a !important;
+            border-color: #333 !important;
+            color: rgba(255, 255, 255, 0.35) !important;
+          }
+          html[data-theme='dark'] .ant-btn-primary[disabled],
+          html[data-theme='dark'] .ant-btn-primary[disabled]:hover {
+            background-color: #33272a !important;
+            border-color: #403338 !important;
+            color: rgba(255, 255, 255, 0.35) !important;
+          }
+          /* 滑动条（图片翻译器缩放面板：轨道与手柄） */
+          html[data-theme='dark'] .ant-slider-rail {
+            background-color: #3a3a3a !important;
+          }
+          html[data-theme='dark'] .ant-slider-handle {
+            background-color: var(--moeflow-sliderThumb) !important;
+            border-color: var(--moeflow-sliderThumb) !important;
+          }
           /* antd-mobile */
           html[data-theme='dark'] .am-navbar {
             background-color: #1f1f1f;
@@ -390,6 +448,10 @@ const App: React.FC = () => {
           html[data-theme='dark'] .am-tab-bar-item .am-tab-bar-tab-icon,
           html[data-theme='dark'] .am-tab-bar-tab-title {
             color: rgba(255, 255, 255, 0.85);
+          }
+          /* antd-mobile TabBar 的 barTintColor 以内联样式落下，需 !important 才能盖住 */
+          html[data-theme='dark'] .am-tab-bar-bar {
+            background-color: #1f1f1f !important;
           }
         `}
       />

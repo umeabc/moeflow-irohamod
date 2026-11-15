@@ -133,7 +133,9 @@ export const ImageSelect: FC<ImageSelectProps> = ({
         .ImageSelect__Menu {
           width: 100%;
           flex-direction: column;
-          background-color: rgba(255, 255, 255, 0.9);
+          /* 菜单底色/文字走主题变量：暗色下避免白底白字（见 index.css --moeflow-menuBg） */
+          background-color: var(--moeflow-menuBg);
+          color: var(--moeflow-textColor);
           overflow-x: hidden;
           overflow-y: auto;
         }
