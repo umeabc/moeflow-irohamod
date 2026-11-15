@@ -1,8 +1,31 @@
-# MoeFlow 定制版（iroha16-fix11）备份仓库
+# MoeFlow 定制版（iroha16-fix12）备份仓库
 
 > 本仓库为 MoeFlow（彩翻 / 萌翻）**内部定制版本**的源码备份仓库（私有）。
-> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；当前测试机与正式机均已部署 **iroha16-fix11**（后端新增 `/v1/site/flavor` 并修复正式机 nginx 静态解析隐患；前端为 fix10）；fix11 后端版本标签及 GHCR `latest` 已发布。历史 fix7/fix6 部署记录见下方。
+> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；测试机已部署 **iroha16-fix12**（前端暗色模式修复，待验收，未推 GHCR）；正式机仍为 fix11/fix10。历史 fix7/fix6 部署记录见下方。
 > 本文档为**脱敏版**，不含具体主机、域名、端口、代理与凭据信息。
+
+---
+
+## iroha16-fix12（2026-11-16，测试机已部署，未发布）
+
+暗色模式漏适配专项修复。仅前端变更，后端沿用 `iroha16-fix11`。**未推送 GHCR、未动正式机**，仅部署测试机等待人工验收。
+
+- **修复清单**（按审计严重程度）：
+  - 登录页整页接入暗色：`index.css` 新增 `--moeflow-loginPageBg/-loginPaper/-loginCloud/-loginInk*` 变量（浅色值与原视觉一致），`frontend/src/pages/Login.tsx` 的页面渐变、卡片、分段控件、文字全部改走变量；输入框前缀附加块由全局 `.ant-input-group-addon` 暗色覆盖兜底。
+  - 图片翻译器图片选择菜单：`rgba(255,255,255,0.9)` 白底白字改为 `var(--moeflow-menuBg)` + 显式文字色，暗色可读。
+  - 移动端底部 TabBar：外层 `#ffffff` 与 `barTintColor="white"` 内联样式改为主题变量，并加 `html[data-theme='dark'] .am-tab-bar-bar { !important }` 兜底（内联样式需 !important 才能覆盖）。
+  - 重置密码页提示：全局 `html[data-theme='dark'] .ant-typography` 文字色（原近黑字压 `#121212` 不可见）。
+  - Radio.Button 分段按钮（创建团队/项目设置/团队设置）：全局暗色覆盖 wrapper/`::before`/checked/hover。
+  - 管理员工作台进度条轨道：`.ant-progress-line .ant-progress-inner` 暗色 `#2a2a2a`。
+  - 缩放面板滑动条：`.ant-slider-rail/.ant-slider-handle` 全局暗色（原轨道 `#f5f5f5`、手柄纯白）。
+  - 禁用按钮：`.ant-btn[disabled]` / `.ant-btn-primary[disabled]` 暗色底（antd 默认浅灰白）。
+  - 条件触发区域：验证码弹窗 `.captcha-form`、邮箱验证码发送条（`#f5f5f5`）、社媒导入失败明细面板（`#fff2f0`/`#ffccc7`）全部改走 `--moeflow-surface`/`-surface2`/`-errorPanel*` 变量。
+  - NavTabs 溢出「更多」按钮：`#fff` → `var(--moeflow-surface)`。
+- **低优先级未改**：默认头像/团队图标/空状态插画等素材层白色、语言切换图标块，属资源本身非容器，保持现状。
+- **验证**：`typecheck` 通过；Jest **9 suites / 48 tests passed**；lint **0 errors / 242 warnings**（与 fix10 持平）；build 通过（48 文件 / 3,698,104 字节 / 0 source map，`index.html` SHA256 `f151be96…ff79`）。
+- **测试机回归审计（实测计算样式）**：登录页暗色渐变/卡片 `#1f1f1f`/分段 `#2a2124`/addon `#262626`；重置页 Paragraph `rgba(255,255,255,0.85)`；图片选择菜单 `rgba(31,31,31,0.92)`+白字；滑轨 `#3a3a3a`/手柄 `#d0d0d0`；Radio `#1f1f1f`；进度轨 `#2a2a2a`；移动端 TabBar `#1f1f1f`；移动端登录卡 `#1f1f1f`；禁用按钮/验证码弹窗/发送条/失败面板规则均已入包。**亮色模式回归**：登录页渐变、卡片、分段、addon 与修复前逐值一致。
+- **测试机部署**：前端镜像 `v1.1.7-iroha16-fix12`（本地构建，未推 GHCR）；compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix12-20261116-025700`，旧前端 `latest` 标签 `pre-fix12-20261116-025700`（fix10）；后端/数据库未动。回退方式：恢复 compose 备份或改回 fix10 tag 后 `docker compose up -d --no-deps moeflow-frontend`。
+- **待办**：人工验收通过后再推 GHCR `v1.1.7-iroha16-fix12` 与 `latest`，并部署正式机。
 
 ---
 
