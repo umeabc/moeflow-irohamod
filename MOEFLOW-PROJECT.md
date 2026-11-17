@@ -1,14 +1,14 @@
 # MoeFlow 项目交接档案（iroha16-fix12 定制版）
 
-> 项目已有历史上线版本；本次 **iroha16-fix12 已部署测试机（待验收，未推 GHCR）**：前端暗色模式专项修复。正式机仍为 fix11/fix10。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
-> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。当前工作区版本 **iroha16-fix12（测试机已部署，待验收）**。
+> 项目已有历史上线版本；本次 **iroha16-fix12 已部署测试机与正式机**：前端暗色模式专项修复；后端沿用 fix11。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
+> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。当前工作区版本 **iroha16-fix12（双机已部署）**。
 > 注：本档案为**脱敏版**，不含具体主机 IP、域名、端口、代理与凭据；实际部署环境信息由部署方自理。
 
 ---
 
-## iroha16-fix12（2026-11-16，测试机已部署，未发布）
+## iroha16-fix12（2026-11-16 测试机，2026-11-18 正式机，已发布）
 
-暗色模式漏适配专项修复。仅前端变更，后端沿用 `iroha16-fix11`。**未推送 GHCR、未动正式机**，仅部署测试机等待人工验收。
+暗色模式漏适配专项修复。仅前端变更，后端沿用 `iroha16-fix11`。fix12 前端版本标签及 GHCR `latest` 已推送，测试机与正式机均已部署。
 
 - **修复清单**（按审计严重程度）：
   - 登录页整页接入暗色：`index.css` 新增 `--moeflow-loginPageBg/-loginPaper/-loginCloud/-loginInk*` 变量（浅色值与原视觉一致），`frontend/src/pages/Login.tsx` 的页面渐变、卡片、分段控件、文字全部改走变量；输入框前缀附加块由全局 `.ant-input-group-addon` 暗色覆盖兜底。
@@ -24,8 +24,10 @@
 - **低优先级未改**：默认头像/团队图标/空状态插画等素材层白色、语言切换图标块，属资源本身非容器，保持现状。
 - **验证**：`typecheck` 通过；Jest **9 suites / 48 tests passed**；lint **0 errors / 242 warnings**（与 fix10 持平）；build 通过（48 文件 / 3,698,104 字节 / 0 source map，`index.html` SHA256 `f151be96…ff79`）。
 - **测试机回归审计（实测计算样式）**：登录页暗色渐变/卡片 `#1f1f1f`/分段 `#2a2124`/addon `#262626`；重置页 Paragraph `rgba(255,255,255,0.85)`；图片选择菜单 `rgba(31,31,31,0.92)`+白字；滑轨 `#3a3a3a`/手柄 `#d0d0d0`；Radio `#1f1f1f`；进度轨 `#2a2a2a`；移动端 TabBar `#1f1f1f`；移动端登录卡 `#1f1f1f`；禁用按钮/验证码弹窗/发送条/失败面板规则均已入包。**亮色模式回归**：登录页渐变、卡片、分段、addon 与修复前逐值一致。
-- **测试机部署**：前端镜像 `v1.1.7-iroha16-fix12`（本地构建，未推 GHCR）；compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix12-20261116-025700`，旧前端 `latest` 标签 `pre-fix12-20261116-025700`（fix10）；后端/数据库未动。回退方式：恢复 compose 备份或改回 fix10 tag 后 `docker compose up -d --no-deps moeflow-frontend`。
-- **待办**：人工验收通过后再推 GHCR `v1.1.7-iroha16-fix12` 与 `latest`，并部署正式机。
+- **镜像与 GHCR**：前端 `v1.1.7-iroha16-fix12`，registry digest `sha256:42d7cb30a2ce0c10676fa2e32dfda2f4699c7675f71bcdaca02558ddb21ba246`，`latest` 已指向同一 digest；后端保持 `v1.1.8-iroha16-fix11`。
+- **测试机部署**：前端 `v1.1.7-iroha16-fix12`；compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix12-20261116-025700`，旧前端标签 `pre-fix12-20261116-025700`（fix10）；后端/数据库未动。
+- **正式机部署**：前端 `latest`（fix12）；compose 备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-fix12-20261118-000700`，旧前端标签 `pre-fix12-20261118-000700`（fix10）。只重建 frontend，backend/celery/MongoDB/Redis 未重启，rabbitmq orphan 仍为 exited。
+- **正式机验收**：域名首页 200、`/api/ping` 200、`/admin` 200；`index.html` SHA256 与本地构建一致（`f151be96…ff79`），容器内 **48 文件 / 0 source map**；暗色下登录页卡片 `#1f1f1f`、分段 `#2a2124`、addon `#262626`（桌面与移动端一致），重置密码页 Paragraph 为 `rgba(255,255,255,0.85)`；frontend/backend 日志无 error。
 
 ---
 
