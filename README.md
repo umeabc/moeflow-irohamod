@@ -27,6 +27,7 @@
 - **镜像与 GHCR**：前端 `v1.1.7-iroha16-fix12`，registry digest `sha256:42d7cb30a2ce0c10676fa2e32dfda2f4699c7675f71bcdaca02558ddb21ba246`，`latest` 已指向同一 digest；后端保持 `v1.1.8-iroha16-fix11`。
 - **测试机部署**：前端 `v1.1.7-iroha16-fix12`；compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix12-20261116-025700`，旧前端标签 `pre-fix12-20261116-025700`（fix10）；后端/数据库未动。
 - **正式机部署**：前端 `latest`（fix12）；compose 备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-fix12-20261118-000700`，旧前端标签 `pre-fix12-20261118-000700`（fix10）。只重建 frontend，backend/celery/MongoDB/Redis 未重启，rabbitmq orphan 仍为 exited。
+- **运维（2026-11-18）正式机宿主 nginx 升级**：`1.31.8-1~trixie` → `1.31.9-1~trixie`（nginx.org mainline 源，当前最新）。升级前备份 `/root/nginx-backup-20261118-082716/`（`etc-nginx`、`nginx-1.31.8.bin`、`nginx_1.31.8-1~trixie_amd64.deb`、`nginx-T-before.txt`）；`nginx -t` 前后均通过；`systemctl restart nginx` 后 `nginx -v` 为 1.31.9、`MainPID` 正常、error.log 无 error/emerg。验收：`moeflow.basmc.org` 首页/`api/ping`/`api/v1/site/flavor`/`admin` 全 200，ALPN 协商 `h2` + TLS1.3；同机 `bilidyn.basmc.org` 302（原行为）。只升级 nginx 一个包，其余 168 个待升级包未动；容器内 nginx 未改动。
 - **正式机验收**：域名首页 200、`/api/ping` 200、`/admin` 200；`index.html` SHA256 与本地构建一致（`f151be96…ff79`），容器内 **48 文件 / 0 source map**；暗色下登录页卡片 `#1f1f1f`、分段 `#2a2124`、addon `#262626`（桌面与移动端一致），重置密码页 Paragraph 为 `rgba(255,255,255,0.85)`；frontend/backend 日志无 error。
 
 ---
