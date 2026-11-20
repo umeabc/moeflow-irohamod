@@ -1,10 +1,32 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha16-fix12）
+# MoeFlow 自定义改动 CHANGELOG（iroha16-fix14）
 
 > 基于 `moeflow-com/moeflow` 的自定义定制版本。
 > 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
 > 当前源码版本：**iroha16-fix12，已部署测试机与正式机**（前端暗色模式修复；后端沿用 fix11）。前端基线 `v1.1.7` / 后端基线 `v1.1.8`；fix8 版本标签及 GHCR `latest` 已发布；历史版本记录保留。
 > 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
 > 交付方式：测试机构建与验收 → GHCR fix8 版本标签 → latest → 正式机拉取，仅重建 backend/celery/frontend；先备份 compose 与旧镜像标签。
+
+---
+
+## iroha16-fix14（2026-11-21 测试机已部署；正式机待拉取）
+
+图片审核与待审图片访问控制，仅后端变更（前端沿用 `v1.1.7-iroha16-fix12`）。
+
+- **设置项**：`SiteSetting.allow_pending_images`（db_field `api`，默认 true）、`auto_approve_images`（db_field `aai`，默认 false）。`PUT /v1/admin/site-setting` 只在请求体带这两个键时才写入，旧客户端保存不会把用户配置重置为默认值。
+- **上传与覆盖**：`File.upload_real_file` 对图片按策略写入 `NEED_HUMAN_CHECK` 或 `SAFE`（沿用 `FileSafeStatus`，不新增状态值），并改用一次 `File.objects.modify()` 原子提交内容与审核状态；先写新值再删旧文件，存储失败时旧版本与审核状态不受影响。文本文件维持 `NEED_MACHINE_CHECK`。
+- **访问闸门**：新增 `File.available_in_project()` / `require_project_availability()` 与 `File.project_visibility_query()`：
+  - 列表/前后图查询按可见性过滤，被驳回的图片只保留一行元数据占位（`save_name` 清空、`file_not_exist_reason=BLOCK`），便于重新上传；没有原图的导入占位仍可用于编辑译文。
+  - 标号增删改与排序、翻译增删改、批量校对、OCR、导出、移动、改名、负责人与原作者编辑、撤回完成等入口统一走该闸门；归档项目额外走 `Project.require_unarchived()`。
+- **导出**：`Project.available_images()` 在导出任务消费时重新读取策略（不信任入队时的可见性），TXT 与 ZIP 共用同一批可访问文件；归档项目不再导出。
+- **OCR**：任务消费时复核项目未归档/未在跑、图片仍可见且版本未变，逐张 CAS 置为处理中；不满足的排队项回退为未开始，避免审核期间的状态竞态。
+- **审核接口**：`GET /v1/admin/files` 按 `safe_status` 过滤进行中项目的图片；`POST /v1/admin/files/safe-status` 按 `save_name` 版本通过/驳回。驳回先隐藏再删字节，并保留可重传的占位行。
+- **测试**：新增 `tests/api/test_image_review_api.py`（审核接口、上传/覆盖/URL 导入共用策略）与 `tests/api/test_pending_image_access.py`（各入口的待审访问控制），共 11 个用例；新增 `scripts/test_isolated.py`（内存库 + 临时本地存储 + 内存 Celery，不加载 `.env`）。同步修正两处旧断言：覆盖上传默认进入人工待审核；LabelPlus 文件头文案改为 `gettext()` 取当前 locale。
+- **回归**：容器内跑 `tests/api` + `tests/model`，**289 passed / 2 failed**；两处失败在改动前基线（`3f6d0fb`）同样失败（`test_delete_team_project_set`、`test_sign_url`），与本次无关。
+- **镜像与 GHCR**：`ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix14`，digest `sha256:4697195660505521b687491861bf02f8101ccde58b5e38d99c4540e399a1e0ad`，`latest` 同 digest；源码提交 `e79d3eb`。
+- **测试机**：backend + celery 重建为 fix14，frontend 保持 fix12；compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix14-20261121-011450`。验收：`/api/ping` 200、`flavor.version=iroha16-fix14`；设置 GET/PUT 正常、旧客户端 PUT 保留原值、显式 PUT 能保存；上传 `safe_status=3(NEED_HUMAN_CHECK)` 且 `available_in_project=true`、`/content` 200；`allow_pending_images=false` 后 `/content` 400、列表查不到、导出不含该图；恢复 true 后全部恢复；Celery 1 node online；日志无 error。
+- **正式机**：本轮未由本机部署（22 端口不可达），改为在正式机自行拉取 `latest`：
+  备份 compose 与旧标签 → `docker compose pull moeflow-backend moeflow-celery` → `docker compose up -d --no-deps moeflow-backend moeflow-celery` → 用 `/api/v1/site/flavor` 的 `version` 校验。回退改回 `v1.1.8-iroha16-fix11` 重建即可，新增字段旧版会忽略。
+- **上线注意**：默认 `auto_approve_images=false`，正式机新图会进人工待审核；Atelier 审核页上线前，因 `allow_pending_images=true` 这些图仍可用。若要与旧行为一致，先在站点设置把 `auto_approve_images` 打开。
 
 ---
 

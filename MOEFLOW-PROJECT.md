@@ -1,7 +1,7 @@
-# MoeFlow 项目交接档案（iroha16-fix12 定制版）
+# MoeFlow 项目交接档案（iroha16-fix14 定制版）
 
-> 项目已有历史上线版本；本次 **iroha16-fix12 已部署测试机与正式机**：前端暗色模式专项修复；后端沿用 fix11。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
-> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。当前工作区版本 **iroha16-fix12（双机已部署）**。
+> 项目已有历史上线版本；当前 **iroha16-fix14 已部署测试机、正式机待拉取**：后端新增图片审核与待审图片访问控制；前端沿用 fix12。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
+> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。当前工作区版本 **iroha16-fix14（测试机已部署，正式机待拉取）**。
 > 注：本档案为**脱敏版**，不含具体主机 IP、域名、端口、代理与凭据；实际部署环境信息由部署方自理。
 
 ---
@@ -311,6 +311,13 @@ python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample'); impo
   - `CVE-2026-109618` / `CVE-2026-109619`（PHP RCE，8.2.35/8.3.36/8.4.27/8.5.12 修复）：**不适用**——正式机无 PHP（无 php 二进制、无 php-fpm、无 PHP 容器镜像），MoeFlow 后端为 Python 3.11。
   - `CVE-2026-111497`（Node.js Brotli 解码器 OOB 写 → RCE，24.22.1 修复）：**已修复**——正式机唯一 Node 运行时是 `bili-dyn-publisher` 容器，`node -v` = `v24.22.1`（即 2026-10-21 安全版），业务页面 200、日志无报错；MoeFlow 自身不使用 Node（前端为 nginx 静态、后端 Python）。
   - 容器内 nginx 为 `1.26.3`（`nginx:1.26` 基础镜像）：按 Debian 记录受 `CVE-2026-42055`（HTTP/2 头长度）与 `CVE-2026-48142`（charset 越界读）影响，但该容器仅 `listen 80`、无 `http2`、无 `charset` 指令，且只经主机 nginx 以 HTTP/1.1 反代，**当前拓扑不可达**；建议下次重建前端镜像时把 `FROM nginx:1.26` 提到 `nginx:1.31.8`。
+
+## 4.17 iroha16-fix14 图片审核与待审图片访问（2026-11-21）
+- **站点设置**：`allow_pending_images`（默认 true，待审图片能否在项目内使用）、`auto_approve_images`（默认 false，新图直接通过或进人工待审核）；旧客户端保存不覆盖这两项。
+- **闸门**：上传/覆盖按策略落状态；标号、翻译、OCR、导出、移动、改名、负责人与作者编辑、撤回等入口统一校验；列表与前后图按可见性过滤，被驳回的图只留元数据占位以便重传。
+- **导出**：导出任务消费时重新读策略，TXT 与 ZIP 共用同一批可访问文件；归档项目不导出。
+- **测试**：新增 2 个测试文件（11 用例）+ `scripts/test_isolated.py` 离线跑测；`tests/api` + `tests/model` 289 passed，2 个既有失败与改动无关。
+- **发布**：后端 `v1.1.8-iroha16-fix14`（GHCR digest `sha256:4697195…e0ad`，`latest` 同步）；测试机已部署，正式机自行拉取 `latest`。上线初期如需与旧版一致，先把 `auto_approve_images` 打开。
 
 ## 4.16 v16-fix5 文件列表自适应分页（2026-11-01）
 - 移除文件页每页 16 张固定下限，按容器宽高和真实卡片行高（296）计算每页数量。
