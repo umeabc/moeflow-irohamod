@@ -37,10 +37,13 @@ class SourceTranslationListAPI(MoeAPIView):
         """
         if source.kind == SourceKind.AUTHOR:
             raise NoPermissionError(gettext("原作者标号不能添加翻译"))
-        if not self.current_user.can(source.file.project, ProjectPermission.ADD_TRA):
+        file = source.file
+        if not self.current_user.can(file.project, ProjectPermission.ADD_TRA):
             raise NoPermissionError
+        file.require_project_availability()
+        file.project.require_unarchived()
         data = self.get_json(CreateTranslationSchema())
-        target = source.file.project.target_by_id(data["target_id"])
+        target = file.project.target_by_id(data["target_id"])
         translation = source.create_translation(
             data["content"], target=target, user=self.current_user
         )
@@ -72,11 +75,12 @@ class TranslationAPI(MoeAPIView):
         """
         if translation.source.kind == SourceKind.AUTHOR:
             raise NoPermissionError(gettext("原作者标号不能修改翻译"))
+        file = translation.source.file
+        file.require_project_availability()
+        file.project.require_unarchived()
         data = self.get_json(EditTranslationSchema())
         if "selected" in data:  # 检查是否有校对权限
-            if not self.current_user.can(
-                translation.source.file.project, ProjectPermission.CHECK_TRA
-            ):
+            if not self.current_user.can(file.project, ProjectPermission.CHECK_TRA):
                 raise NoPermissionError
             if data["selected"] is True:
                 translation.select(user=self.current_user)
@@ -94,7 +98,7 @@ class TranslationAPI(MoeAPIView):
             translation.update_cache("edit_time", datetime.datetime.utcnow())
         if "proofread_content" in data:  # 检查是否有校对权限
             if not self.current_user.can(
-                translation.source.file.project,
+                file.project,
                 ProjectPermission.PROOFREAD_TRA,
             ):
                 raise NoPermissionError
@@ -129,8 +133,11 @@ class TranslationAPI(MoeAPIView):
         """
         if translation.source.kind == SourceKind.AUTHOR:
             raise NoPermissionError(gettext("原作者标号不能删除翻译"))
+        file = translation.source.file
         if translation.user != self.current_user and not self.current_user.can(
-            translation.source.file.project, ProjectPermission.DELETE_TRA
+            file.project, ProjectPermission.DELETE_TRA
         ):
             raise NoPermissionError
+        file.require_project_availability()
+        file.project.require_unarchived()
         translation.clear()

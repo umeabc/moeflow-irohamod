@@ -9,6 +9,7 @@ import uuid
 import chardet
 from celery.exceptions import MaxRetriesExceededError
 from flask import json
+from mongoengine.queryset.visitor import Q
 
 from app import celery
 from app import oss
@@ -124,15 +125,7 @@ def parse_text(file_id, /, *, old_revision_id=None, run_sync=False):
         return parse_text_task.delay(file_id, old_revision_id)
 
 
-@celery.task(name="tasks.safe_task", bind=True, max_retries=3)
-def safe_task(self, file_id):
-    """发送安全检测请求"""
-    from app.models.file import File
-    from app.models.project import Project
-    from app.models.team import Team
-
-    (Project, Team)
-    # 配置文件
+def _green_request(action, uri):
     from aliyunsdkcore import client
     from aliyunsdkcore.profile import region_provider
     from aliyunsdkcore.request import RoaRequest
@@ -145,32 +138,39 @@ def safe_task(self, file_id):
     region_provider.modify_point(
         "Green", "cn-shanghai", "green.cn-shanghai.aliyuncs.com"
     )
-    oss_file_prefix = celery.conf.app_config["OSS_FILE_PREFIX"]
-    connect_db(celery.conf.app_config)
-    oss.init(celery.conf.app_config)
-    # 获取file
-    file = File.objects(id=file_id, type=FileType.IMAGE).first()
-    if file is None:
-        return f"跳过，文件不存在，File <{file_id}>"
-    # 如果图片是成功或等待结果状态则跳过
-    if file.safe_status in [
-        FileSafeStatus.NEED_HUMAN_CHECK,
-        FileSafeStatus.SAFE,
-        FileSafeStatus.BLOCK,
-    ]:
-        return "跳过，文件已有检测结果，File <{file_id}>"
-    if file.safe_status == FileSafeStatus.WAIT_RESULT:
-        # 报告开始时间
-        start_time = "无"
-        if file.safe_start_time:
-            start_time = str(file.safe_start_time)
-        return f"跳过，文件正在等待结果，开始时间：{start_time}，File <{file_id}>"
-
-    # 通过sdk建立请求头
-    request = RoaRequest("Green", "2017-08-25", "ImageAsyncScan", "green")
-    request.set_uri_pattern("/green/image/asyncscan")
+    request = RoaRequest("Green", "2017-08-25", action, "green")
+    request.set_uri_pattern(uri)
     request.set_method("POST")
     request.set_accept_format("JSON")
+    return green_client, request
+
+
+@celery.task(name="tasks.safe_task", bind=True, max_retries=3)
+def safe_task(self, file_id, expected_save_name=None):
+    """处理遗留机器检测请求，不覆盖已经重传或人工审核的图片。"""
+    from app.models.file import File
+
+    connect_db(celery.conf.app_config)
+    file = File.objects(id=file_id, type=FileType.IMAGE).first()
+    if (
+        file is None
+        or not file.save_name
+        or (expected_save_name is not None and file.save_name != expected_save_name)
+        or file.file_not_exist_reason == FileNotExistReason.BLOCK
+        or file.safe_status not in (
+            FileSafeStatus.NEED_MACHINE_CHECK,
+            FileSafeStatus.QUEUING,
+        )
+    ):
+        return f"跳过：图片已变更或不需机器检测，File <{file_id}>"
+    image = File.objects(id=file.id, type=FileType.IMAGE, save_name=file.save_name)
+    status = Q(safe_status=file.safe_status)
+    if file.safe_status == FileSafeStatus.NEED_MACHINE_CHECK:
+        status |= Q(safe_status=None)
+    version = image.filter(status, file_not_exist_reason__ne=FileNotExistReason.BLOCK)
+    oss_file_prefix = celery.conf.app_config["OSS_FILE_PREFIX"]
+    oss.init(celery.conf.app_config)
+    green_client, request = _green_request("ImageAsyncScan", "/green/image/asyncscan")
     # 异步支持多张图片，最多50张
     tasks = [
         {
@@ -189,73 +189,83 @@ def safe_task(self, file_id):
         data = json.loads(response)
         if data["code"] == 200:
             task_id = data["data"][0]["taskId"]
-            # 建立获取结果任务
-            result = safe_result_task.apply_async(args=(file_id,), countdown=120)
-            # 将File设置成处理中，并设置开始时间
-            file.update(
+            if not version.update_one(
                 safe_status=FileSafeStatus.WAIT_RESULT,
                 safe_result_id=task_id,
                 safe_start_time=datetime.datetime.utcnow(),
-                safe_task_id=result.task_id,
+                unset__safe_task_id=1,
+            ):
+                return f"跳过：图片已变更，File <{file_id}>"
+            waiting = image.filter(
+                safe_status=FileSafeStatus.WAIT_RESULT, safe_result_id=task_id
             )
+            try:
+                result = safe_result_task.apply_async(
+                    args=(file_id, file.save_name, task_id), countdown=120
+                )
+            except Exception:
+                waiting.update_one(
+                    safe_status=file.safe_status,
+                    unset__safe_result_id=1,
+                    unset__safe_start_time=1,
+                )
+                raise
+            waiting.update_one(safe_task_id=result.task_id)
             return "成功：稍后查询结果"
         else:
             raise Exception(f"阿里云绿网code非200：{data}")
     except Exception as e:
         # 尝试重新访问
         try:
-            self.retry(countdown=5)
-            file.update(safe_status=FileSafeStatus.QUEUING)
+            self.retry(countdown=5, args=(file_id, file.save_name), kwargs={})
             return f"失败：重试，错误内容：({e})"
         except MaxRetriesExceededError:
-            file.update(
+            version.update_one(
                 safe_status=FileSafeStatus.NEED_MACHINE_CHECK,
                 unset__safe_result_id=1,
                 unset__safe_start_time=1,
+                unset__safe_task_id=1,
             )
             return f"失败：超过最大重试次数，错误内容：({e})"
 
 
-def safe(file_id):
-    return safe_task.delay(file_id)
+def safe(file_id, expected_save_name=None):
+    return safe_task.delay(file_id, expected_save_name)
 
 
 @celery.task(name="tasks.safe_result_task", bind=True, max_retries=10)
-def safe_result_task(self, file_id):
-    """获取检测安全检测结果"""
+def safe_result_task(self, file_id, expected_save_name=None, expected_result_id=None):
+    """仅把遗留检测结果应用到当时排队的存储对象。"""
     from app.models.file import File
-    from app.models.project import Project
-    from app.models.team import Team
 
-    (Project, Team)
-    # 配置
-    from aliyunsdkcore import client
-    from aliyunsdkcore.profile import region_provider
-    from aliyunsdkcore.request import RoaRequest
-
-    green_client = client.AcsClient(
-        celery.conf.app_config["SAFE_ACCESS_KEY_ID"],
-        celery.conf.app_config["SAFE_ACCESS_KEY_SECRET"],
-        "cn-shanghai",
-    )
-    region_provider.modify_point(
-        "Green", "cn-shanghai", "green.cn-shanghai.aliyuncs.com"
-    )
-    oss_file_prefix = celery.conf.app_config["OSS_FILE_PREFIX"]
     connect_db(celery.conf.app_config)
-    oss.init(celery.conf.app_config)
-    # 获取file
     file = File.objects(id=file_id, type=FileType.IMAGE).first()
-    if file is None:
-        return f"跳过：文件不存在，File <{file_id}>"
-    # 如果图片是成功或等待结果状态则跳过
-    if file.safe_status != FileSafeStatus.WAIT_RESULT:
-        return f"跳过：文件状态不是WAIT_RESULT，File <{file_id}>"
-    # 配置请求
-    request = RoaRequest("Green", "2017-08-25", "ImageAsyncScanResults", "green")
-    request.set_uri_pattern("/green/image/results")
-    request.set_method("POST")
-    request.set_accept_format("JSON")
+    if (
+        file is None
+        or not file.save_name
+        or file.safe_status != FileSafeStatus.WAIT_RESULT
+        or not file.safe_result_id
+        or file.file_not_exist_reason == FileNotExistReason.BLOCK
+        or (expected_save_name is not None and file.save_name != expected_save_name)
+        or (expected_result_id is not None and file.safe_result_id != expected_result_id)
+        # 上一版本的消息只有 file_id，校验其 Celery ID，避免认领其他检测。
+        or (
+            expected_save_name is None
+            and self.request.id
+            and file.safe_task_id != self.request.id
+        )
+    ):
+        return f"跳过：图片或检测请求已变更，File <{file_id}>"
+    version = File.objects(
+        id=file.id,
+        type=FileType.IMAGE,
+        save_name=file.save_name,
+        safe_status=FileSafeStatus.WAIT_RESULT,
+        safe_result_id=file.safe_result_id,
+        file_not_exist_reason__ne=FileNotExistReason.BLOCK,
+    )
+    oss.init(celery.conf.app_config)
+    green_client, request = _green_request("ImageAsyncScanResults", "/green/image/results")
     request.set_content(json.dumps([file.safe_result_id]))
     try:
         response = green_client.do_action_with_exception(request)
@@ -269,39 +279,37 @@ def safe_result_task(self, file_id):
                         scene = scene_result["scene"]
                         suggestion = scene_result["suggestion"]
                         if scene == "porn":
-                            # 图片正常设置为安全
+                            changes = dict(
+                                unset__safe_result_id=1,
+                                unset__safe_start_time=1,
+                                unset__safe_task_id=1,
+                            )
                             if suggestion == "pass":
-                                file.update(
-                                    safe_status=FileSafeStatus.SAFE,
-                                    unset__safe_result_id=1,
-                                    unset__safe_start_time=1,
-                                    unset__safe_task_id=1,
-                                )
-                            # 确认黄图直接屏蔽
+                                changes["safe_status"] = FileSafeStatus.SAFE
                             elif suggestion == "block":
-                                # 删除oss上文件
-                                oss.delete(
-                                    oss_file_prefix,
-                                    file.save_name,
-                                    bucket_name=file.storage_bucket or None,
-                                )
-                                file.update(
-                                    save_name="",
-                                    file_not_exist_reason=FileNotExistReason.BLOCK,  # noqa: E501
-                                    safe_status=FileSafeStatus.BLOCK,
-                                    unset__safe_result_id=1,
-                                    unset__safe_start_time=1,
-                                    unset__safe_task_id=1,
-                                )
-                                file.inc_cache("file_size", -file.file_size)
-                            # 需要人工审核 scene == 'review' 或其他
+                                changes["safe_status"] = FileSafeStatus.BLOCK
                             else:
-                                file.update(
-                                    safe_status=FileSafeStatus.NEED_HUMAN_CHECK,  # noqa: E501
-                                    unset__safe_result_id=1,
-                                    unset__safe_start_time=1,
-                                    unset__safe_task_id=1,
+                                changes["safe_status"] = FileSafeStatus.NEED_HUMAN_CHECK
+                            if not version.update_one(**changes):
+                                return f"跳过：图片或检测请求已变更，File <{file_id}>"
+                            if suggestion == "block":
+                                # 先屏蔽，再删除旧存储对象；删除失败仍保留清理所需的键。
+                                File._delete_stored_file(file.save_name, file.storage_bucket)
+                                blocked = File.objects(
+                                    id=file.id,
+                                    save_name=file.save_name,
+                                    safe_status=FileSafeStatus.BLOCK,
+                                ).modify(
+                                    new=False,
+                                    set__save_name="",
+                                    set__md5="",
+                                    set__file_size=0,
+                                    set__file_not_exist_reason=FileNotExistReason.BLOCK,
                                 )
+                                if blocked is not None and blocked.activated:
+                                    blocked.inc_cache(
+                                        "file_size", -blocked.file_size, update_self=False
+                                    )
                     return f"成功：Image <{file_id}>，详细内容：{task_results}"
                 else:
                     raise Exception(f"阿里云绿网内task数组code非200：{result}")
@@ -311,10 +319,14 @@ def safe_result_task(self, file_id):
         logger.error(e)
         # 尝试重新访问
         try:
-            self.retry(countdown=30)
+            self.retry(
+                countdown=30,
+                args=(file_id, file.save_name, file.safe_result_id),
+                kwargs={},
+            )
             return f"失败：重试，错误内容：{e}"
         except MaxRetriesExceededError:
-            file.update(
+            version.update_one(
                 safe_status=FileSafeStatus.NEED_MACHINE_CHECK,
                 unset__safe_result_id=1,
                 unset__safe_start_time=1,

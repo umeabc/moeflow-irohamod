@@ -309,22 +309,30 @@ class FileModelTestCase(MoeTestCase):
                 self.assertEqual(file1, file2)
 
     def test_upload_file_reset_safe_status(self):
-        """测试覆盖文件时，会重置安全检查状态"""
+        """覆盖文件时按当前审核策略重置安全状态（默认进入人工待审核）"""
+        from app.models.site_setting import SiteSetting
+
         with self.app.test_request_context():
             with open(os.path.join(TEST_FILE_PATH, "1kbA.txt"), "rb") as file:
                 # 测试用项目、团队
                 team = Team.create("t1")
                 project = Project.create("p1", team=team)
-                # 上传文件
+                # 默认 auto_approve_images=False：新图进入人工待审核
                 file1 = project.upload("1.jpg", file)
-                self.assertEqual(file1.safe_status, FileSafeStatus.NEED_MACHINE_CHECK)
+                self.assertEqual(file1.safe_status, FileSafeStatus.NEED_HUMAN_CHECK)
                 file1.update(safe_status=FileSafeStatus.SAFE)
                 file1.reload()
                 self.assertEqual(file1.safe_status, FileSafeStatus.SAFE)
-                # 覆盖文件，将重置安全检查状态
+                # 覆盖文件，按策略重置安全状态
                 project.upload("1.jpg", file)
                 file1.reload()
-                self.assertEqual(file1.safe_status, FileSafeStatus.NEED_MACHINE_CHECK)
+                self.assertEqual(file1.safe_status, FileSafeStatus.NEED_HUMAN_CHECK)
+                # 开启自动通过后，覆盖上传直接视为已通过
+                SiteSetting.get().update(auto_approve_images=True)
+                project.upload("1.jpg", file)
+                file1.reload()
+                self.assertEqual(file1.safe_status, FileSafeStatus.SAFE)
+                SiteSetting.get().update(auto_approve_images=False)
 
     def test_file_md5(self):
         """测试md5的获取"""

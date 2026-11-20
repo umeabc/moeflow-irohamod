@@ -13,7 +13,6 @@ from zipfile import ZipFile
 from app import TMP_PATH, celery
 
 from app.constants.output import OutputStatus, OutputTypes
-from app.constants.file import FileType
 from app import oss
 from app.models import connect_db
 from app.regexs import SAFE_FILENAME_REGEX
@@ -93,12 +92,12 @@ def output_project_task(output_id):
     try:
         # 创建图片临时文件夹
         os.makedirs(zip_images_folder_path, exist_ok=True)
-        files = list(
-            project.files(
-                type_only=FileType.IMAGE,
-                file_ids_include=file_ids_include,
-                file_ids_exclude=file_ids_exclude,
-            )
+        # 不信任入队时的可见性。在消费时读取一次策略，再让 TXT 和 ZIP
+        # 共享同一批确实能访问内容的文件（不含仅保留元数据的屏蔽项）。
+        files = project.available_images(
+            File.current_allow_pending_images(),
+            file_ids_include=file_ids_include,
+            file_ids_exclude=file_ids_exclude,
         )
         export_paths = build_export_paths(files) if type == OutputTypes.ALL else None
         # Existing formats retain their legacy LabelPlus paths and ZIP layout.
@@ -115,9 +114,8 @@ def output_project_task(output_id):
         output.update(status=OutputStatus.TRANSLATION_OUTPUTING)
         labelplus = project.to_labelplus(
             target=target,
-            file_ids_include=file_ids_include,
-            file_ids_exclude=file_ids_exclude,
             export_paths=converted_paths,
+            available_images=files,
         )
         with open(zip_translations_txt_path, "w", encoding="utf-8") as txt:
             txt.write(labelplus)

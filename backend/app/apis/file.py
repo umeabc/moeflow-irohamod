@@ -1,8 +1,10 @@
 from app.exceptions.project import ProjectFinishedError
 import mimetypes
 
+from bson import ObjectId
 from flask import current_app, g, request, send_file
 from flask_babel import gettext
+from mongoengine import Q
 
 from app import oss
 from app.core.responses import MoePagination
@@ -123,15 +125,19 @@ class ProjectFileListAPI(MoeAPIView):
             other_query = {**other_query, "type_exclude": FileType.FOLDER}
         # 进行搜索
         p = MoePagination()
-        files = project.files(
-            skip=p.skip,
-            limit=p.limit,
-            parent=query["parent_id"],
-            order_by=query["order_by"],
-            word=query["word"],
-            **other_query,
+        allow_pending = File.current_allow_pending_images()
+        files = (
+            project.files(
+                parent=query["parent_id"],
+                order_by=query["order_by"],
+                word=query["word"],
+                **other_query,
+            )
+            .filter(File.project_visibility_query(allow_pending))
+            .skip(p.skip)
+            .limit(p.limit)
         )
-        data = [file.to_api() for file in files]
+        data = [file.to_api(allow_pending_images=allow_pending) for file in files]
         if query["target"]:
             target = project.target_by_id(query["target"])
             file_target_caches = FileTargetCache.objects(
@@ -197,6 +203,8 @@ class ProjectFileListAPI(MoeAPIView):
             )
             # 同名同项目的覆盖上传（同一个文件）不算重复
             if duplicate and (old_file is None or str(duplicate.id) != str(old_file.id)):
+                if not duplicate.available_in_project(File.current_allow_pending_images()):
+                    raise FileDuplicateError(gettext("相同内容的图片已存在"))
                 dup_project = duplicate.project
                 raise FileDuplicateError(
                     gettext(
@@ -246,8 +254,19 @@ class ProjectFileMoveAPI(MoeAPIView):
         ):
             raise NoPermissionError(gettext("您没有权限访问目标项目"))
         files = list(File.objects(id__in=data["file_ids"], project=project))
+        allow_pending = File.current_allow_pending_images()
         results = []
         for file in files:
+            if not file.available_in_project(allow_pending):
+                results.append(
+                    {
+                        "file_id": str(file.id),
+                        "name": "",
+                        "status": "skipped",
+                        "reason": gettext("此图片当前不可在项目中使用"),
+                    }
+                )
+                continue
             if file.type != FileType.IMAGE or not file.activated:
                 results.append(
                     {
@@ -344,8 +363,11 @@ class FileAPI(MoeAPIView):
         """
         if not self.current_user.can(file.project, ProjectPermission.ACCESS):
             raise NoPermissionError(gettext("您没有此项目的访问权限"))
+        allow_pending = File.current_allow_pending_images()
+        if file.save_name:
+            file.require_project_availability(allow_pending)
         query = self.get_query({}, FileGetSchema())
-        data = file.to_api()
+        data = file.to_api(allow_pending_images=allow_pending)
         data["project_id"] = str(file.project.id)
         if query["target"]:
             target = file.project.target_by_id(query["target"])
@@ -355,13 +377,14 @@ class FileAPI(MoeAPIView):
             data["file_target_cache"] = file_target_cache.to_api()
         # 插入前后图片的信息
         if file.type == FileType.IMAGE:
+            visible_rows = File.project_visibility_query(allow_pending)
             prev_image = (
                 file.project.files(
                     parent=file.parent,
                     type_only=FileType.IMAGE,
                     order_by=["-sort_name"],
                 )
-                .filter(sort_name__lt=file.sort_name)
+                .filter(visible_rows, sort_name__lt=file.sort_name)
                 .limit(1)
                 .first()
             )
@@ -371,14 +394,14 @@ class FileAPI(MoeAPIView):
                     type_only=FileType.IMAGE,
                     order_by=["sort_name"],
                 )
-                .filter(sort_name__gt=file.sort_name)
+                .filter(visible_rows, sort_name__gt=file.sort_name)
                 .limit(1)
                 .first()
             )
             if prev_image:
-                data["prev_image"] = prev_image.to_api()
+                data["prev_image"] = prev_image.to_api(allow_pending_images=allow_pending)
             if next_image:
-                data["next_image"] = next_image.to_api()
+                data["next_image"] = next_image.to_api(allow_pending_images=allow_pending)
         return data
 
     @token_required
@@ -411,6 +434,7 @@ class FileAPI(MoeAPIView):
                     gettext("original_author 不能与其它参数同时提交")
                 )
             require_edit_original_author(self.current_user, file)
+            file.require_project_availability()
             author_source = set_original_author(file, data["original_author"])
             return {
                 "message": gettext("保存成功"),
@@ -420,6 +444,7 @@ class FileAPI(MoeAPIView):
         if data.get("parent_id"):
             if not self.current_user.can(file.project, ProjectPermission.MOVE_FILE):
                 raise NoPermissionError(gettext("您没有权限移动文件"))
+            file.require_project_availability()
             if data["parent_id"] == "root":
                 file.move_to(None)
             else:
@@ -428,6 +453,7 @@ class FileAPI(MoeAPIView):
         elif data.get("name"):
             if not self.current_user.can(file.project, ProjectPermission.RENAME_FILE):
                 raise NoPermissionError(gettext("您没有权限修改文件名"))
+            file.require_project_availability()
             file.rename(data["name"])
             return {"message": gettext("改名成功")}
         elif any(field in data for field in role_fields):
@@ -466,6 +492,7 @@ class FileAPI(MoeAPIView):
                     # 逐字段判权后直接设置（原作者清空走独立分支）
                     editable[field] = value
             if editable:
+                file.require_project_availability()
                 file.update(**editable)
                 file.reload()
                 # 负责人字段可能出现在作者信息模板里，同步更新作者标号文案
@@ -499,6 +526,10 @@ class FileAPI(MoeAPIView):
         # 检查用户权限
         if not self.current_user.can(file.project, ProjectPermission.DELETE_FILE):
             raise NoPermissionError(gettext("您没有权限删除文件"))
+        # An authorized project operator can remove a rejected row instead of
+        # re-uploading it; neither operation gives access to its rejected bytes.
+        if not file.is_blocked_image:
+            file.require_project_availability()
         file.clear()
         return {"message": gettext("删除成功")}
 
@@ -519,6 +550,7 @@ class FileContentAPI(MoeAPIView):
             raise NoPermissionError(gettext("您没有此项目的访问权限"))
         if not file.save_name:
             raise SourceFileNotExist(file.file_not_exist_reason)
+        file.require_project_availability()
         stream = oss.download(
             current_app.config["OSS_FILE_PREFIX"],
             file.save_name,
@@ -563,6 +595,9 @@ class FileOCRAPI(MoeAPIView):
             raise NoPermissionError(gettext("文件不是图像文件"))
         if file.project.team.ocr_quota_left <= 0:
             raise NoPermissionError(gettext("团队限额不足"))
+        file.require_project_availability()
+        if not file.save_name:
+            raise SourceFileNotExist(file.file_not_exist_reason)
         file.parse()
         return {"message": gettext("已加入队列"), "file": file.to_api()}
 
@@ -598,6 +633,7 @@ class FileUndoCompletionAPI(MoeAPIView):
             "coordinator",
         ):
             raise NoPermissionError(gettext("仅项目管理员可撤回校对/嵌字/原作者"))
+        file.require_project_availability()
 
         data = self.get_json()
         for key in ("proofreader", "typesetter", "original_author"):
@@ -661,24 +697,56 @@ class FileUndoCompletionAPI(MoeAPIView):
         }
 
 
+def _admin_images():
+    active_project_ids = [
+        proj.id for proj in Project.objects(status=ProjectStatus.WORKING).only("id")
+    ]
+    return File.objects(project__in=active_project_ids, activated=True, type=FileType.IMAGE)
+
+
+def _stored_image_query():
+    return Q(save_name__exists=True, save_name__nin=("", None))
+
+
 class AdminFileListAPI(MoeAPIView):
     @admin_required
     def get(self):
         query = self.get_query({"safe_status": [int]}, AdminFileSearchSchema())
         p = MoePagination()
-        db_query = {}
-        if query["safe_status"]:
-            db_query["safe_status__in"] = query["safe_status"]
-        # 仅显示进行中（WORKING）项目下的图片，已完结项目的图片不参与审核
-        active_project_ids = [
-            proj.id
-            for proj in Project.objects(status=ProjectStatus.WORKING).only("id")
-        ]
-        db_query["project__in"] = active_project_ids
-        files = (
-            File.objects(**db_query).skip(p.skip).limit(p.limit).order_by("-edit_time")
+        statuses = query["safe_status"]
+        rows = _stored_image_query()
+        if FileSafeStatus.BLOCK in statuses:
+            # Keep the rejected image's metadata available on the history tab.
+            rows |= Q(safe_status=FileSafeStatus.BLOCK)
+        files = _admin_images().filter(rows)
+        if statuses:
+            # Legacy images without a persisted status appear as status 0.
+            if FileSafeStatus.NEED_MACHINE_CHECK in statuses:
+                statuses = [*statuses, None]
+            files = files.filter(safe_status__in=statuses)
+        files = files.order_by("-edit_time").skip(p.skip).limit(p.limit)
+        return p.set_objects(
+            files,
+            func_kwargs={
+                "allow_pending_images": File.current_allow_pending_images(),
+                "for_review": True,
+            },
         )
-        return p.set_objects(files)
+
+
+def _review_file_ids(value):
+    if not isinstance(value, list) or any(
+        not isinstance(item, str) or not ObjectId.is_valid(item) for item in value
+    ):
+        raise ValidateError(gettext("审核文件 ID 必须是有效的 ID 数组"))
+    return set(str(ObjectId(item)) for item in value)
+
+
+def _review_conflict(file_ids):
+    return {
+        "message": gettext("图片已变更，请刷新审核列表后重试"),
+        "conflicting_file_ids": sorted(file_ids),
+    }, 409
 
 
 class AdminFileListSafeCheckAPI(MoeAPIView):
@@ -686,13 +754,44 @@ class AdminFileListSafeCheckAPI(MoeAPIView):
     @log_action("file.safe_check")
     def put(self):
         data = self.get_json()
-        safe_file_ids = data.get("safe_files", [])
-        unsafe_file_ids = data.get("unsafe_files", [])
-        File.objects(id__in=safe_file_ids).update(safe_status=FileSafeStatus.SAFE)
-        unsafe_files = File.objects(id__in=unsafe_file_ids)
-        unsafe_files.update(safe_status=FileSafeStatus.BLOCK)
-        for file in unsafe_files:
-            file.delete_real_file(file_not_exist_reason=FileNotExistReason.BLOCK)
+        safe_ids = _review_file_ids(data.get("safe_files", []))
+        unsafe_ids = _review_file_ids(data.get("unsafe_files", []))
+        if safe_ids & unsafe_ids:
+            raise ValidateError(gettext("同一图片不能同时通过和驳回"))
+        ids = safe_ids | unsafe_ids
+        versions = None
+        if "file_versions" in data:
+            versions = data["file_versions"]
+            if not isinstance(versions, dict) or any(
+                not isinstance(versions.get(file_id), str) or not versions[file_id]
+                for file_id in ids
+            ):
+                raise ValidateError(gettext("请为所有审核图片提供文件版本"))
+        files = {
+            str(file.id): file
+            for file in _admin_images().filter(_stored_image_query(), id__in=ids)
+        }
+        if versions is not None:
+            conflicts = {
+                file_id
+                for file_id in ids
+                if file_id not in files
+                or versions[file_id] != files[file_id].save_name
+                or (file_id in safe_ids and files[file_id].is_blocked_image)
+            }
+            if conflicts:
+                return _review_conflict(conflicts)
+        conflicts = set()
+        for file_id, file in files.items():
+            approve = file_id in safe_ids
+            if approve and file.is_blocked_image:
+                continue  # Never mark a rejected image SAFE without a fresh upload.
+            if file.project.status != ProjectStatus.WORKING or not file.apply_image_review(
+                approve=approve
+            ):
+                conflicts.add(file_id)
+        if conflicts:
+            return _review_conflict(conflicts)
         return {"message": gettext("处理成功")}
 
 
@@ -749,9 +848,15 @@ class FileSearchAPI(MoeAPIView):
         ]
         if not project_ids:
             return []
-        # 按文件名模糊匹配
+        # Apply visibility before limiting search results.
+        allow_pending = File.current_allow_pending_images()
         files = (
-            File.objects(activated=True, name__icontains=word, project__in=project_ids)
+            File.objects(
+                File.project_visibility_query(allow_pending),
+                activated=True,
+                name__icontains=word,
+                project__in=project_ids,
+            )
             .order_by("-edit_time")
             .limit(limit)
         )
@@ -770,9 +875,8 @@ class FileSearchAPI(MoeAPIView):
                     "project_set_name": project_set.name,
                     "team_id": str(team.id),
                     "team_name": team.name,
-                    "can_access": self.current_user.can(
-                        project, ProjectPermission.ACCESS
-                    ),
+                    "can_access": file.available_in_project(allow_pending)
+                    and self.current_user.can(project, ProjectPermission.ACCESS),
                 }
             )
         return result

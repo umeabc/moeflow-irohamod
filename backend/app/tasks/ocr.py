@@ -11,6 +11,7 @@ from uuid import uuid4
 import requests
 from app import celery, gs_vision, oss
 from app.constants.file import FileType, ImageOCRPercent, ParseErrorType, ParseStatus
+from app.constants.project import ProjectStatus
 from app.constants.source import SourceKind
 from app.models import connect_db
 from app.tasks import SyncResult
@@ -590,6 +591,7 @@ def ocr_task(type, id):
     :param id: 项目/图片 ID
     :return:
     """
+    from app.models.file import File
     from app.models.project import Project
     from app.models.team import Team
 
@@ -601,37 +603,83 @@ def ocr_task(type, id):
         return f"跳过 (项目不存在)：<{type}>{id}"
     if project.ocring:
         return f"跳过 (已在 OCR)：<{type}>{id}"
-    queuing_images = project.files(type_only=FileType.IMAGE).filter(
-        parse_status=ParseStatus.QUEUING
+    queuing_images = list(
+        project.files(type_only=FileType.IMAGE).filter(parse_status=ParseStatus.QUEUING)
     )
-    if queuing_images.count() == 0:
+    if not queuing_images:
         return f"跳过 (没有排队中的文件)：<{type}>{id}"
-    # TODO 现在可以一下启动很多项目，即使限额不够。需要检查限额并多加一个超限额的错误类型。
-    project.update(ocring=True)
-    parsing_images = [*queuing_images]
-    queuing_images.update(
-        parse_status=ParseStatus.PARSING,
-        image_ocr_percent=ImageOCRPercent.QUEUING,
-        parse_start_time=datetime.datetime.utcnow(),
-        unset__parse_error_type=1,
-    )
+
+    def image_version(image, parse_status):
+        return File.objects(
+            id=image.id,
+            project=project,
+            activated=True,
+            save_name=image.save_name,
+            parse_status=parse_status,
+        )
+
+    def reset_queued(image):
+        image_version(image, ParseStatus.QUEUING).update_one(
+            parse_status=ParseStatus.NOT_START,
+            image_ocr_percent=ImageOCRPercent.QUEUING,
+            unset__parse_task_id=1,
+            unset__parse_start_time=1,
+        )
+
+    if project.is_archived:
+        for image in queuing_images:
+            reset_queued(image)
+        return f"跳过 (项目已归档)：<{type}>{id}"
+
+    # 消费时重新读取设置；置为处理中只匹配仍可见的同一份存储对象。
+    allow_pending_images = File.current_allow_pending_images()
+    visibility_query = File.project_visibility_query(allow_pending_images)
+    if not Project.objects(
+        id=project.id,
+        ocring__ne=True,
+        archived__ne=True,
+        status__ne=ProjectStatus.ARCHIVED,
+    ).update_one(ocring=True):
+        return f"跳过 (已在 OCR 或已归档)：<{type}>{id}"
+    parsing_images = []
+    release_ocr_lock = True
     try:
+        parse_start_time = datetime.datetime.utcnow()
+        for image in queuing_images:
+            if not image.save_name or not image.available_in_project(
+                allow_pending_images
+            ):
+                reset_queued(image)
+                continue
+            still_eligible = image_version(image, ParseStatus.QUEUING).filter(
+                visibility_query
+            )
+            if still_eligible.update_one(
+                parse_status=ParseStatus.PARSING,
+                image_ocr_percent=ImageOCRPercent.QUEUING,
+                parse_start_time=parse_start_time,
+                unset__parse_error_type=1,
+            ):
+                parsing_images.append(image)
+        if not parsing_images:
+            return f"跳过 (没有可标记的图片)：<{type}>{id}"
         parsing_alone_images = merge_and_ocr(parsing_images)
         merge_and_ocr(parsing_alone_images, parse_alone=True)
-        project.update(ocring=False)
         return f"成功：<{type}>{id}"
     except AboutToShutdownError:
+        release_ocr_lock = False  # 交给重启后的恢复任务
         return f"Celery 将要关闭，停止标记 <{type}>{id}"
     except Exception as e:
-        project.update(ocring=False)
-        project.files(type_only=FileType.IMAGE).filter(
-            parse_status=ParseStatus.PARSING
-        ).update(
-            parse_status=ParseStatus.PARSE_FAILED,
-            parse_error_type=ParseErrorType.UNKNOWN,
-        )
+        for image in parsing_images:
+            image_version(image, ParseStatus.PARSING).update_one(
+                parse_status=ParseStatus.PARSE_FAILED,
+                parse_error_type=ParseErrorType.UNKNOWN,
+            )
         logger.error(e, exc_info=True)
         return f"失败：<{type}>{id}，错误内容：{e}"
+    finally:
+        if release_ocr_lock:
+            project.update(ocring=False)
 
 
 def ocr(type: str, id: str, /, *, run_sync=False):

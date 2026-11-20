@@ -42,6 +42,7 @@ class FileSourceListAPI(MoeAPIView):
         """
         if not self.current_user.can(file.project, ProjectPermission.ACCESS):
             raise NoPermissionError
+        file.require_project_availability()
         data = self.get_query({"paging": QueryParser.bool}, SourceSearchSchema())
         target = file.project.targets().filter(id=data["target_id"]).first()
         if target is None:
@@ -68,6 +69,8 @@ class FileSourceListAPI(MoeAPIView):
         """
         if not self.current_user.can(file.project, ProjectPermission.CHECK_TRA):
             raise NoPermissionError
+        file.require_project_availability()
+        file.project.require_unarchived()
         data = self.get_json(BatchSelectTranslationSchema(many=True))
         for source_translation_id_map in data:
             source_id = source_translation_id_map["source_id"]
@@ -106,6 +109,8 @@ class FileSourceListAPI(MoeAPIView):
             raise FileTypeNotSupportError(gettext("只有图片文件能添加原文"))
         if not self.current_user.can(file.project, ProjectPermission.ADD_LABEL):
             raise NoPermissionError
+        file.require_project_availability()
+        file.project.require_unarchived()
         data = self.get_json(CreateImageSourceSchema())
         source = file.create_source(
             data["content"],
@@ -142,10 +147,13 @@ class SourceAPI(MoeAPIView):
         """
         if source.kind == SourceKind.AUTHOR:
             raise NoPermissionError(gettext("原作者标号只能在原作者栏修改"))
-        if source.file.type != FileType.IMAGE:
+        file = source.file
+        if file.type != FileType.IMAGE:
             raise FileTypeNotSupportError(gettext("只有图片文件能修改原文"))
-        if not self.current_user.can(source.file.project, ProjectPermission.MOVE_LABEL):
+        if not self.current_user.can(file.project, ProjectPermission.MOVE_LABEL):
             raise NoPermissionError
+        file.require_project_availability()
+        file.project.require_unarchived()
         data = self.get_json(EditImageSourceSchema())
         source.update(**data)
         source.update_cache("edit_time", datetime.datetime.utcnow())
@@ -170,12 +178,13 @@ class SourceAPI(MoeAPIView):
         """
         if source.kind == SourceKind.AUTHOR:
             raise NoPermissionError(gettext("原作者标号不能通过普通标号入口删除"))
-        if source.file.type != FileType.IMAGE:
+        file = source.file
+        if file.type != FileType.IMAGE:
             raise FileTypeNotSupportError(gettext("只有图片文件能删除原文"))
-        if not self.current_user.can(
-            source.file.project, ProjectPermission.DELETE_LABEL
-        ):
+        if not self.current_user.can(file.project, ProjectPermission.DELETE_LABEL):
             raise NoPermissionError
+        file.require_project_availability()
+        file.project.require_unarchived()
         source.update_cache("edit_time", datetime.datetime.utcnow())
         source.clear()
 
@@ -201,10 +210,13 @@ class SourceRankAPI(MoeAPIView):
         """
         if source.kind == SourceKind.AUTHOR:
             raise NoPermissionError(gettext("原作者标号不参与普通标号排序"))
-        if source.file.type != FileType.IMAGE:
+        file = source.file
+        if file.type != FileType.IMAGE:
             raise FileTypeNotSupportError(gettext("只有图片文件能修改原文顺序"))
-        if not self.current_user.can(source.file.project, ProjectPermission.ADD_LABEL):
+        if not self.current_user.can(file.project, ProjectPermission.ADD_LABEL):
             raise NoPermissionError
+        file.require_project_availability()
+        file.project.require_unarchived()
         data = self.get_json(EditImageSourceRankSchema())
         if data["next_source_id"] == "end":
             source.move_ahead(None)

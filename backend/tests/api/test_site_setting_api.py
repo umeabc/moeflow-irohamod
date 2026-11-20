@@ -60,12 +60,9 @@ class TestSiteSettingAPI(MoeAPITestCase):
         )
         self.assertErrorEqual(data)
         site_setting.reload()
-        self.assertEqual(
-            site_setting.enable_whitelist, new_setting_json["enable_whitelist"]
-        )
-        self.assertEqual(
-            site_setting.whitelist_emails, new_setting_json["whitelist_emails"]
-        )
+        # Deprecated whitelist fields are accepted but no longer written.
+        self.assertTrue(site_setting.enable_whitelist)
+        self.assertEqual(site_setting.whitelist_emails, [])
         self.assertEqual(
             site_setting.only_allow_admin_create_team,
             new_setting_json["only_allow_admin_create_team"],
@@ -74,3 +71,28 @@ class TestSiteSettingAPI(MoeAPITestCase):
             [str(id) for id in site_setting.auto_join_team_ids],
             new_setting_json["auto_join_team_ids"],
         )
+
+    def test_review_switches_default_and_are_preserved_by_older_settings_put(self):
+        admin = self.create_user("review-admin")
+        admin.admin = True
+        admin.save()
+        token = admin.generate_token()
+        url = "/v1/admin/site-setting"
+        # Existing site documents need not be migrated before deploying.
+        SiteSetting.get().update(unset__allow_pending_images=1, unset__auto_approve_images=1)
+        initial = self.get(url, token=token)
+        self.assertTrue(initial.json["allow_pending_images"])
+        self.assertFalse(initial.json["auto_approve_images"])
+        old_payload = {"only_allow_admin_create_team": False, "auto_join_team_ids": []}
+        updated = self.put(
+            url,
+            token=token,
+            json={**old_payload, "allow_pending_images": False, "auto_approve_images": True},
+        )
+        self.assertErrorEqual(updated)
+        self.assertFalse(updated.json["allow_pending_images"])
+        self.assertTrue(updated.json["auto_approve_images"])
+        self.assertErrorEqual(self.put(url, token=token, json=old_payload))
+        saved = self.get(url, token=token)
+        self.assertFalse(saved.json["allow_pending_images"])
+        self.assertTrue(saved.json["auto_approve_images"])

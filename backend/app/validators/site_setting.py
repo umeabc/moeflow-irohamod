@@ -26,6 +26,8 @@ class SiteSettingSchema(DefaultSchema):
         required=True,
         error_messages={**required_message},
     )
+    allow_pending_images = fields.Boolean()
+    auto_approve_images = fields.Boolean()
     homepage_html = fields.Str()
     homepage_css = fields.Str()
     # 从社交媒体/外部链接下载图片设置

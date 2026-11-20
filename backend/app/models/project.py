@@ -812,6 +812,25 @@ class Project(GroupMixin, Document):
         files = mongo_slice(files, skip, limit)
         return files
 
+    def available_images(
+        self, allow_pending_images, /, *, file_ids_include=None, file_ids_exclude=None
+    ):
+        """图片内容操作的文件集合；可列出元数据的屏蔽占位也不能导出。"""
+        files = self.files(
+            type_only=FileType.IMAGE,
+            file_ids_include=file_ids_include,
+            file_ids_exclude=file_ids_exclude,
+        ).filter(File.project_visibility_query(allow_pending_images))
+        return [file for file in files if file.available_in_project(allow_pending_images)]
+
+    @property
+    def is_archived(self):
+        return self.archived or self.status == ProjectStatus.ARCHIVED
+
+    def require_unarchived(self):
+        if self.is_archived:
+            raise ProjectFinishedError
+
     def plan_finish(self):
         """计划完结项目"""
         # 项目已有完结/销毁计划
@@ -997,8 +1016,15 @@ class Project(GroupMixin, Document):
         file_ids_include: List[str] = None,
         file_ids_exclude: List[str] = None,
         export_paths=None,
+        available_images=None,
     ):
-        """将图片文件的翻译导出成Labelplus格式"""
+        """将可用图片导出为 LabelPlus；ZIP 可复用同一份文件快照。"""
+        if available_images is None:
+            available_images = self.available_images(
+                File.current_allow_pending_images(),
+                file_ids_include=file_ids_include,
+                file_ids_exclude=file_ids_exclude,
+            )
         # 标签分组：1=框内、2=框外；启用原作者的项目追加第 3 组「作者信息」
         label_groups = [gettext("框内"), gettext("框外")]
         if bool(self.with_author):
@@ -1012,12 +1038,7 @@ class Project(GroupMixin, Document):
             + gettext("可使用 LabelPlus Photoshop 脚本导入 psd 中")
             + "\r\n"  # 注释
         )
-        # 遍历所有图片
-        for file in self.files(
-            type_only=FileType.IMAGE,
-            file_ids_include=file_ids_include,
-            file_ids_exclude=file_ids_exclude,
-        ):
+        for file in available_images:
             data += file.to_labelplus(
                 target=target,
                 export_path=(export_paths or {}).get(str(file.id)),

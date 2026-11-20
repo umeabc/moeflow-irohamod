@@ -19,6 +19,7 @@ from mongoengine import (
     IntField,
     ListField,
     LongField,
+    Q,
     ReferenceField,
     StringField,
 )
@@ -39,6 +40,7 @@ from app.exceptions import (
     FileTypeNotSupportError,
     FolderNotExistError,
     FolderNoVersionError,
+    NoPermissionError,
     SourceFileNotExist,
     SourceMovingError,
     SourceNotExistError,
@@ -47,6 +49,7 @@ from app.exceptions import (
     TipEmptyError,
     TranslationNotUniqueError,
 )
+from app.models.site_setting import SiteSetting
 from app.models.target import Target
 from app.models.term import Term
 
@@ -77,6 +80,12 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 default_translations_order = ["-selected", "-proofread_content", "-edit_time"]
+PENDING_IMAGE_SAFE_STATUSES = (
+    FileSafeStatus.NEED_MACHINE_CHECK,
+    FileSafeStatus.QUEUING,
+    FileSafeStatus.WAIT_RESULT,
+    FileSafeStatus.NEED_HUMAN_CHECK,
+)
 
 
 class Filename:
@@ -691,6 +700,53 @@ class File(Document):
         if update_project:
             self.project.update_cache(cache_name, value)
 
+    @staticmethod
+    def current_allow_pending_images():
+        settings = SiteSetting.get()
+        return settings.allow_pending_images if settings is not None else True
+
+    @staticmethod
+    def project_visibility_query(allow_pending_images: bool) -> Q:
+        """Visible project rows, including placeholders for re-upload."""
+        status = Q(safe_status=FileSafeStatus.SAFE)
+        if allow_pending_images:
+            # Old rows with no status are equivalent to NEED_MACHINE_CHECK.
+            status |= Q(safe_status__in=PENDING_IMAGE_SAFE_STATUSES) | Q(safe_status=None)
+        return (
+            Q(type__ne=FileType.IMAGE)
+            | Q(save_name__in=("", None))
+            | Q(save_name__exists=False)
+            | (Q(file_not_exist_reason__ne=FileNotExistReason.BLOCK) & status)
+        )
+
+    @property
+    def is_blocked_image(self):
+        return self.type == FileType.IMAGE and (
+            self.safe_status == FileSafeStatus.BLOCK
+            or self.file_not_exist_reason == FileNotExistReason.BLOCK
+        )
+
+    def available_in_project(self, allow_pending_images: bool) -> bool:
+        """Moderation gate only: callers must still check their usual permissions."""
+        if self.type != FileType.IMAGE:
+            return True
+        if self.is_blocked_image:
+            return False
+        if not self.save_name:
+            # A LabelPlus placeholder (and a resumed project's missing original)
+            # still supports editing its translations. A rejected image does not.
+            return True
+        return self.safe_status == FileSafeStatus.SAFE or (
+            bool(allow_pending_images)
+            and self.safe_status in (*PENDING_IMAGE_SAFE_STATUSES, None)
+        )
+
+    def require_project_availability(self, allow_pending_images=None):
+        if allow_pending_images is None:
+            allow_pending_images = self.current_allow_pending_images()
+        if not self.available_in_project(allow_pending_images):
+            raise NoPermissionError(gettext("此图片当前不可在项目中使用"))
+
     @property
     def url(self):
         if not self.save_name:
@@ -770,40 +826,55 @@ class File(Document):
         上传源文件
         """
         ensure_image_codec(self.name)
-        # 尝试删除源文件
-        self.delete_real_file()
-        # 重置安全检测数据
-        self.update(
-            safe_status=FileSafeStatus.NEED_MACHINE_CHECK,
+        filename = Filename(self.name)
+        save_name = str(ObjectId()) + "." + filename.suffix
+        md5 = get_file_md5(real_file)
+        file_size = math.ceil(get_file_size(real_file))
+        # Keep the old version and its review state if the storage write fails.
+        oss_result, storage_bucket = oss.upload(
+            current_app.config["OSS_FILE_PREFIX"], save_name, real_file
+        )
+        safe_status = FileSafeStatus.NEED_MACHINE_CHECK
+        if self.type == FileType.IMAGE:
+            settings = SiteSetting.get()
+            safe_status = (
+                FileSafeStatus.SAFE
+                if settings is not None and settings.auto_approve_images
+                else FileSafeStatus.NEED_HUMAN_CHECK
+            )
+        now = datetime.datetime.utcnow()
+        # Commit content and its moderation state together. The pre-image is the
+        # actual version superseded, even if another request changed it meanwhile.
+        old_file = File.objects(id=self.id).modify(
+            new=False,
+            set__save_name=save_name,
+            set__storage_bucket=storage_bucket or "",
+            set__md5=md5,
+            set__file_size=file_size,
+            set__file_not_exist_reason=FileNotExistReason.UNKNOWN,
+            set__safe_status=safe_status,
+            set__edit_time=now,
             unset__safe_task_id=1,
             unset__safe_result_id=1,
             unset__safe_start_time=1,
         )
-        # 生成用于保存的名称
-        filename = Filename(self.name)
-        save_name = str(ObjectId()) + "." + filename.suffix
-        # 文件md5
-        md5 = get_file_md5(real_file)
-        # 文件大小
-        file_size = math.ceil(get_file_size(real_file))  # 获取文件大小，去掉小数
-        # 将文件上传到OSS/R2（R2 多桶自动选桶，返回实际桶名）
-        oss_result, storage_bucket = oss.upload(
-            current_app.config["OSS_FILE_PREFIX"], save_name, real_file
-        )
-        # 替换原存储名和md5（R2 多桶时记录所在桶）
-        update_kwargs = {"save_name": save_name, "md5": md5}
-        if storage_bucket:
-            update_kwargs["storage_bucket"] = storage_bucket
-        self.update(**update_kwargs)
-        # 更新文件大小，非激活修订版只更新自身文件大小
-        if self.activated:
-            self.inc_cache("file_size", file_size - self.file_size)
-        else:
-            self.update(file_size=file_size)
-        # 更新修改时间
-        self.update_cache("edit_time", datetime.datetime.utcnow())
-        # 检查文件安全性
-        if do_safe_scan:
+        if old_file is None:
+            self._delete_stored_file(save_name, storage_bucket)
+            raise FileNotExistError
+        if old_file.activated:
+            old_file.inc_cache(
+                "file_size", file_size - old_file.file_size, update_self=False
+            )
+            old_file.update_cache("edit_time", now, update_self=False)
+        try:
+            self._delete_stored_file(old_file.save_name, old_file.storage_bucket)
+        except Exception:
+            logger.exception("Unable to remove superseded file %s", old_file.save_name)
+        self.reload()
+        if self.save_name != save_name:
+            return oss_result
+        # The project upload paths never opt in to the legacy scanner.
+        if do_safe_scan and safe_status != FileSafeStatus.SAFE:
             self.safe_scan()
         # 文本自动解析生成 Source
         if self.type == FileType.TEXT:
@@ -816,6 +887,66 @@ class File(Document):
             create_thumbnail(str(self.id))
         self.reload()
         return oss_result
+
+    @staticmethod
+    def _delete_stored_file(save_name, storage_bucket):
+        if not save_name:
+            return None
+        config = current_app.config
+        return oss.delete(
+            config["OSS_FILE_PREFIX"],
+            [
+                save_name,
+                config["OSS_PROCESS_COVER_NAME"] + "-" + save_name,
+                config["OSS_PROCESS_SAFE_CHECK_NAME"] + "-" + save_name,
+            ],
+            bucket_name=storage_bucket or None,
+        )
+
+    def apply_image_review(self, *, approve: bool) -> bool:
+        """Review this exact uploaded version. False means the row changed."""
+        if self.type != FileType.IMAGE or not self.activated or not self.save_name:
+            return False
+        if approve and self.is_blocked_image:
+            return False
+        status = Q(safe_status=self.safe_status)
+        if self.safe_status == FileSafeStatus.NEED_MACHINE_CHECK:
+            status |= Q(safe_status=None)
+        version = File.objects(
+            status,
+            id=self.id,
+            project=self.project,
+            type=FileType.IMAGE,
+            activated=True,
+            save_name=self.save_name,
+        )
+        if not version.update_one(
+            set__safe_status=FileSafeStatus.SAFE if approve else FileSafeStatus.BLOCK,
+            unset__safe_task_id=1,
+            unset__safe_result_id=1,
+            unset__safe_start_time=1,
+        ):
+            return False
+        if approve:
+            return True
+        # Hide the image before deleting its bytes. Never use a newer save_name,
+        # or clear the metadata of a replacement uploaded during deletion.
+        self._delete_stored_file(self.save_name, self.storage_bucket)
+        now = datetime.datetime.utcnow()
+        deleted = File.objects(
+            id=self.id, save_name=self.save_name, safe_status=FileSafeStatus.BLOCK
+        ).modify(
+            new=False,
+            set__save_name="",
+            set__md5="",
+            set__file_size=0,
+            set__file_not_exist_reason=FileNotExistReason.BLOCK,
+            set__edit_time=now,
+        )
+        if deleted is not None and deleted.activated:
+            deleted.inc_cache("file_size", -deleted.file_size, update_self=False)
+            deleted.update_cache("edit_time", now, update_self=False)
+        return True
 
     @only_file
     def delete_real_file(
@@ -832,37 +963,21 @@ class File(Document):
         :param file_not_exist_reason: 删除原因
         :return:
         """
-        # 如果是文件夹则跳过
-        if self.has_real_file:
-            # 物理删除源文件
-            oss_result = oss.delete(
-                current_app.config["OSS_FILE_PREFIX"],
-                [
-                    self.save_name,
-                    current_app.config["OSS_PROCESS_COVER_NAME"] + "-" + self.save_name,
-                    current_app.config["OSS_PROCESS_SAFE_CHECK_NAME"]
-                    + "-"
-                    + self.save_name,
-                ],
-                bucket_name=self.storage_bucket or None,
+        oss_result = self._delete_stored_file(self.save_name, self.storage_bucket)
+        if init_obj:
+            self.update(
+                save_name="",
+                md5="",
+                file_not_exist_reason=file_not_exist_reason,
             )
-            # 初始化对象，并更新缓存计数
-            if init_obj:
-                self.update(
-                    save_name="",
-                    md5="",
-                    file_not_exist_reason=file_not_exist_reason,
-                )
-                # 更新缓存数据
-                if update_cache:
-                    # 非激活修订版只更新自身文件大小
-                    if self.activated:
-                        self.inc_cache("file_size", -self.file_size)
-                    else:
-                        self.update(file_size=0)
+            if update_cache:
+                if self.activated:
+                    self.inc_cache("file_size", -self.file_size)
                     self.update_cache("edit_time", datetime.datetime.utcnow())
-                self.reload()
-            return oss_result
+                else:
+                    self.update(file_size=0)
+            self.reload()
+        return oss_result
 
     @only_file
     def _draw(self):
@@ -1259,11 +1374,16 @@ class File(Document):
         return data
 
     @need_activated
-    def to_api(self):
+    def to_api(self, *, allow_pending_images=None, for_review=False):
+        if allow_pending_images is None:
+            allow_pending_images = self.current_allow_pending_images()
+        available = self.available_in_project(allow_pending_images)
+        can_show_asset = available or (for_review and not self.is_blocked_image)
         data = {
             "id": str(self.id),
             "name": self.name,
-            "save_name": self.save_name,
+            "save_name": self.save_name if can_show_asset else "",
+            "available_in_project": available,
             "type": self.type,
             "source_count": self.source_count,
             "translated_source_count": self.translated_source_count,
@@ -1285,9 +1405,9 @@ class File(Document):
             data["parse_status_detail_name"] = ImageParseStatus.get_detail_by_value(
                 self.parse_status, "name"
             )
-            data["url"] = self.url
-            data["cover_url"] = self.cover_url
-            data["safe_check_url"] = self.safe_check_url
+            data["url"] = self.url if can_show_asset else ""
+            data["cover_url"] = self.cover_url if can_show_asset else ""
+            data["safe_check_url"] = self.safe_check_url if can_show_asset else ""
             data["image_ocr_percent"] = self.image_ocr_percent
             data["image_ocr_percent_detail_name"] = ImageOCRPercent.get_detail_by_value(
                 self.image_ocr_percent, "name"

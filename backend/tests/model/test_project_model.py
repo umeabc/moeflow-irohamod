@@ -3,6 +3,7 @@ from app.models.output import Output
 import os
 
 from flask import current_app
+from flask_babel import gettext
 
 from app import oss
 from app.core.rbac import AllowApplyType, ApplicationCheckType
@@ -587,13 +588,17 @@ class ProjectModelTestCase(MoeTestCase):
             source5.create_translation("f3t1", target=default_target, user=user2)
             source6.create_translation("f3t2", target=default_target, user=user2)
             # 对比生成的labelplus
+            # 文件头文案随当前 locale 翻译（镜像内含 .mo，本机可能只有 .po）
             need_result = (
                 "1,0\r\n"
                 + "-\r\n"
-                + "框内\r\n"
-                + "框外\r\n"
+                + gettext("框内")
+                + "\r\n"
+                + gettext("框外")
+                + "\r\n"
                 + "-\r\n"
-                + "可使用 LabelPlus Photoshop 脚本导入 psd 中\r\n"
+                + gettext("可使用 LabelPlus Photoshop 脚本导入 psd 中")
+                + "\r\n"
                 + ">>>>>>>>[file0.png]<<<<<<<<\r\n"
                 + ">>>>>>>>[file1.png]<<<<<<<<\r\n"
                 + "----------------[1]----------------[0.11111,0.22222,1]\r\n"

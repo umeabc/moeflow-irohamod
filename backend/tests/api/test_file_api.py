@@ -492,11 +492,11 @@ class FileAPITestCase(MoeAPITestCase):
                 self.assertTrue(
                     oss.is_exist(self.app.config["OSS_FILE_PREFIX"], file4_save_name)
                 )
-                self.assertEqual(file1.safe_status, FileSafeStatus.NEED_MACHINE_CHECK)
+                self.assertEqual(file1.safe_status, FileSafeStatus.NEED_HUMAN_CHECK)
                 self.assertEqual(
                     file1.file_not_exist_reason, FileNotExistReason.UNKNOWN
                 )
-                self.assertEqual(file3.safe_status, FileSafeStatus.NEED_MACHINE_CHECK)
+                self.assertEqual(file3.safe_status, FileSafeStatus.NEED_HUMAN_CHECK)
                 self.assertEqual(
                     file3.file_not_exist_reason, FileNotExistReason.UNKNOWN
                 )

@@ -17,6 +17,7 @@ from app.exceptions import (
     ProjectNotFinishedError,
     RequestDataEmptyError,
 )
+from app.models.file import File
 from app.models.project import Project, ProjectPermission
 from app.models.target import Target
 from app.models.output import Output
@@ -370,10 +371,14 @@ class ProjectTargetOutputListAPI(MoeAPIView):
             typesetter = self.current_user.name or ""
         typesetter = (typesetter or "").strip()
         only_fill_empty = bool(data.get("only_fill_empty_typesetter", True))
-        files = project.files(
-            type_only=FileType.IMAGE,
-            file_ids_include=data.get("file_ids_include") or [],
-            file_ids_exclude=data.get("file_ids_exclude") or [],
+        files = (
+            []
+            if project.is_archived
+            else project.available_images(
+                File.current_allow_pending_images(),
+                file_ids_include=data["file_ids_include"],
+                file_ids_exclude=data["file_ids_exclude"],
+            )
         )
         marked = 0
         for f in files:
@@ -422,18 +427,30 @@ class ProjectOCRAPI(MoeAPIView):
             raise NoPermissionError(
                 gettext("您没有此项目所在团队使用自动标记限额的权限")
             )
+        project.require_unarchived()
         if not project.source_language.g_ocr_code:
             raise NoPermissionError(gettext("源语言不支持自动标记"))
         if project.ocring:
             raise NoPermissionError(gettext("自动标记进行中"))
-        images = project.files(type_only=FileType.IMAGE).filter(
-            parse_status__in=[ParseStatus.NOT_START, ParseStatus.PARSE_FAILED]
+        allow_pending_images = File.current_allow_pending_images()
+        eligible = project.files(type_only=FileType.IMAGE).filter(
+            File.project_visibility_query(allow_pending_images),
+            parse_status__in=[ParseStatus.NOT_START, ParseStatus.PARSE_FAILED],
+            save_name__nin=["", None],
         )
-        if images.count() == 0:
+        images = [f for f in eligible if f.available_in_project(allow_pending_images)]
+        if not images:
             raise NoPermissionError(gettext("未发现需要标记的图片"))
-        if project.team.ocr_quota_left < images.count():
+        if project.team.ocr_quota_left < len(images):
             raise NoPermissionError(gettext("团队限额不足"))
-        images.update(parse_status=ParseStatus.QUEUING)
+        queued = sum(
+            eligible.filter(id=f.id, save_name=f.save_name).update_one(
+                parse_status=ParseStatus.QUEUING
+            )
+            for f in images
+        )
+        if not queued:
+            raise NoPermissionError(gettext("未发现需要标记的图片"))
         ocr("project", str(project.id))
         return {"message": gettext("已开始自动标记")}
 
