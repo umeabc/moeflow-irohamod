@@ -1,14 +1,11 @@
-# MoeFlow 自定义改动 CHANGELOG（iroha16-fix14）
+# MoeFlow 定制版 CHANGELOG
 
-> 基于 `moeflow-com/moeflow` 的自定义定制版本。
-> 前端基线 `moeflow-frontend:v1.1.7`，后端基线 `moeflow-backend:v1.1.8`。
-> 当前源码版本：**iroha16-fix12，已部署测试机与正式机**（前端暗色模式修复；后端沿用 fix11）。前端基线 `v1.1.7` / 后端基线 `v1.1.8`；fix8 版本标签及 GHCR `latest` 已发布；历史版本记录保留。
-> 源码备份仓库：`umeabc/moeflow-backup`（私有，含 `frontend/` 与 `backend/`）。
-> 交付方式：测试机构建与验收 → GHCR fix8 版本标签 → latest → 正式机拉取，仅重建 backend/celery/frontend；先备份 compose 与旧镜像标签。
+> 基于官方 `moeflow-com/moeflow` 的定制版本；前端基线 `v1.1.7`，后端基线 `v1.1.8`。
+> 版本命名：`irohaN`（新特性）/ `irohaN-fixM`（修复）。部署与运维记录不在本文件。
 
 ---
 
-## iroha16-fix14（2026-11-21 双机已部署；同日上线 MoeFlow Atelier）
+## iroha16-fix14（2026-11-21）
 
 图片审核与待审图片访问控制，仅后端变更（前端沿用 `v1.1.7-iroha16-fix12`）。
 
@@ -22,21 +19,10 @@
 - **审核接口**：`GET /v1/admin/files` 按 `safe_status` 过滤进行中项目的图片；`POST /v1/admin/files/safe-status` 按 `save_name` 版本通过/驳回。驳回先隐藏再删字节，并保留可重传的占位行。
 - **测试**：新增 `tests/api/test_image_review_api.py`（审核接口、上传/覆盖/URL 导入共用策略）与 `tests/api/test_pending_image_access.py`（各入口的待审访问控制），共 11 个用例；新增 `scripts/test_isolated.py`（内存库 + 临时本地存储 + 内存 Celery，不加载 `.env`）。同步修正两处旧断言：覆盖上传默认进入人工待审核；LabelPlus 文件头文案改为 `gettext()` 取当前 locale。
 - **回归**：容器内跑 `tests/api` + `tests/model`，**289 passed / 2 failed**；两处失败在改动前基线（`3f6d0fb`）同样失败（`test_delete_team_project_set`、`test_sign_url`），与本次无关。
-- **镜像与 GHCR**：`ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix14`，digest `sha256:4697195660505521b687491861bf02f8101ccde58b5e38d99c4540e399a1e0ad`，`latest` 同 digest；源码提交 `e79d3eb`。
-- **测试机**：backend + celery 重建为 fix14，frontend 保持 fix12；compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix14-20261121-011450`。验收：`/api/ping` 200、`flavor.version=iroha16-fix14`；设置 GET/PUT 正常、旧客户端 PUT 保留原值、显式 PUT 能保存；上传 `safe_status=3(NEED_HUMAN_CHECK)` 且 `available_in_project=true`、`/content` 200；`allow_pending_images=false` 后 `/content` 400、列表查不到、导出不含该图；恢复 true 后全部恢复；Celery 1 node online；日志无 error。
-- **正式机（已部署）**：`docker compose pull moeflow-backend moeflow-celery` 拉到 digest `sha256:4697195…e0ad`，`up -d --no-deps` 只重建 backend + celery（frontend 维持 fix12）；compose 备份 `docker-compose.yml.bak-pre-fix14-20261120-214315`。验收：`/api/v1/site/flavor` → `iroha16-fix14`，`/api/ping` 200，首页 `/login` `/admin` 200，Celery 1 node online，日志无 error。管理端 `GET /v1/admin/site-setting` 已返回两个新字段，`GET /v1/admin/files?safe_status=3` 正常。回退：compose 改回 `v1.1.8-iroha16-fix11` 重建，新增字段旧版会忽略。
-- **MoeFlow Atelier 并存上线（同日）**：新前端镜像 `ghcr.io/umeabc/moeflow-atelier:v2.0.7`（digest `sha256:defceacd…6b49`，源码仓库 `umeabc/moeflow-atelier`）；正式机独立 compose 项目 `moeflow-atelier`（`/opt/moeflow-atelier`），端口 `127.0.0.1:8734`，只读加入 `moeflow_default`；宿主 nginx 新增 `conf.d/mfv2.conf` → `mfv2.basmc.org`（`*.basmc.org` 通配证书，改前备份 `conf.d`）。验收：`https://mfv2.basmc.org` 首页/登录/`/dashboard/projects` 均 200，资源 200，`/api/v1/captchas` 200，`flavor` 走新后端，管理台「图片审核」可见待审队列；旧站不受影响。
-- **交付方式（正式机，2026-11-21 起改为离线）**：Atelier 镜像在构建机 `docker save | gzip -1`（约 70MB）→ 传到正式机 `docker load`，校验 sha256 `2943fd49…cda4`；正式机已删除 ghcr 凭据 `/root/.docker/config.json`，不再依赖 registry 账号，`docker compose up -d` 直接用本地镜像。
-- **审核默认值（正式机）**：按要求把 `auto_approve_images` 改为 `true`（新图上传即通过，与旧版行为一致），`allow_pending_images` 保持 `true`；历史上未标记的图片仍可在 Atelier「图片审核」里回看与处置。
-- **运维提示**：正式机 22 端口按网络安全策略封禁，SSH 仅开放高位端口且只能从管理侧经转发访问；大规模文件传输请分块续传（SFTP 长连接易被中断）。
-- **数据操作（2026-11-21）**：正式机将全部已上传图片批量标记为「已通过」——`safe_status=0` 的 5,635 张（全部带存储字节的图片）更新为 `SAFE`，并清理 `safe_task_id/result_id/start_time`；变更前把 `_id → safe_status` 导出到 `logs/moeflow-backend/safe_status_backup_20261121-065138.json`（另存本地一份）便于回滚。无存储字节的占位行（559 条，含导入占位）未改动；审核队列「待审核」现为 0。
-- **上线注意**：默认 `auto_approve_images=false`，正式机新图会进人工待审核；Atelier 审核页上线前，因 `allow_pending_images=true` 这些图仍可用。若要与旧行为一致，先在站点设置把 `auto_approve_images` 打开。
 
 ---
 
-## iroha16-fix12（2026-11-16 测试机，2026-11-18 正式机，已发布）
-
-暗色模式漏适配专项修复。仅前端变更，后端沿用 `iroha16-fix11`。fix12 前端版本标签及 GHCR `latest` 已推送，测试机与正式机均已部署。
+## iroha16-fix12（2026-11-16）
 
 - **修复清单**（按审计严重程度）：
   - 登录页整页接入暗色：`index.css` 新增 `--moeflow-loginPageBg/-loginPaper/-loginCloud/-loginInk*` 变量（浅色值与原视觉一致），`frontend/src/pages/Login.tsx` 的页面渐变、卡片、分段控件、文字全部改走变量；输入框前缀附加块由全局 `.ant-input-group-addon` 暗色覆盖兜底。
@@ -51,30 +37,18 @@
   - NavTabs 溢出「更多」按钮：`#fff` → `var(--moeflow-surface)`。
 - **低优先级未改**：默认头像/团队图标/空状态插画等素材层白色、语言切换图标块，属资源本身非容器，保持现状。
 - **验证**：`typecheck` 通过；Jest **9 suites / 48 tests passed**；lint **0 errors / 242 warnings**（与 fix10 持平）；build 通过（48 文件 / 3,698,104 字节 / 0 source map，`index.html` SHA256 `f151be96…ff79`）。
-- **测试机回归审计（实测计算样式）**：登录页暗色渐变/卡片 `#1f1f1f`/分段 `#2a2124`/addon `#262626`；重置页 Paragraph `rgba(255,255,255,0.85)`；图片选择菜单 `rgba(31,31,31,0.92)`+白字；滑轨 `#3a3a3a`/手柄 `#d0d0d0`；Radio `#1f1f1f`；进度轨 `#2a2a2a`；移动端 TabBar `#1f1f1f`；移动端登录卡 `#1f1f1f`；禁用按钮/验证码弹窗/发送条/失败面板规则均已入包。**亮色模式回归**：登录页渐变、卡片、分段、addon 与修复前逐值一致。
-- **镜像与 GHCR**：前端 `v1.1.7-iroha16-fix12`，registry digest `sha256:42d7cb30a2ce0c10676fa2e32dfda2f4699c7675f71bcdaca02558ddb21ba246`，`latest` 已指向同一 digest；后端保持 `v1.1.8-iroha16-fix11`。
-- **测试机部署**：前端 `v1.1.7-iroha16-fix12`；compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix12-20261116-025700`，旧前端标签 `pre-fix12-20261116-025700`（fix10）；后端/数据库未动。
-- **正式机部署**：前端 `latest`（fix12）；compose 备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-fix12-20261118-000700`，旧前端标签 `pre-fix12-20261118-000700`（fix10）。只重建 frontend，backend/celery/MongoDB/Redis 未重启，rabbitmq orphan 仍为 exited。
-- **运维（2026-11-18）正式机宿主 nginx 升级**：`1.31.8-1~trixie` → `1.31.9-1~trixie`（nginx.org mainline 源，当前最新）。升级前备份 `/root/nginx-backup-20261118-082716/`（`etc-nginx`、`nginx-1.31.8.bin`、`nginx_1.31.8-1~trixie_amd64.deb`、`nginx-T-before.txt`）；`nginx -t` 前后均通过；`systemctl restart nginx` 后 `nginx -v` 为 1.31.9、`MainPID` 正常、error.log 无 error/emerg。验收：`moeflow.basmc.org` 首页/`api/ping`/`api/v1/site/flavor`/`admin` 全 200，ALPN 协商 `h2` + TLS1.3；同机 `bilidyn.basmc.org` 302（原行为）。只升级 nginx 一个包，其余 168 个待升级包未动；容器内 nginx 未改动。
-- **正式机验收**：域名首页 200、`/api/ping` 200、`/admin` 200；`index.html` SHA256 与本地构建一致（`f151be96…ff79`），容器内 **48 文件 / 0 source map**；暗色下登录页卡片 `#1f1f1f`、分段 `#2a2124`、addon `#262626`（桌面与移动端一致），重置密码页 Paragraph 为 `rgba(255,255,255,0.85)`；frontend/backend 日志无 error。
 
 ---
 
-## iroha16-fix11（2026-11-11，双机已部署）
+## iroha16-fix11（2026-11-11）
 
-新增公开站点标识端点，并修复正式机「只重建后端会 502」的隐患。后端 `iroha16-fix11`，前端沿用 `iroha16-fix10`。
+新增公开站点标识端点。后端 `iroha16-fix11`，前端沿用 `iroha16-fix10`。
 
 - **新端点**：`GET /v1/site/flavor`，无需登录，返回 `{"flavor": "irohamod", "name": <SITE_NAME>, "version": <MOEFLOW_BUILD_ID>}`，供桌面客户端识别站点并选择对应前端。源码提交 `0537bd8`。
-- **验证**：新增 `test_get_flavor_without_token`（**1 passed**）；`tests/api/test_site_setting_api.py` 为 2 passed / 1 failed，失败项仍是既有的 `test_put_site_setting`（白名单字段已停用，与本次无关）。两机实测：测试机 `{"flavor":"irohamod","name":"Moeflow-iroha10-test","version":"iroha16-fix11"}`、正式机 `{"flavor":"irohamod","name":"BASMC-Moeflow","version":"iroha16-fix11"}`，均 200。
-- **运维修复（正式机 nginx）**：重建 backend 后容器 IP 变化，而正式机 `nginx/templates/default.conf.template` 仍是静态 `proxy_pass http://moeflow-backend:5000/;`，nginx 启动时解析一次即缓存，导致 API 全部 502（首页仍 200）。已把 `/api` 改成与测试机一致的动态解析：`resolver 127.0.0.11 valid=10s ipv6=off;` + `set $moeflow_backend ...; rewrite ^/api/?(.*)$ /$1 break; proxy_pass $moeflow_backend;`，`nginx -t` 通过；实测容器 `/etc/hosts` 里已无 backend 条目时 `/api` 仍 200，确认走 Docker DNS 动态解析，后续单独重建 backend 不再 502。模板备份：`/var/dockers/moeflow/nginx/templates/default.conf.template.bak-pre-dynamic-dns-20261111`。
-- **镜像**：后端 `v1.1.8-iroha16-fix11`，digest `sha256:501e28c84f62f0af26ed73f3d559a593598f1ff64d59a07550d2cc2faa1f3e12`，`latest` 已指向同一 digest；前端保持 `v1.1.7-iroha16-fix10`。
-- **测试机回退**：compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix11-20261111-000700`，旧后端 `latest` 标签 `pre-fix11-20261111-000700`（fix8）。
-- **正式机回退**：compose 备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-fix11-20261111-001500`，旧后端 `latest` 标签 `pre-fix11-20261111-001500`（fix8）。本次只重建 backend/celery；MongoDB、Redis 未重启，redis/rabbitmq orphan 状态未变。
-- **运行状态**：两机 Celery 均 `pong`；backend/celery/frontend 日志无 error；首页、`/api/ping`、`/admin`、PS 脚本下载均 200。
 
 ---
 
-## iroha16-fix10（2026-11-10，双机已部署）
+## iroha16-fix10（2026-11-10）
 
 后台「用户管理」翻页抽风的修复版本。仅前端变更，后端沿用 `iroha16-fix8`。
 
@@ -86,15 +60,10 @@
 - **顺带清理**：删除该文件里已无用的 `TableParams` 接口与 `SorterResult` 类型导入（原有 2 条 lint warning）。
 - **测试**：新增 `frontend/src/components/admin/AdminUserList.test.tsx`，mock 用户列表接口（共 59 条）并断言：首屏只请求 1 次；点第 2 页只新增 1 次请求且分页高亮停在第 2 页；等待后请求数不再增长。旧实现下该用例会因无限请求而挂起，可稳定复现原 bug。
 - **验证**：前端 `typecheck` 通过；Jest **9 suites / 48 tests passed**；`lint` **0 errors / 242 warnings**（比 fix9 少 2 条）；`build` 通过（48 文件 / 3,693,387 字节 / 0 source map，`index.html` SHA256 `7e8ae9d6…9250`）。
-- **浏览器实测（测试机）**：拦截用户列表接口返回 59 条假数据 → 首屏 1 次请求；点第 2 页仅 1 次 `page=2` 请求、页码停在 2、等待 2 秒无新增请求；把每页改为 100 条仅 1 次 `page=1&limit=100` 请求、页码回到 1、稳定。
-- **浏览器实测（正式机，真实数据 59 个用户）**：首屏 `page=1&limit=30`、30 行；点第 2 页仅 1 次 `page=2&limit=30`、页码 2、首行为第 2 页用户、2.5 秒内无新增请求；改为 100 条仅 1 次 `page=1&limit=100`、页码 1、显示全部 59 行、稳定。全程只读，未修改任何用户。
-- **镜像**：前端 `v1.1.7-iroha16-fix10`，registry digest `sha256:4d397f8f86d9448450e0fe68f9760a07e87f110bc24414dd01bb623fa594af08`，`latest` 已指向同一 digest；后端保持 `v1.1.8-iroha16-fix8`。
-- **测试机回退**：compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix10-20261110-030500`，旧 `latest` 标签 `pre-fix10-20261110-030500`（fix9）。
-- **正式机回退**：compose 备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-fix10-20261110-031000`，旧 `latest` 标签 `pre-fix10-20261110-031000`（fix9）。只重建 frontend，backend/celery/MongoDB/Redis 未重启。
 
 ---
 
-## iroha16-fix9（2026-11-09，双机已部署）
+## iroha16-fix9（2026-11-09）
 
 自动翻译（机翻）全链路故障的修复版本。仅前端变更，后端沿用 `iroha16-fix8`。
 
@@ -102,33 +71,20 @@
 - **根因**：fix4 依赖瘦身（提交 `026fa9f`）把 `zod-to-json-schema` 当作「未使用依赖」从 `frontend/package.json` 删除。它实际是 `xsschema` 的 optional peer dependency：`@xsai/tool` 把 zod v3 schema 转成 JSON Schema 时按需 `import`，缺失即抛错。fix7/fix8 构建产物里因此留下 Vite 的 optional-peer 抛错占位 chunk（`__vite-optional-peer-dep_zod-to-json-schema_xsschema_false-*.js`），所以凡走 `tool()` 的机翻路径全部不可用。该依赖为 optional peer，安装时 npm 不会自动补齐，删除后也不会报安装错误，属于隐性破坏。
 - **修复**：恢复 `zod-to-json-schema@^3.25.2` 依赖（lock 同步，仅新增该包），并新增 `frontend/src/services/ai/aiSchemaDeps.test.ts` 回归测试：直接校验该包存在且能把机翻用的 zod schema 转成 JSON Schema，防止再次被误删。
 - **验证**：前端 `typecheck`、`lint`（0 errors / 245 warnings）、`build` 通过；Jest **8 suites / 47 tests passed**（新增 1 项）。构建产物中 `__vite-optional-peer-dep_zod-to-json-schema` 占位 chunk 消失，改为真实转换模块。
-- **真实浏览器验证**：在测试机与正式机分别用管理员账号打开项目文件列表 → 自动翻译 → 自定义 API URL 指向本页 mock 地址（请求被浏览器拦截，不落到真实服务），确认发出的 `/chat/completions` 请求体含 `tools[0].function.name = "submit"`、`parameters.type = "object"`、`properties = ["texts"]`，页面与 console 均无 `Missing zod`；mock 返回 502 后流程按「翻译失败」正常收尾。正式机验证后核查 30 分钟内 `Source`/`Translation` 新增均为 0，未写入脏数据。
-- **镜像**：前端 `v1.1.7-iroha16-fix9`，registry digest `sha256:4bcb3e261099340e7b7db9c493031368c02b134205ec39f5311264693a9ecf72`，`latest` 已指向同一 digest；后端保持 `v1.1.8-iroha16-fix8`（digest `sha256:eb95a8b8…f360b8`）。
-- **测试机回退**：compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix9-20261109-140400`，旧 `latest` 前端镜像标签 `pre-fix9-20261109-140400`（fix8）。
-- **正式机回退**：compose 备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-fix9-20261109-142000`，旧 `latest` 前端镜像标签 `pre-fix9-20261109-142000`（fix8）。本次只重建 frontend，backend/celery/MongoDB/Redis 未重启，rabbitmq orphan 仍为 exited。
 - **限制**：本机 `zod-to-json-schema` 类型声明与 zod 3.25 类型存在轻微偏差，测试里对转换函数做了显式类型收窄；运行时转换已验证正确。
 
 ---
 
-## iroha16-fix8（2026-11-06 测试机，2026-11-07 正式机，已部署）
-
-本轮先发测试机、验收通过后发布正式机；GHCR fix8 版本标签及 `latest` 均已推送。测试机镜像为前端 `v1.1.7-iroha16-fix8` / 后端 `v1.1.8-iroha16-fix8`，后端 build ID `iroha16-fix8`，构建目录 `/opt/build/moeflow-iroha16-fix8`。
+## iroha16-fix8（2026-11-06）
 
 - **作者标号顺序**：前端在 Redux source 层统一稳定排序，作者 Source 永远固定在最后；画布标号与全能模式列表使用同一顺序，普通标号 1..n、作者 n+1，新增标号时作者编号实时递增。只改展示顺序，不改数据库 `rank`、LabelPlus 作者分组、作者只读和统计排除语义；重排锚点避开作者，翻译/校对模式继续过滤作者。
 - **PS 脚本本地下载**：`/api/v1/site/ps-scripts/labelplus` 与 `/api/v1/site/ps-scripts/llm` 同源下载；内置 LabelPlus `1.8.0` 7z（94,536 字节）和 PS LLM 擦字脚本 `v6.5.1` zip（1,623,369 字节），返回带版本文件名，`Cache-Control: no-store`。
 - **后台更新**：新增 `GET /v1/admin/ps-scripts` 与 `POST /v1/admin/ps-scripts/labelplus/update`；从 GitHub `LabelPlus/PS-Script` latest release 取 7z，校验发布域名、大小、7z magic 和 SHA-256，原子写入 `STORAGE_PATH/static/ps-scripts`（保留当前及最近两个历史版本），失败保留旧文件。站点设置新增「PS 脚本」区块，导出页「其他资源」改为两行本地下载。当前 latest 仍为 1.8.0，后台按钮实测返回「已是最新版本」；真实下载更新路径由 72 个模拟 HTTP 测试覆盖。
-- **镜像与 GHCR**：源码提交 `f64d1d3`；前端 `sha256:94f25d4273874e970581070c192cef10bab2449286f73f1ffdc4290aa6cdeb92`，后端 `sha256:eb95a8b8b9f2b4ff7a56fea97316cd522d31fc1d95231ee0c5647d5328f360b8`。fix8 版本标签与 `latest` 的 registry digest 均与上述值一致。
-- **验证**：新增 PS 后端测试 **72 passed**，相关 source/output 回归 **28 passed**（合计 100）；前端 **7 suites / 46 tests passed**；`typecheck`、`lint`、`build` 通过。前端产物 **48 个文件 / 3,671,667 字节 / 0 个 source map**，`index.html` SHA256 `835776aeb7249ae158af9c04beb85360aaa48e614989595ba0a19aca4c00c6cc`。测试机首页、`/api/ping`、`/admin` 均 200；两个下载文件 SHA256 与内置值一致；管理员状态/更新接口 200；Celery `pong`，backend/celery/frontend 日志无 error。
-- **正式机烟测**：正式域名首页、`/api/ping`、`/admin` 均 200；前端运行容器与本地构建 **48/48 文件 SHA-256 一致**，`index.html` 仍为 `835776...`；后端与 Celery build ID 均为 `iroha16-fix8`，AVIF 插件正常；两个 PS 下载文件文件名、大小、SHA-256 正确；管理员 PS 状态/更新接口 200（当前 latest 与内置同版本，返回已是最新）；参与统计接口 **200 / 59 用户 / 1.815s**；Celery `pong`，backend/celery/frontend 日志无 error。
 - **浏览器实测**：测试项目图片原有 2 个普通标号 + 作者时，翻译模式右侧序号为 1/2、画布紫色作者号为 3；全能模式为 1/2/3。通过 API 临时新增一个标号后为 1/2/3/4、作者为 4，删除后恢复 1/2/3；`source_count` 回到 2。管理员「站点设置 → PS 脚本」区块、项目导出页两行本地下载均实测；UI 下载文件名与 SHA-256 正确。后台按钮返回「已是最新版本」；容器内临时把内置版本降为 0.0.0 后，实际从 GitHub 下载 1.8.0 并通过 SHA-256 校验。
-- **回退**：测试机 compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix8-20261106-012227`，旧 `latest` 镜像标签 `pre-fix8-20261106-012227`；正式机 compose 备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-fix8-20261107-074642`，旧 `latest` 镜像标签 `pre-fix8-20261107-074642`（均指向 fix7）。正式机只重建 backend/celery/frontend，MongoDB/Redis 未重启，既有 rabbitmq orphan 保持 exited，未执行 prune/remove-orphans。
-- **限制**：本地全量后端测试仍有 7 个既有/环境性失败（4 个缺少 `pillow-avif-plugin`、3 个既有测试），发布镜像内 AVIF 插件已验证正常。当前 GitHub latest 与内置版本同为 1.8.0，因此后台按钮显示已是最新，未产生新版本文件；真实下载链路已在测试机容器内用临时版本强制验证。
 
 ---
 
-## iroha16-fix7（2026-11-05，已部署测试机与正式机）
-
-本轮源码已提交，镜像已在测试机构建并验收；GHCR fix7 版本标签与 latest 已发布，正式机完成部署与烟测。此前 fix6 部署记录保留为历史。
+## iroha16-fix7（2026-11-05）
 
 - **批次 1**：删除未注册的旧角色 API 链、不可达同步用户媒体下载、无入口自助重置密码、异步 `wait_result` 与直接 `asgiref` 依赖；保留 RBAC/角色模型、逐图线程导入、改密 PUT、管理员重置和联系管理员页面。删除无消费者的前端包装、验证码列表、模板组件与 `mascot-jump2.png`。
 - **批次 2**：生产、开发、OSS/R2/Google OCR 根依赖分离；新的锁文件生成器使用独立 venv 和现有精确版本约束，成功解析及 `pip check` 后才替换文件，避免测试工具进入生产。补全 `curl_cffi` 和 AVIF 依赖；删除 `fontmin` 脚本、无用类型/工具依赖，更新 npm lock。
@@ -142,64 +98,8 @@
 
 AVIF 上游 wheel 信息：[pillow-avif-plugin 1.5.5](https://pypi.org/project/pillow-avif-plugin/1.5.5/) 提供 CPython 3.11 Windows/Linux wheel；本轮实际编解码是否通过以本节最终测试记录为准。
 
+## iroha16-fix6（2026-11-02）
 
-### fix7 发布验证与回退
-
-- **源码提交**：`974a4e2a8c5c8286a5960c7659da8f86c3f44a17`，`feat: 代码瘦身与 WebP/AVIF 支持（fix7）`。发布后另行提交本节部署记录。
-- **前序已通过验证**：`test_auth_api` **18 passed**、后端关键测试 **66 passed**、前端 **4 suites / 24 tests passed** 及 `typecheck`。18 与 66 分别记录，不相加为完整后端测试总数；本次续发沿用这些结果。
-- **本次发布前检查**：Windows 使用 `npm.cmd`；TEMP/TMP 指向 `frontend/.fix7-tmp` 后，`npm.cmd run build` **通过，16.54s**；`npm.cmd run lint` **0 errors / 243 warnings**；`git diff --check` 通过。保留构建的循环 chunk、第三方 `eval` 与大 chunk 提示，未在发布阶段扩大代码改动。
-- **前端产物**：48 个文件、3,665,735 字节、**0 个 source map**；本地、测试机构建目录、两机运行容器中全部 48 个文件的 SHA256 一致。两机首页及管理页 HTTP 内容也与本地产物一致。`index.html` SHA256：`072a25fdbb3ab61d47dbea8dc3adf87af2744014cd34ffb74bc5a75f0e32c0ea`。
-- **真实镜像构建**：测试机目录 `/opt/build/moeflow-iroha16-fix7` 包含该源码提交与 `frontend/build`；后端使用 `STORAGE_TYPE=REMOTE_HTTP`、`MOEFLOW_BUILD_ID=iroha16-fix7`、阿里云 PIP 镜像。前端 `v1.1.7-iroha16-fix7` / 后端 `v1.1.8-iroha16-fix7` 均构建成功，镜像 revision 标签指向上述源码提交。
-- **图片运行时**：构建镜像内 `pillow_avif` import 与真实 AVIF 编解码通过；两机后端容器内 WebP/AVIF 原生 RGBA 内存编码、解码、尺寸与透明通道验证通过，WebP 无损像素一致。后端与 Celery 容器 build ID 均为 `iroha16-fix7`。
-- **GHCR 发布**：先推送并核验两端 fix7 版本标签，再推送 `latest`；registry 上版本与 latest digest 一致，正式机 pull 后 digest 及三个运行容器的镜像身份再次核验一致。
-
-| 镜像 | fix7 版本与 latest 的 registry digest |
-| --- | --- |
-| `ghcr.io/umeabc/moeflow-frontend` | `sha256:dbfeadd8dc101868f5fc2b890b3298f9f44e11022bbe0a0c358fe395cff489a1` |
-| `ghcr.io/umeabc/moeflow-backend` | `sha256:42c7b56f0b84baaf4f45d6808ad5b91b7a80b6e998eb94ac64c6ea3550725721` |
-
-- **测试机烟测**：首页、`/api/ping`、`/admin`、`/admin/contribution-stats` 均通过 HTTP 验证；鉴权统计接口 **200 / 5 用户 / 0.056s**。抽样 5 个源项目，移动目标数为 **1、1、1、1、0**；逐项核对 WORKING 状态、同项目集、校对/作者模式、排除源项目及目标集合完整性，全部通过。
-- **正式机烟测**：正式域名首页、API 健康接口、两处 admin 页面均通过 HTTP 验证；鉴权统计接口 **200 / 59 用户 / 1.776s**。抽样 5 个源项目，移动目标数为 **2、2、2、23、0**，同样的数据库规则与集合校验全部通过。页面结果为 HTTP 烟测，不代表完整交互 UI 测试。
-- **运行状态**：两机 Celery inspect 均返回 **pong**、启动日志含 **ready**；本次部署后的 backend/celery/frontend 日志检查范围内无 error/traceback，后端启动日志 build ID 正确。
-- **测试机回退**：compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix7-20261105-023640`；前后端旧 latest 均保留镜像标签 `pre-fix7-20261105-023640`。
-- **正式机回退**：compose 备份 `/var/dockers/moeflow/docker-compose.yml.bak-pre-fix7-20261104-103922`；前后端旧 latest 均保留镜像标签 `pre-fix7-20261104-103922`。备份文件名时间采用各主机本地时区，正式机为 UTC−08:00。
-- **操作范围**：只重建 `moeflow-backend`、`moeflow-celery`、`moeflow-frontend`；MongoDB、Redis、init 容器及正式机 rabbitmq orphan 的容器 ID/状态均保持不变。未执行 prune/remove-orphans，未操作其它项目。`.fix7-tmp`、`.review-*`、build、日志与部署凭据不入库；本地缓存排除规则位于 `.git/info/exclude`。
-
-### 前序验证记录与复现
-
-早期缺少 AVIF 插件时，15 个相关文件统一测试为 **146 passed / 4 failed**，其中图片回归 **7 passed / 4 failed**，4 项均为缺少插件的导入错误；此为历史环境记录。后续本地已有 `pillow-avif-plugin==1.5.5`，发布镜像及两机真实编解码验证见上。本次续发未重新运行这组完整 150 用例，不将容器编解码烟测表述为完整上传/导出套件重跑结果。
-
-前序另已验证：五种依赖 lock profile `--check`、已安装依赖 `pip check`、中英文 Babel MO 编译，以及 Docker 安装分支的 10 种组合；本轮已补充真实镜像构建。npm lock 节点 1201 → 974（删除 227 项，未升级保留包）；cache 测试 15 个方法及 69 次中间校验、file_model 22 个方法和导出 7 种场景的覆盖保留。未重新执行完整联网锁解析。
-
-前端发布检查（在 `frontend/`）：
-
-```powershell
-New-Item -ItemType Directory -Force .fix7-tmp | Out-Null
-$env:TEMP=(Resolve-Path .fix7-tmp).Path
-$env:TMP=$env:TEMP
-npm.cmd run build
-npm.cmd run lint
-```
-
-后端图片回归复现（在 `backend/`，仅加载本地测试配置；测试依赖与 AVIF 插件需已安装）：
-
-```powershell
-$env:PYTHONPATH="$PWD/.review-minimal;$PWD/.review-deps"
-$env:TEMP="$PWD/.review-minimal/tmp"; $env:TMP=$env:TEMP
-New-Item -ItemType Directory -Force -Path $env:TEMP | Out-Null
-python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample', override=True); import pytest; raise SystemExit(pytest.main(['-o','addopts=','-q','tests/api/test_image_formats_api.py']))"
-```
-
-
-## iroha16-fix6（2026-11-02，已部署测试机与正式机）
-
-- 镜像：前端 `v1.1.7-iroha16-fix6` / 后端 `v1.1.8-iroha16-fix6`，后端 build ID `iroha16-fix6`；测试机 `172.29.133.24` 与正式机（`moeflow.basmc.org`）均已部署。
-- GHCR：版本标签及 `:latest` 已推送。
-  - frontend `sha256:8cbd8bf1aa8c57ea5f0b5dac205c26583983a1e4e352cbed5dd54eace3d73a45`
-  - backend `sha256:73509e1bf9ea4065a5dfeac50c9157e595eea1ee9830dbb937ed41d5981c7000`
-- 测试机 compose 备份：`/opt/moeflow-deploy/docker-compose.yml.bak-pre-iroha16-fix6-20261102-160424`。
-- 正式机 compose 备份：`/var/dockers/moeflow/docker-compose.yml.bak-pre-fix6-20261102-014743`；旧镜像已打 `pre-fix6-20261102-014743` 回退标签。
-- 真实环境验收：测试机统计接口 200、5 个用户、0.018s；正式机统计接口 200、58 个用户、1.833s。两端均抽样 5 个项目，移动目标全部为 WORKING；正式机域名/API/管理页 200，Celery ready，后端日志无 error。
 - 后台新增「参与统计」：管理员接口 `GET /v1/admin/contribution-stats`，页面 `/admin/contribution-stats`，入口在管理分组。一次查询用户、一次遍历有效图片，不按用户查询文件。按当前 `File` 的 translator / proofreader / typesetter 负责人字符串统计参与图片数；支持顿号、中文逗号、英文逗号，trim 后同图同角色去重，与 `User.name` 精确匹配。仅计 `IMAGE` 且 `activated=True`，包含所有项目状态；列出未封禁、未注销用户及零计数用户，排除 `[Redacted]`，按合计降序、姓名升序。表格包含用户、邮箱、翻译、校对、嵌字、合计，支持分页、空态、加载态；中英文翻译及 locale JSON 已更新。
 - 图片移动目标接口 `GET /v1/projects/<project_id>/move-target-projects` 增加 `status=ProjectStatus.WORKING`，排除完结、归档、计划完结、计划删除、已删除项目；保持项目集、类型 / 作者模式隔离与原权限。已检查 `FileMoveModal.tsx` 直接使用接口列表，无需前端过滤。
 - 新增后端测试 `tests/api/test_admin_stats_api.py`：覆盖统计多角色 / 多人 / 三种分隔符 / 去重 / 精确匹配 / 零计数 / banned 与脱敏用户排除 / 图片与激活条件 / 历史状态，以及移动目标六种状态、四种类型组合与权限。
@@ -214,7 +114,6 @@ python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample', overr
 $env:PYTHONPATH="$PWD/.review-minimal;$PWD/.review-deps"
 python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample'); import pytest; raise SystemExit(pytest.main(['-o','addopts=','tests/api/test_admin_stats_api.py','tests/api/test_admin_api.py','tests/api/test_file_api.py','-q','-k','not test_upload_project_file']))"
 ```
-
 
 ## iroha14 新增特性（基于 iroha13）
 
@@ -251,14 +150,10 @@ python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample'); impo
 - 管理后台「用户管理」列表在**邮箱右侧**新增「**最后登录时间**」列：显示该用户**最后一次在站点进行操作的时间**。
 - 后端 `User` 新增 `last_active_time`（db_field `la`，UTC）；`token_required` / `admin_required` 鉴权成功后调用 `touch_last_active()`（60 秒节流 + 原子更新），登录 `POST /v1/user/token` 成功时也记录一次；仅在管理员请求时随 `to_api` 下发，普通接口不暴露；无记录显示「—」。
 
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha14-fix7` / `moeflow-backend:1.1.8-iroha14-fix7`（含绿条修复 fix5）。
-
 ### 七、修复：移动图片在旧数据下目标列表为空（iroha14-fix8）
 
 - **问题**：`Project.with_proofread`（db_field `wp`）为 iroha14 新增、默认 `True`，但**旧项目从未写入该字段**；移动目标接口按 `with_proofread=<bool>` 精确查询，对「翻校嵌」源项目生成 `{wp: true}`，匹配不到任何缺字段的老项目 → 目标列表为空、图片移动不出数据（生产机 198 个项目中 197 个缺 `wp`）。
 - **修复（代码）**：`MoveTargetProjectsAPI` 对「翻校嵌」源改用 `with_proofread__ne=False`（`$ne` 同时命中缺失字段，缺失即视为翻校嵌）；「仅翻嵌」源仍用 `with_proofread=False`。
-- **修复（数据）**：将缺 `wp` 的老项目补齐为 `wp=true`（生产机 197 条、测试机 0 条）；补齐后当前旧代码亦可正常移动。
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha14-fix7` / `moeflow-backend:1.1.8-iroha14-fix8`。
 
 ### 八、站点管理员成员管理完全放开：改角色 / 删成员（iroha14-fix9）
 
@@ -267,7 +162,6 @@ python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample'); impo
 - 前端：`MemberList.tsx` 删除按钮、`RoleSelect.tsx` 角色下拉对站点管理员放开（含创建人/自己的角色切换与删除入口）。
 - 前端（站点管理员）角色下拉**包含「创建人」选项**：`MemberList.getTypes` 对站点管理员传 `with_creator=true`，否则类型接口默认 `without_creator` 不含创建人，「设置为创建人」无从操作；`RoleSelect` 增加兜底——当前角色不在选项列表时自动补一项，避免受控 `Select` 的 `value` 无匹配 `Option` 而显示原始 id（站点管理员查看创建人行时原会触发）。
 - ⚠️ **副作用（有意放开）**：站点管理员可将**最后一个创建人**降级或删除，此后该团体**无创建人**——已核查全部创建人消费点无崩溃（`import_from_labelplus` 有 `creator is None` 分支、`project.move` 防 None、删除权限由 admin 共同持有、无 `group.creator` 悬空字段）；团体继续由 admin 正常管理。**下掉创建人后，可将其余任意 1 人设为创建人**（超管下拉已含创建人选项），避免团体长期无主。
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha14-fix9` / `moeflow-backend:1.1.8-iroha14-fix9`。
 
 ---
 
@@ -288,7 +182,6 @@ python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample'); impo
 - **自动翻译取图（外置存储跨域）**：新增同源代理接口 `GET /v1/files/<file_id>/content`（`token_required` + 项目访问权限校验，后端从 LOCAL/OSS/R2/imgstore 读取原始字节流并用 `send_file` 返回）；前端自动翻译改用该同源接口取图，修复外置存储（R2 / imgstore）直链无 CORS 头导致的「获取图片失败」。
 - **自动翻译弹窗白屏**：`modal.confirm` 会同步挂载子组件并触发其初始 `useEffect`，effect 回调 `onChange` 引用了尚未初始化的 modal `handle`（TDZ：`ReferenceError: Cannot access ... before initialization`）；改为先 `let handle = null` + `handle?.update(...)`，赋值后再补一次按钮状态同步。
 - **i18n**：日志管理文案（37 个 key）补回 `messages.yaml`（此前只存在于生成的 locale JSON，运行 `build:locale` 时被覆盖，导致界面显示成 key 原名）。
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha13` / `moeflow-backend:1.1.8-iroha13`。
 
 ---
 
@@ -305,7 +198,6 @@ python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample'); impo
 - **操作 IP（CDN 场景）**：优先 `CF-Connecting-IP` / `True-Client-IP`，其次 `X-Forwarded-For` 中第一个非内网地址，最后回退 `X-Real-IP` / `remote_addr`，套 CDN 也能取到真实用户 IP。
 - **前端**：管理后台新增「日志管理」页（`/admin/logs`，侧边栏带剪贴板图标），操作日志 / 错误日志两个标签页 + 筛选 + 错误详情弹窗（堆栈、请求数据、处理人）+ 标记已处理；操作日志表格在用户名旁展示操作 IP；暗色模式适配（Tabs 标签文字、时间选择器面板与「时/分」列头、详情弹窗 Descriptions、筛选区底色）。
 - 关键文件：后端 `models/log.py`、`apis/admin_log.py`、`decorators/log.py`、`apis/urls.py`、`factory.py` 及各处 `@log_action` 埋点；前端 `components/admin/AdminLogList.tsx`、`apis/log.ts`、`pages/Admin.tsx`、`components/admin/AdminSidebar.tsx`、`pages/Login.tsx`、`App.tsx`、`locales/*`。
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha12` / `moeflow-backend:1.1.8-iroha12`。
 
 ---
 
@@ -328,12 +220,9 @@ python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample'); impo
 
 - **问题**：`oss.default_bucket_name()`（以及 `select_r2_bucket` / `_r2_conf_by_bucket` 等）引用 `self.r2_buckets`，但该属性只在 `STORAGE_TYPE=R2` 分支初始化。LOCAL_STORAGE / OSS / REMOTE_HTTP 模式下调用会 `AttributeError`，导致团队/用户头像、导出 URL、品牌资源等接口 500。
 - **修复**：`OSS.init()` 开头无条件初始化 `self.r2_buckets = []`，非 R2 模式下相关方法安全返回空值。
-- 镜像 tag：`moeflow-backend:1.1.8-iroha11-fix1`。
 - 文件：`backend/app/services/oss.py`。
 
 ### 四、版本
-
-- 镜像 tag：`moeflow-frontend:1.1.7-iroha11` / `moeflow-backend:1.1.8-iroha11-fix1`。
 
 ---
 
@@ -455,7 +344,6 @@ python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample'); impo
   - API 与 `requests` 几乎完全兼容（`curl_cffi.requests` 是 drop-in 兼容层），改动最小。
 - **依赖版本**：`curl_cffi==0.14.0`（依赖 `cffi>=1.12`，与项目锁定的 `cffi==1.17.1` 兼容；0.15+ 需要 `cffi>=2.0` 会与锁定版本冲突，故不用最新版）。
 - **实现**：`backend/app/services/image_download.py` 全部请求（`download_external` / Twitter / Bluesky / Pixiv 下载）改用 curl_cffi 并注入 `impersonate="chrome"`；移除 `stream=True`（curl_cffi 流式读取 `content` 为空，与 requests 行为不同）；异常类改用 `curl_cffi.requests.exceptions.RequestException`。
-- **验证**：`https://cdn.donmai.us/...`（Danbooru，Cloudflare 保护）原图 2.4MB 直连下载成功；本地与测试机容器内均通过。
 - 前端无改动（后端下载链路）。
 
 ---
@@ -779,12 +667,9 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
   - **撤回校对时同步清理编辑器校对模式里的确认状态**（初版只清 `File.proofreader` 导致校对确认残留，已修复）：遍历该文件所有原文的翻译，逐条 `Translation.unselect()`（选定确认状态，正确递减 `checked_source_count`，文件/父级文件夹/`FileTargetCache`/项目各级缓存同步）并清空 `proofread_content`（db_field `p`）与校对者引用；重复调用幂等。
   - `file.update()` 后 `reload()` 再返回，保证响应里 `file` 为最新值（前端撤回后整页刷新，双保险）。
   - 返回 `{"message": "已撤回：校对、嵌字", "file": <to_api>}`。
-  - 测试机 E2E 实测：BS测试1 某图撤回前 `csc=5 / selected=5 / FTC.cs=5` → 撤回后全部归 0，`FileTargetCache` 同步。
 - 前端（`FileItem.tsx` 角色行）：
   - 校对/嵌字行在**有值**时显示「↶」小按钮（仅项目管理员可见）；点击 `confirm` 确认后调 `api.file.undoFileCompletion`（`apis/file.ts` 新增），成功后整页刷新即时生效。
   - 进度条绿条（`typesetter`）与角色栏随字段清空自动消失；`FileItem--typeset` 绿框同步取消。
-- 部署：测试机 172.29.133.24 已部署（构建机与测试机同机，直接 `/opt/build/moeflow-irohamod` 整包同步后本地构建）。
-- 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha15` / `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha15`。
 
 ---
 
@@ -793,7 +678,6 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 - **纯前端改动**，后端不变（仍为 `v1.1.8-iroha15`）。
 - **① 项目文件列表移动端顶栏收纳**（`FileList.tsx`）：手机端将顶栏的「移动图片 / AI翻译 / 导出 / 上传 / 社媒导入」等操作收进右上角「省略号」更多菜单（antd Dropdown，click 触发），社媒导入七个子源作为子菜单；桌面端交互完全不变。
 - **② 符号工具移动端默认隐藏**（`markers/translate/index.tsx`、`markers/proofread/index.tsx`）：检测到 `isMobile` 时 `symbolToolVisible` 初始为 `false`，点「显示符号工具」展开；桌面端保持默认显示。
-- 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha15-fix1` / `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha15`（不变）。
 
 ---
 
@@ -806,7 +690,6 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
   - 分组列表：账号（用户设置）/ 协作（新的邀请、新的申请，保留 Badge 计数）/ 管理区（仅管理员：管理员中心、邀请码、通知管理、用户管理、日志管理五个直达入口）/ 其他（首页）；
   - 独立危险色退出登录按钮（无确认弹窗，行为不变）；
   - 全部配色走 `--moeflow-*` CSS 变量（暗色模式自动适配），触控行高 ≥48px，焦点可见；修正旧 45px 底部魔法数为正确的 TabBar 50px 模型（不重复扣高）。
-- 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha15-fix2` / 后端不变。
 
 ---
 
@@ -824,8 +707,6 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 - **前端**：文件卡高度 268→286（`FileList` `itemHeight` 250→290），四行角色 + 两条进度不遮挡；创建项目双勾选改为选项卡片并带模式预览 Tag；图片编辑器左上角作者标号只读（不可拖动/删除/右键），overview 显示「翻译（不记名）」+ 署名，translate/proofread 面板过滤作者；新增 i18n `file.originalAuthor*`、`project.withAuthor*`、`translation.anonymous` 等。
 - **导出**：`File.to_labelplus` 将作者标号按普通标号输出（内容取 `source.content`），不烧录进图片像素。
 - **修订版**：`create_revision` 复制 `original_author` 并重建作者 Source，`activate_revision` 兜底补建。
-- **运维（测试机 502 修复）**：测试机后端容器单独重建后 IP 变化，前端 nginx 仍缓存旧 upstream（`links`/静态 `proxy_pass`）导致全站 `/api` 502、无法登录。已在 `nginx/templates/default.conf.template` 的 `/api` 使用 Docker 内置 DNS 动态解析（`resolver 127.0.0.11 valid=10s` + 变量 `proxy_pass`），后续单独重建后端不再 502。
-- **镜像 tag**：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16` / `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16`；测试机 172.29.133.24 已部署并通过 API/UI 实测。
 
 ---
 
@@ -833,12 +714,6 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 
 - **① 所有图片可重命名**：后端 `PUT /v1/files/<file_id>` 已支持 `{"name": ...}`（RENAME_FILE 权限 + 同名/后缀校验），本次补齐前端入口：文件卡文件名行内编辑（点击进入 input，Enter/失焦保存、Esc 取消，与卡片打开图片点击隔离）；权限不足不显示；重名/校验错误展示后端 message。
 - **② X / Bluesky / Pixiv 单点导入改批量**：`ImportFromURLModal` 输入由单行 Input 改为多行 TextArea（一行一个 URL），前端逐行串行调用现有接口；逐行成功/重复/失败明细 + 汇总；`*_user` 进度式来源多行排队处理。
-- 镜像 tag：`ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix1`（本次纯前端，后端沿用 `v1.1.8-iroha16`）。
-- **部署方式变更（2026-10-22）**：正式机 compose 已改为跟踪 `:latest`
-  （`moeflow-frontend:latest` / `moeflow-backend:latest`），后续发版只需
-  `docker push …:latest` → 正式机 `docker compose pull && docker compose up -d`。
-  备份：`/var/dockers/moeflow/docker-compose.yml.bak-pre-latest-iroha16`。
-  当前 `latest` = 前端 `v1.1.7-iroha16-fix1` + 后端 `v1.1.8-iroha16`。
 
 ---
 
@@ -855,12 +730,6 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 - **③ 不进自动翻译**：作者标号不产生 Translation；批量 AI 翻译 / 标号匹配继续过滤 `kind=author`，普通 Source / Translation 入口拒绝操作作者标号。
 - **数据结构**：`Project.author_label_template`（`alt`），无新集合；`File.original_author`（`oa`）仍是 `{原作者}` 的数据源。
 - **接口**：`PUT /v1/projects/<id>` 新增 `author_label_template`（仅 `with_author` 项目、CHANGE 权限；空串=清空，保存后同步全项目图片的作者标号）。
-- **测试机部署（172.29.133.24）**：已构建并切换
-  `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix3` + `ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix3`
-  （`/opt/moeflow-deploy/docker-compose.yml` 已改 tag，备份 `docker-compose.yml.bak-pre-fix3-*`）。
-  - 冒烟（backend 容器内 test_client + Mongo 校验）：模板保存/读取、按模板渲染、角色变更即时重渲染、上传自动加标号并随删除清理、给作者标号加翻译被拒、LabelPlus 头含第 3 组且作者行 `,3]`、未知占位符 400、统计计数不变 —— 全部通过。
-  - 项目设置页（BS测试4）实测：模板编辑 → 预览 → 保存提示「作者信息设置已保存」；编辑器作者标号计算样式 `rgba(179, 127, 235, 0.7)`。
-  - 正式机尚未推送；发布时按 `:latest` 流程 `docker tag … :latest && docker push`。
 
 ---
 
@@ -880,12 +749,6 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 - **顺手修复**：`Output.delete_real_files` 以列表调用 `oss.rmdir`，REMOTE_HTTP/R2
   分支把列表当缓存 key，抛 `TypeError(unhashable type: 'list')` 被兜底吞掉，
   导致 imgstore/R2 上的旧导出目录从未真正删除。`oss.rmdir` 现在支持列表入参。
-- **测试机验证（172.29.133.24，镜像同 tag 重建）**：
-  - 空嵌字 + 「嵌字A」→ 标记 1 张，导出 txt 内 `嵌字：嵌字A`；
-  - 已有「嵌字A」+ 「嵌字B」且仅填空白 → 保留 A，导出仍为 A；
-  - 关闭「仅填充」→ 覆盖为 B，导出为 B；
-  - 界面弹窗实测：输入「前端嵌字」导出后，`file.typesetter` 与作者标号内容同步更新；
-  - `rmdir` 列表入参不再报错，旧导出文件确认从 imgstore 删除（GET 404）。
 
 ---
 
@@ -905,10 +768,6 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
   - Dockerfile 新增 `STORAGE_TYPE`（`LOCAL_STORAGE`/`REMOTE_HTTP`/`OSS`/`R2`/`ALL`）与 `ENABLE_GOOGLE_OCR` 构建参数；默认最小镜像不安装 OSS/R2/Google SDK，`ALL` 保留完整兼容安装。
   - OSS、Google Storage 改为按需导入；imgstore/R2/LOCAL 不依赖缺失 SDK。
 - **注册/密码策略不变**：仍为邀请码注册、忘记密码联系管理员；未恢复已停用的邮箱验证码注册和自助重置接口。
-- **测试机部署（172.29.133.24）**：已切换
-  `ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix4` +
-  `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix4`（`REMOTE_HTTP` 构建，后端约 371MB）。
-  compose 备份：`/opt/moeflow-deploy/docker-compose.yml.bak-pre-iroha16-fix4-20261101-004605`。
 - **验证**：后端 Linux 镜像内 28 项关键测试通过、14 项旧流程跳过；前端 19 项测试、typecheck、生产构建通过；`/api/ping`、`/api/v1/site/*`、登录/注册页与验证码正常。
 
 ---
@@ -925,14 +784,6 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
   - 通用 `List` 新增默认关闭的 `refetchOnPageSizeChange`；仅文件页开启。
   - 尺寸变化且出现尚未请求过的页大小时，重置第 1 页并用新 `pageSize` 重取；`lastRequestedPageSizeRef` 防重复/漏请求，移动端键盘缩小仍不触发。
 - **验证**：`typecheck`、19 项 Jest、ESLint 0 error、生产构建通过。
-- **测试机部署（172.29.133.24）**：已切换
-  `ghcr.io/umeabc/moeflow-frontend:v1.1.7-iroha16-fix5` +
-  `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix5`，后端 build ID `iroha16-fix5`。
-  compose 备份：`/opt/moeflow-deploy/docker-compose.yml.bak-pre-iroha16-fix5-20261101-174820`。
-- **GHCR**：已推送 fix5 版本标签，并把 `:latest` 指向同一 digest：
-  - frontend `sha256:1a3024e5ee4aff2ca23bce095f33780ec7c064b10d88766fa888d01e799efa83`
-  - backend `sha256:a8dbf96cfe9110927dc63115cfdbce85f63f254a0fe0343c8b04359997f74ffd`
-- **说明**：后端本次无业务改动，仅为统一版本号重建；未部署正式机，正式机需手动 pull 后才会升级到 fix5。
 
 ---
 
@@ -940,4 +791,3 @@ typesetter  = StringField(db_field="tyu", default="")   # 嵌字负责人
 
 - 本改动为定制版本，与上游 moeflow 官方代码存在差异；如需回退，可用官方 tag `v1.1.7` / `v1.1.8` 重新构建。
 - 涉及权限与交互调整（角色编辑、项目集删除/移动、搜索范围、上传去重、主题切换、符号工具），请按实际团队与权限配置确认。
-- 交付：前端/后端镜像已按 `docker save` 打包为 tar（`moeflow-*-1.1.x-iroha8.tar`），生产侧 `docker load` 后替换对应镜像即可（仅替换镜像，不动 env/compose）。
