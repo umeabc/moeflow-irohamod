@@ -29,6 +29,7 @@
 - **交付方式（正式机，2026-11-21 起改为离线）**：Atelier 镜像在构建机 `docker save | gzip -1`（约 70MB）→ 传到正式机 `docker load`，校验 sha256 `2943fd49…cda4`；正式机已删除 ghcr 凭据 `/root/.docker/config.json`，不再依赖 registry 账号，`docker compose up -d` 直接用本地镜像。
 - **审核默认值（正式机）**：按要求把 `auto_approve_images` 改为 `true`（新图上传即通过，与旧版行为一致），`allow_pending_images` 保持 `true`；历史上未标记的图片仍可在 Atelier「图片审核」里回看与处置。
 - **运维提示**：正式机 22 端口按网络安全策略封禁，SSH 仅开放高位端口且只能从管理侧经转发访问；大规模文件传输请分块续传（SFTP 长连接易被中断）。
+- **数据操作（2026-11-21）**：正式机将全部已上传图片批量标记为「已通过」——`safe_status=0` 的 5,635 张（全部带存储字节的图片）更新为 `SAFE`，并清理 `safe_task_id/result_id/start_time`；变更前把 `_id → safe_status` 导出到 `logs/moeflow-backend/safe_status_backup_20261121-065138.json`（另存本地一份）便于回滚。无存储字节的占位行（559 条，含导入占位）未改动；审核队列「待审核」现为 0。
 - **上线注意**：默认 `auto_approve_images=false`，正式机新图会进人工待审核；Atelier 审核页上线前，因 `allow_pending_images=true` 这些图仍可用。若要与旧行为一致，先在站点设置把 `auto_approve_images` 打开。
 
 ---

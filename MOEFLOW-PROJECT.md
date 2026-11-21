@@ -317,6 +317,7 @@ python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample'); impo
 - **镜像**：`ghcr.io/umeabc/moeflow-atelier:v2.0.7` / `latest`（digest `sha256:defceacd…6b49`），基础镜像复用 nginx。
 - **正式机**：独立 compose 项目 `moeflow-atelier`（`/opt/moeflow-atelier`），`127.0.0.1:8734 -> 80`，只读加入 `moeflow_default` 网络；宿主 nginx `conf.d/mfv2.conf` 提供 `https://mfv2.basmc.org`（通配证书）。
 - **测试机**：此前已在 8733 运行 v2.0.6，本次不改动。
+- **数据**：2026-11-21 正式机把 5,635 张已上传图片批量置为「已通过」（附 `_id → safe_status` 备份），审核队列清空；无字节占位行未动。
 - **交付**：正式机改为离线交付（`docker save | gzip` → 传输 → `docker load`，sha256 校验），并已删除正式机 ghcr 凭据；`auto_approve_images` 已在正式机开启为 `true`。
 - **前提**：后端需 fix14（图片审核两项设置）；旧前端不传新字段时后端保留原值。
 
