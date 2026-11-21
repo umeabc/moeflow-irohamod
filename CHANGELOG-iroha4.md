@@ -26,6 +26,9 @@
 - **测试机**：backend + celery 重建为 fix14，frontend 保持 fix12；compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix14-20261121-011450`。验收：`/api/ping` 200、`flavor.version=iroha16-fix14`；设置 GET/PUT 正常、旧客户端 PUT 保留原值、显式 PUT 能保存；上传 `safe_status=3(NEED_HUMAN_CHECK)` 且 `available_in_project=true`、`/content` 200；`allow_pending_images=false` 后 `/content` 400、列表查不到、导出不含该图；恢复 true 后全部恢复；Celery 1 node online；日志无 error。
 - **正式机（已部署）**：`docker compose pull moeflow-backend moeflow-celery` 拉到 digest `sha256:4697195…e0ad`，`up -d --no-deps` 只重建 backend + celery（frontend 维持 fix12）；compose 备份 `docker-compose.yml.bak-pre-fix14-20261120-214315`。验收：`/api/v1/site/flavor` → `iroha16-fix14`，`/api/ping` 200，首页 `/login` `/admin` 200，Celery 1 node online，日志无 error。管理端 `GET /v1/admin/site-setting` 已返回两个新字段，`GET /v1/admin/files?safe_status=3` 正常。回退：compose 改回 `v1.1.8-iroha16-fix11` 重建，新增字段旧版会忽略。
 - **MoeFlow Atelier 并存上线（同日）**：新前端镜像 `ghcr.io/umeabc/moeflow-atelier:v2.0.7`（digest `sha256:defceacd…6b49`，源码仓库 `umeabc/moeflow-atelier`）；正式机独立 compose 项目 `moeflow-atelier`（`/opt/moeflow-atelier`），端口 `127.0.0.1:8734`，只读加入 `moeflow_default`；宿主 nginx 新增 `conf.d/mfv2.conf` → `mfv2.basmc.org`（`*.basmc.org` 通配证书，改前备份 `conf.d`）。验收：`https://mfv2.basmc.org` 首页/登录/`/dashboard/projects` 均 200，资源 200，`/api/v1/captchas` 200，`flavor` 走新后端，管理台「图片审核」可见待审队列；旧站不受影响。
+- **交付方式（正式机，2026-11-21 起改为离线）**：Atelier 镜像在构建机 `docker save | gzip -1`（约 70MB）→ 传到正式机 `docker load`，校验 sha256 `2943fd49…cda4`；正式机已删除 ghcr 凭据 `/root/.docker/config.json`，不再依赖 registry 账号，`docker compose up -d` 直接用本地镜像。
+- **审核默认值（正式机）**：按要求把 `auto_approve_images` 改为 `true`（新图上传即通过，与旧版行为一致），`allow_pending_images` 保持 `true`；历史上未标记的图片仍可在 Atelier「图片审核」里回看与处置。
+- **运维提示**：正式机 22 端口按网络安全策略封禁，SSH 仅开放高位端口且只能从管理侧经转发访问；大规模文件传输请分块续传（SFTP 长连接易被中断）。
 - **上线注意**：默认 `auto_approve_images=false`，正式机新图会进人工待审核；Atelier 审核页上线前，因 `allow_pending_images=true` 这些图仍可用。若要与旧行为一致，先在站点设置把 `auto_approve_images` 打开。
 
 ---
