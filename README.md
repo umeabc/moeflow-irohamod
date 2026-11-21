@@ -1,12 +1,12 @@
 # MoeFlow 定制版（iroha16-fix14）备份仓库
 
 > 本仓库为 MoeFlow（彩翻 / 萌翻）**内部定制版本**的源码备份仓库（私有）。
-> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；测试机已部署 **iroha16-fix14**（后端图片审核，前端沿用 fix12），正式机待拉取 `latest`。历史 fix7/fix6 部署记录见下方。
+> 定制基线：前端 `v1.1.7`、后端 `v1.1.8`；测试机与正式机均已部署 **iroha16-fix14**（后端图片审核，旧前端沿用 fix12）。同机以独立容器并存部署新前端 **MoeFlow Atelier v2.0.7**（`https://mfv2.basmc.org`，源码在 `umeabc/moeflow-atelier`）。历史 fix7/fix6 部署记录见下方。
 > 本文档为**脱敏版**，不含具体主机、域名、端口、代理与凭据信息。
 
 ---
 
-## iroha16-fix14（2026-11-21 测试机已部署；正式机待拉取）
+## iroha16-fix14（2026-11-21 双机已部署，含 Atelier 并存）
 
 图片审核与待审图片访问控制。**仅后端变更**，前端沿用 `v1.1.7-iroha16-fix12`。
 
@@ -14,7 +14,8 @@
 - **生效范围**：上传、覆盖和媒体导入中的实际图片都按新图规则处理；只有标号而没有原图的导入占位不进入审核。两项设置不会批量修改历史审核结果。关闭待审图访问会限制应用内的新访问和新导出，不撤销此前签发的图片链接或已经生成的导出包。
 - **发布状态（2026-11-21）**：镜像 `ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix14`，digest `sha256:4697195660505521b687491861bf02f8101ccde58b5e38d99c4540e399a1e0ad`，GHCR `latest` 已指向同一 digest；源码已在 GitHub `master`（`e79d3eb`）。
 - **测试机**：`v1.1.8-iroha16-fix14`，backend + celery 已重建（frontend 未动）；compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix14-20261121-011450`。验收：`/api/ping` 200、`/api/v1/site/flavor` 版本 `iroha16-fix14`；设置 GET/PUT 正常且旧客户端 PUT 保留原值；上传新图 `safe_status=NEED_HUMAN_CHECK`、可用；关闭 `allow_pending_images` 后该图内容接口 400、列表消失、导出不含该图；重新开启后恢复；Celery `1 node online`；backend 日志无 error。
-- **正式机拉取步骤**（compose 跟踪 `latest`）：先备份 compose 与旧镜像标签，再 `docker compose pull moeflow-backend moeflow-celery && docker compose up -d --no-deps moeflow-backend moeflow-celery`，最后核对 `/api/v1/site/flavor` 的 `version` 为 `iroha16-fix14`。
+- **正式机（2026-11-21 已部署）**：compose 备份 `docker-compose.yml.bak-pre-fix14-20261120-214315`；`docker compose pull moeflow-backend moeflow-celery` 后只重建 backend + celery（frontend 未动），`/api/v1/site/flavor` 返回 `iroha16-fix14`，`/api/ping` 200，Celery 1 node online，日志无 error。
+- **Atelier 并存部署（正式机）**：镜像 `ghcr.io/umeabc/moeflow-atelier:v2.0.7`，独立 compose 项目 `moeflow-atelier`（`/opt/moeflow-atelier/docker-compose.atelier.yml`），`127.0.0.1:8734 -> 80`，只读加入 `moeflow_default` 网络把 `/api` 反代到 `moeflow-backend:5000`；宿主 nginx 新增 `conf.d/mfv2.conf`（`mfv2.basmc.org`，复用 `*.basmc.org` 通配证书），改前备份 `conf.d`。旧站 `moeflow.basmc.org` 与 `/admin` 保持 200。
 - **上线注意**：默认 `auto_approve_images=false`，正式机新上传的图片会进入人工待审核。Atelier 审核页尚未上线期间，这些图片因 `allow_pending_images=true` 仍可用；若希望保持与旧版一致的「上传即通过」，可先在站点设置里把 `auto_approve_images` 打开（或等 Atelier 一起上线）。
 - **回退**：把 compose 里的后端镜像改回 `v1.1.8-iroha16-fix11`（或备份 compose）后重建 backend/celery；`SiteSetting` 里的 `api`/`aai` 两个字段旧版会忽略，无需清库。
 - **本地隔离测试**可用 [test_isolated.py](<backend/scripts/test_isolated.py>)：在后端目录下运行 `python scripts/test_isolated.py tests/api/test_site_setting_api.py`。仅使用内存数据库、临时本地图片存储和内存 Celery，不加载 `.env`。

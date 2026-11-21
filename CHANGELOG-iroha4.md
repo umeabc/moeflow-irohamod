@@ -8,7 +8,7 @@
 
 ---
 
-## iroha16-fix14（2026-11-21 测试机已部署；正式机待拉取）
+## iroha16-fix14（2026-11-21 双机已部署；同日上线 MoeFlow Atelier）
 
 图片审核与待审图片访问控制，仅后端变更（前端沿用 `v1.1.7-iroha16-fix12`）。
 
@@ -24,8 +24,8 @@
 - **回归**：容器内跑 `tests/api` + `tests/model`，**289 passed / 2 failed**；两处失败在改动前基线（`3f6d0fb`）同样失败（`test_delete_team_project_set`、`test_sign_url`），与本次无关。
 - **镜像与 GHCR**：`ghcr.io/umeabc/moeflow-backend:v1.1.8-iroha16-fix14`，digest `sha256:4697195660505521b687491861bf02f8101ccde58b5e38d99c4540e399a1e0ad`，`latest` 同 digest；源码提交 `e79d3eb`。
 - **测试机**：backend + celery 重建为 fix14，frontend 保持 fix12；compose 备份 `/opt/moeflow-deploy/docker-compose.yml.bak-pre-fix14-20261121-011450`。验收：`/api/ping` 200、`flavor.version=iroha16-fix14`；设置 GET/PUT 正常、旧客户端 PUT 保留原值、显式 PUT 能保存；上传 `safe_status=3(NEED_HUMAN_CHECK)` 且 `available_in_project=true`、`/content` 200；`allow_pending_images=false` 后 `/content` 400、列表查不到、导出不含该图；恢复 true 后全部恢复；Celery 1 node online；日志无 error。
-- **正式机**：本轮未由本机部署（22 端口不可达），改为在正式机自行拉取 `latest`：
-  备份 compose 与旧标签 → `docker compose pull moeflow-backend moeflow-celery` → `docker compose up -d --no-deps moeflow-backend moeflow-celery` → 用 `/api/v1/site/flavor` 的 `version` 校验。回退改回 `v1.1.8-iroha16-fix11` 重建即可，新增字段旧版会忽略。
+- **正式机（已部署）**：`docker compose pull moeflow-backend moeflow-celery` 拉到 digest `sha256:4697195…e0ad`，`up -d --no-deps` 只重建 backend + celery（frontend 维持 fix12）；compose 备份 `docker-compose.yml.bak-pre-fix14-20261120-214315`。验收：`/api/v1/site/flavor` → `iroha16-fix14`，`/api/ping` 200，首页 `/login` `/admin` 200，Celery 1 node online，日志无 error。管理端 `GET /v1/admin/site-setting` 已返回两个新字段，`GET /v1/admin/files?safe_status=3` 正常。回退：compose 改回 `v1.1.8-iroha16-fix11` 重建，新增字段旧版会忽略。
+- **MoeFlow Atelier 并存上线（同日）**：新前端镜像 `ghcr.io/umeabc/moeflow-atelier:v2.0.7`（digest `sha256:defceacd…6b49`，源码仓库 `umeabc/moeflow-atelier`）；正式机独立 compose 项目 `moeflow-atelier`（`/opt/moeflow-atelier`），端口 `127.0.0.1:8734`，只读加入 `moeflow_default`；宿主 nginx 新增 `conf.d/mfv2.conf` → `mfv2.basmc.org`（`*.basmc.org` 通配证书，改前备份 `conf.d`）。验收：`https://mfv2.basmc.org` 首页/登录/`/dashboard/projects` 均 200，资源 200，`/api/v1/captchas` 200，`flavor` 走新后端，管理台「图片审核」可见待审队列；旧站不受影响。
 - **上线注意**：默认 `auto_approve_images=false`，正式机新图会进人工待审核；Atelier 审核页上线前，因 `allow_pending_images=true` 这些图仍可用。若要与旧行为一致，先在站点设置把 `auto_approve_images` 打开。
 
 ---

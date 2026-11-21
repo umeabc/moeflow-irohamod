@@ -1,7 +1,7 @@
 # MoeFlow 项目交接档案（iroha16-fix14 定制版）
 
 > 项目已有历史上线版本；当前 **iroha16-fix14 已部署测试机、正式机待拉取**：后端新增图片审核与待审图片访问控制；前端沿用 fix12。本文件为项目背景的**自包含交接档案**，可随工作区/仓库迁移。
-> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。当前工作区版本 **iroha16-fix14（测试机已部署，正式机待拉取）**。
+> 配套文件：`CHANGELOG-iroha4.md`（改动明细）、备份仓库 `umeabc/moeflow-backup`。当前工作区版本 **iroha16-fix14（双机已部署）**；新前端 **MoeFlow Atelier v2.0.7** 已与旧前端并存上线。
 > 注：本档案为**脱敏版**，不含具体主机 IP、域名、端口、代理与凭据；实际部署环境信息由部署方自理。
 
 ---
@@ -311,6 +311,13 @@ python -c "from dotenv import load_dotenv; load_dotenv('.env.test.sample'); impo
   - `CVE-2026-109618` / `CVE-2026-109619`（PHP RCE，8.2.35/8.3.36/8.4.27/8.5.12 修复）：**不适用**——正式机无 PHP（无 php 二进制、无 php-fpm、无 PHP 容器镜像），MoeFlow 后端为 Python 3.11。
   - `CVE-2026-111497`（Node.js Brotli 解码器 OOB 写 → RCE，24.22.1 修复）：**已修复**——正式机唯一 Node 运行时是 `bili-dyn-publisher` 容器，`node -v` = `v24.22.1`（即 2026-10-21 安全版），业务页面 200、日志无报错；MoeFlow 自身不使用 Node（前端为 nginx 静态、后端 Python）。
   - 容器内 nginx 为 `1.26.3`（`nginx:1.26` 基础镜像）：按 Debian 记录受 `CVE-2026-42055`（HTTP/2 头长度）与 `CVE-2026-48142`（charset 越界读）影响，但该容器仅 `listen 80`、无 `http2`、无 `charset` 指令，且只经主机 nginx 以 HTTP/1.1 反代，**当前拓扑不可达**；建议下次重建前端镜像时把 `FROM nginx:1.26` 提到 `nginx:1.31.8`。
+
+## 4.18 MoeFlow Atelier 并存上线（2026-11-21）
+- **定位**：全新独立前端（`umeabc/moeflow-atelier`，React 17 + Vite，无 UI 库），与旧前端并存、共用同一后端与数据。
+- **镜像**：`ghcr.io/umeabc/moeflow-atelier:v2.0.7` / `latest`（digest `sha256:defceacd…6b49`），基础镜像复用 nginx。
+- **正式机**：独立 compose 项目 `moeflow-atelier`（`/opt/moeflow-atelier`），`127.0.0.1:8734 -> 80`，只读加入 `moeflow_default` 网络；宿主 nginx `conf.d/mfv2.conf` 提供 `https://mfv2.basmc.org`（通配证书）。
+- **测试机**：此前已在 8733 运行 v2.0.6，本次不改动。
+- **前提**：后端需 fix14（图片审核两项设置）；旧前端不传新字段时后端保留原值。
 
 ## 4.17 iroha16-fix14 图片审核与待审图片访问（2026-11-21）
 - **站点设置**：`allow_pending_images`（默认 true，待审图片能否在项目内使用）、`auto_approve_images`（默认 false，新图直接通过或进人工待审核）；旧客户端保存不覆盖这两项。
