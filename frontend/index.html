@@ -2,7 +2,7 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="moeflow-build" content="iroha16-fix15" />
+    <meta name="moeflow-build" content="iroha16-fix16" />
     <script>
       // 在样式与应用加载前恢复偏好，兼容旧版 darkMode 存储。
       (function () {
@@ -15,8 +15,9 @@
           }
         }
         var palette = stored('palette', 'default');
+        var palettes = ['default', 'azure', 'miku', 'resort-anthem', 'sparkle-shower', 'zinrai'];
         document.documentElement.dataset.theme = stored('darkMode', false) === true ? 'dark' : 'light';
-        document.documentElement.dataset.palette = palette === 'azure' || palette === 'miku' ? palette : 'default';
+        document.documentElement.dataset.palette = palettes.indexOf(palette) !== -1 ? palette : 'default';
       })();
     </script>
     <link rel="icon" href="/static/favicon.png" />

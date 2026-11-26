@@ -1,8 +1,15 @@
-export const themePalettes = ['default', 'azure', 'miku'] as const;
+export const themePalettes = [
+  'default',
+  'azure',
+  'miku',
+  'resort-anthem',
+  'sparkle-shower',
+  'zinrai',
+] as const;
 export type ThemePalette = (typeof themePalettes)[number];
 
 export function normalizePalette(value: unknown): ThemePalette {
-  return value === 'azure' || value === 'miku' ? value : 'default';
+  return themePalettes.find((palette) => palette === value) ?? 'default';
 }
 
 /** 配色与明暗模式独立，不改变图片画布或业务状态色。 */

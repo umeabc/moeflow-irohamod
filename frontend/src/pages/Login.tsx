@@ -38,6 +38,8 @@ interface LoginProps {
 const BRAND = {
   primary: style.primaryColor, // #FF657C
   primaryDeep: 'var(--moeflow-loginPrimaryDeep, #e0506a)',
+  action: 'var(--moeflow-primaryActionColor, var(--moeflow-primaryColor))',
+  actionHover: 'var(--moeflow-primaryActionHover, var(--moeflow-loginPrimaryDeep, #e0506a))',
   gold: '#f2b64b',
   paper: 'var(--moeflow-loginPaper)', // 浅粉底
   cloud: 'var(--moeflow-loginCloud)',
@@ -385,20 +387,20 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
               font-size: 15px;
               margin-bottom: 14px;
               &.Login__LoginedPrimary {
-                color: var(--moeflow-primaryContrast);
+                color: var(--moeflow-primaryActionContrast, var(--moeflow-primaryContrast));
                 background: linear-gradient(
                   135deg,
-                  ${BRAND.primary},
-                  ${BRAND.primaryDeep}
+                  ${BRAND.action},
+                  ${BRAND.actionHover}
                 );
                 border: none;
-                box-shadow: 0 8px 20px rgba(var(--moeflow-primaryRgb), 0.3);
+                box-shadow: 0 8px 20px rgba(var(--moeflow-primaryActionRgb, var(--moeflow-primaryRgb)), 0.3);
                 transition: all 0.25s ease;
                 &:hover {
                   background: linear-gradient(
                     135deg,
-                    ${BRAND.primaryDeep},
-                    ${BRAND.primaryDeep}
+                    ${BRAND.actionHover},
+                    ${BRAND.actionHover}
                   );
                   transform: translateY(-1px);
                 }
@@ -602,23 +604,23 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
                   height: 44px;
                   border-radius: 10px;
                   font-size: 16px;
-                  color: var(--moeflow-primaryContrast);
+                  color: var(--moeflow-primaryActionContrast, var(--moeflow-primaryContrast));
                   background: linear-gradient(
                     135deg,
-                    ${BRAND.primary},
-                    ${BRAND.primaryDeep}
+                    ${BRAND.action},
+                    ${BRAND.actionHover}
                   );
                   border: none;
-                  box-shadow: 0 8px 20px rgba(var(--moeflow-primaryRgb), 0.3);
+                  box-shadow: 0 8px 20px rgba(var(--moeflow-primaryActionRgb, var(--moeflow-primaryRgb)), 0.3);
                   transition: all 0.25s ease;
                   &:hover {
                     background: linear-gradient(
                       135deg,
-                      ${BRAND.primaryDeep},
-                      ${BRAND.primaryDeep}
+                      ${BRAND.actionHover},
+                      ${BRAND.actionHover}
                     );
                     transform: translateY(-1px);
-                    box-shadow: 0 10px 24px rgba(var(--moeflow-primaryRgb), 0.36);
+                    box-shadow: 0 10px 24px rgba(var(--moeflow-primaryActionRgb, var(--moeflow-primaryRgb)), 0.36);
                   }
                 `}
               >

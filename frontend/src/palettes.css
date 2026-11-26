@@ -1,4 +1,5 @@
-/* Atelier studio.css 的 azure / miku 色值；default 继续使用 index.css 原明暗主题。
+/* azure / miku 来自 Atelier；IIDX 三套来自用户提供的配色 guide。
+ * guide 只有单一时代配色，其明暗底色按同一色相补齐；default 保持原样。
  * 配色只覆盖品牌色与中性色，不改成功/警告/错误等语义色、字体、尺寸或漫画画布。
  */
 html[data-theme='light'][data-palette='azure'] {
@@ -85,15 +86,197 @@ html[data-theme='dark'][data-palette='miku'] {
   --moeflow-primaryContrast: #072322;
 }
 
+/* IIDX 18 Resort Anthem：夕阳橙 / 琥珀、白色面板、电青交互。
+ * 原色 #FF8D04、#FFAF04、#00FFFF、#008080、#C04808 来自 guide18。
+ * 浅底使用火焰朱强调文字，橙色操作按钮使用深字；深色底为推导色。
+ */
+html[data-theme='light'][data-palette='resort-anthem'] {
+  --moeflow-paletteCanvas: #fff1de;
+  --moeflow-paletteSurface: #ffffff;
+  --moeflow-paletteElevated: #ffe8c7;
+  --moeflow-paletteHover: #e0ffff;
+  --moeflow-paletteGlass: #fffffff5;
+  --moeflow-paletteText: #1a0f00;
+  --moeflow-paletteTextRgb: 26, 15, 0;
+  --moeflow-paletteSecondary: #6a4318;
+  --moeflow-paletteMuted: #78573e;
+  --moeflow-paletteBorderSubtle: #f4dcc0;
+  --moeflow-paletteBorderInk: #e4bd8c;
+  --moeflow-paletteBorderStrong: #c98f4e;
+  --moeflow-paletteAccent: #c04808;
+  --moeflow-paletteAccentDeep: #9e001a;
+  --moeflow-paletteAccentSoft: #fff6ea;
+  --moeflow-paletteAccentBorder: #ffaf04;
+  --moeflow-primaryRgb: 192, 72, 8;
+  --moeflow-primaryContrast: #ffffff;
+  --moeflow-paletteAction: #ff8d04;
+  --moeflow-paletteActionHover: #ffaf04;
+  --moeflow-paletteActionContrast: #1a0f00;
+  --moeflow-paletteActionRgb: 255, 141, 4;
+  --moeflow-paletteFocus: #008080;
+  --moeflow-paletteFocusRgb: 0, 128, 128;
+  --moeflow-paletteLoginBg: linear-gradient(135deg, #ff8d04 0%, #ffaf04 26%, #fff1de 58%, #e0ffff 100%);
+}
+
+html[data-theme='dark'][data-palette='resort-anthem'] {
+  --moeflow-paletteCanvas: #1a1008;
+  --moeflow-paletteSurface: #241609;
+  --moeflow-paletteElevated: #2f1c0c;
+  --moeflow-paletteHover: #153c3b;
+  --moeflow-paletteGlass: #241609f5;
+  --moeflow-paletteText: #fff2df;
+  --moeflow-paletteTextRgb: 255, 242, 223;
+  --moeflow-paletteSecondary: #d9bc97;
+  --moeflow-paletteMuted: #c29c73;
+  --moeflow-paletteBorderSubtle: #3a2614;
+  --moeflow-paletteBorderInk: #4a331c;
+  --moeflow-paletteBorderStrong: #6b4a28;
+  --moeflow-paletteAccent: #ffaf04;
+  --moeflow-paletteAccentDeep: #ff8d04;
+  --moeflow-paletteAccentSoft: #3a2410;
+  --moeflow-paletteAccentBorder: #e07800;
+  --moeflow-primaryRgb: 255, 175, 4;
+  --moeflow-primaryContrast: #1a1008;
+  --moeflow-paletteAction: #ff8d04;
+  --moeflow-paletteActionHover: #ffaf04;
+  --moeflow-paletteActionContrast: #1a1008;
+  --moeflow-paletteActionRgb: 255, 141, 4;
+  --moeflow-paletteFocus: #00ffff;
+  --moeflow-paletteFocusRgb: 0, 255, 255;
+}
+
+/* IIDX 33 Sparkle Shower：青柠汽水 / 薄荷玻璃 / 橙色 CTA。
+ * #007A6B 是源 #00AB95 的可读深色变体；原青柠/水青保留在底色与深色强调。
+ */
+html[data-theme='light'][data-palette='sparkle-shower'] {
+  --moeflow-paletteCanvas: #f1fbe0;
+  --moeflow-paletteSurface: #ffffff;
+  --moeflow-paletteElevated: #e8fbf2;
+  --moeflow-paletteHover: #dff6c8;
+  --moeflow-paletteGlass: #fcfffdf5;
+  --moeflow-paletteText: #0a1607;
+  --moeflow-paletteTextRgb: 10, 22, 7;
+  --moeflow-paletteSecondary: #33502f;
+  --moeflow-paletteMuted: #41675a;
+  --moeflow-paletteBorderSubtle: #d7edbe;
+  --moeflow-paletteBorderInk: #bedfa0;
+  --moeflow-paletteBorderStrong: #93be74;
+  --moeflow-paletteAccent: #007a6b;
+  --moeflow-paletteAccentDeep: #00594f;
+  --moeflow-paletteAccentSoft: #e8fbf2;
+  --moeflow-paletteAccentBorder: #25b07c;
+  --moeflow-primaryRgb: 0, 122, 107;
+  --moeflow-primaryContrast: #ffffff;
+  --moeflow-paletteAction: #ff9000;
+  --moeflow-paletteActionHover: #ffb800;
+  --moeflow-paletteActionContrast: #0a1607;
+  --moeflow-paletteActionRgb: 255, 144, 0;
+  --moeflow-paletteFocus: #007a6b;
+  --moeflow-paletteFocusRgb: 0, 122, 107;
+  --moeflow-paletteLoginBg: linear-gradient(135deg, #bffe40 0%, #f6fef9 55%, #94efe6 100%);
+}
+
+html[data-theme='dark'][data-palette='sparkle-shower'] {
+  --moeflow-paletteCanvas: #101a12;
+  --moeflow-paletteSurface: #16241b;
+  --moeflow-paletteElevated: #1d2f22;
+  --moeflow-paletteHover: #27402d;
+  --moeflow-paletteGlass: #16241bf5;
+  --moeflow-paletteText: #effbe6;
+  --moeflow-paletteTextRgb: 239, 251, 230;
+  --moeflow-paletteSecondary: #b9d3ac;
+  --moeflow-paletteMuted: #94bea7;
+  --moeflow-paletteBorderSubtle: #24382a;
+  --moeflow-paletteBorderInk: #31492f;
+  --moeflow-paletteBorderStrong: #4c6a48;
+  --moeflow-paletteAccent: #bffe40;
+  --moeflow-paletteAccentDeep: #ffee06;
+  --moeflow-paletteAccentSoft: #26380f;
+  --moeflow-paletteAccentBorder: #6e8a2e;
+  --moeflow-primaryRgb: 191, 254, 64;
+  --moeflow-primaryContrast: #0a1400;
+  --moeflow-paletteAction: #ff9000;
+  --moeflow-paletteActionHover: #ffb800;
+  --moeflow-paletteActionContrast: #0a1400;
+  --moeflow-paletteActionRgb: 255, 144, 0;
+  --moeflow-paletteFocus: #5ae7d9;
+  --moeflow-paletteFocusRgb: 90, 231, 217;
+}
+
+/* IIDX 34 ZINRAI：紫黑 / 深紫内容文字 / 樱霓虹洋红 / 雷神青。
+ * 白卡链接使用源 #9B00E3 与 #300C5D，源 #FE40DD 按钮使用深字。
+ */
+html[data-theme='light'][data-palette='zinrai'] {
+  --moeflow-paletteCanvas: #f7f2fb;
+  --moeflow-paletteSurface: #ffffff;
+  --moeflow-paletteElevated: #efe6f7;
+  --moeflow-paletteHover: #e7daf3;
+  --moeflow-paletteGlass: #fffffff5;
+  --moeflow-paletteText: #1a0b2e;
+  --moeflow-paletteTextRgb: 26, 11, 46;
+  --moeflow-paletteSecondary: #5a4a70;
+  --moeflow-paletteMuted: #6d577d;
+  --moeflow-paletteBorderSubtle: #e3d6ee;
+  --moeflow-paletteBorderInk: #cbb6dc;
+  --moeflow-paletteBorderStrong: #a98cc2;
+  --moeflow-paletteAccent: #9b00e3;
+  --moeflow-paletteAccentDeep: #300c5d;
+  --moeflow-paletteAccentSoft: #f2e4fb;
+  --moeflow-paletteAccentBorder: #ae00ff;
+  --moeflow-primaryRgb: 155, 0, 227;
+  --moeflow-primaryContrast: #ffffff;
+  --moeflow-paletteAction: #fe40dd;
+  --moeflow-paletteActionHover: #ec22fd;
+  --moeflow-paletteActionContrast: #1a0b2e;
+  --moeflow-paletteActionRgb: 254, 64, 221;
+  --moeflow-paletteFocus: #9b00e3;
+  --moeflow-paletteFocusRgb: 155, 0, 227;
+}
+
+html[data-theme='dark'][data-palette='zinrai'] {
+  --moeflow-paletteCanvas: #080014;
+  --moeflow-paletteSurface: #120826;
+  --moeflow-paletteElevated: #1b0b36;
+  --moeflow-paletteHover: #2a1150;
+  --moeflow-paletteGlass: #120826f5;
+  --moeflow-paletteText: #ffffff;
+  --moeflow-paletteTextRgb: 255, 255, 255;
+  --moeflow-paletteSecondary: #c9b4e0;
+  --moeflow-paletteMuted: #b7a2cd;
+  --moeflow-paletteBorderSubtle: #2b0066;
+  --moeflow-paletteBorderInk: #3d1780;
+  --moeflow-paletteBorderStrong: #6a34a8;
+  --moeflow-paletteAccent: #fe40dd;
+  --moeflow-paletteAccentDeep: #ec22fd;
+  --moeflow-paletteAccentSoft: #2a0b3d;
+  --moeflow-paletteAccentBorder: #ae00ff;
+  --moeflow-primaryRgb: 254, 64, 221;
+  --moeflow-primaryContrast: #080014;
+  --moeflow-paletteAction: #fe40dd;
+  --moeflow-paletteActionHover: #ec22fd;
+  --moeflow-paletteActionContrast: #080014;
+  --moeflow-paletteActionRgb: 254, 64, 221;
+  --moeflow-paletteFocus: #00dae2;
+  --moeflow-paletteFocusRgb: 0, 218, 226;
+  --moeflow-paletteLoginBg: linear-gradient(135deg, #080014 0%, #180030 55%, #2b0066 100%);
+}
+
 /* 比 index.css 的 html[data-theme] 多一个属性权重，导入在前仍能覆盖。
  * 组件 token 仅在新配色中定义；App.tsx 的 fallback 保留 default 暗色原值。
  */
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) {
   --moeflow-primaryColor: var(--moeflow-paletteAccent);
   --moeflow-primaryColorDarker: var(--moeflow-paletteAccentDeep);
   --moeflow-primaryColorLighter: var(--moeflow-paletteAccentDeep);
   --moeflow-primaryColorLightest: var(--moeflow-paletteAccentBorder);
   --moeflow-primaryColorBg: var(--moeflow-paletteAccentSoft);
+  /* 操作填色与正文强调分开，鲜亮的 IIDX CTA 不再变成低对比度小字。 */
+  --moeflow-primaryActionColor: var(--moeflow-paletteAction, var(--moeflow-paletteAccent));
+  --moeflow-primaryActionHover: var(--moeflow-paletteActionHover, var(--moeflow-paletteAccentDeep));
+  --moeflow-primaryActionContrast: var(--moeflow-paletteActionContrast, var(--moeflow-primaryContrast));
+  --moeflow-primaryActionRgb: var(--moeflow-paletteActionRgb, var(--moeflow-primaryRgb));
+  --moeflow-primaryFocusColor: var(--moeflow-paletteFocus, var(--moeflow-paletteAccent));
+  --moeflow-primaryFocusRgb: var(--moeflow-paletteFocusRgb, var(--moeflow-primaryRgb));
   --moeflow-normalColor: var(--moeflow-paletteBorderStrong);
   --moeflow-textColor: var(--moeflow-paletteText);
   --moeflow-textColorSecondary: var(--moeflow-paletteMuted);
@@ -125,15 +308,15 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) {
   --moeflow-sliderRail: var(--moeflow-paletteBorderInk);
   --moeflow-sliderThumb: var(--moeflow-paletteAccent);
   --moeflow-menuBg: var(--moeflow-paletteGlass);
-  --moeflow-loginPageBg: linear-gradient(135deg, var(--moeflow-paletteCanvas) 0%, var(--moeflow-paletteSurface) 55%, var(--moeflow-paletteElevated) 100%);
+  --moeflow-loginPageBg: var(--moeflow-paletteLoginBg, linear-gradient(135deg, var(--moeflow-paletteCanvas) 0%, var(--moeflow-paletteSurface) 55%, var(--moeflow-paletteElevated) 100%));
   --moeflow-loginPaper: var(--moeflow-paletteElevated);
   --moeflow-loginCloud: var(--moeflow-paletteSurface);
   --moeflow-loginInk: var(--moeflow-paletteText);
   --moeflow-loginInkLight: var(--moeflow-paletteSecondary);
   --moeflow-loginInkLighter: var(--moeflow-paletteMuted);
   --moeflow-loginPrimaryDeep: var(--moeflow-paletteAccentDeep);
-  --moeflow-loginSegmentBg: var(--moeflow-primaryColor);
-  --moeflow-loginSegmentText: var(--moeflow-primaryContrast);
+  --moeflow-loginSegmentBg: var(--moeflow-primaryActionColor);
+  --moeflow-loginSegmentText: var(--moeflow-primaryActionContrast);
   --moeflow-componentSurface: var(--moeflow-paletteSurface);
   --moeflow-componentElevated: var(--moeflow-paletteElevated);
   --moeflow-componentBorder: var(--moeflow-paletteBorderInk);
@@ -152,7 +335,7 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) {
  * 必要的 !important 同时覆盖其 !important 和移动底栏内联背景。
  * 不以 #root 限定，Select/Dropdown/Modal 等 body portal 同样继承主题。
  */
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-modal-content, .ant-modal-body, .ant-modal-header, .ant-modal-footer,
   .ant-modal-confirm, .ant-modal-confirm-body, .ant-modal-confirm-content,
   .ant-drawer-content, .ant-drawer-header, .ant-card, .ant-card-head,
@@ -166,7 +349,7 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
   color: var(--moeflow-textColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-select-dropdown, .ant-dropdown-menu, .ant-menu, .ant-menu-sub,
   .ant-menu-submenu-popup, .ant-message-notice-content, .ant-notification-notice,
   .ant-tooltip-inner, .ant-popover-inner, .ant-popover-inner-content,
@@ -177,7 +360,7 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
   color: var(--moeflow-textColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-card, .ant-card-head, .ant-modal-header, .ant-modal-footer,
   .ant-drawer-header, .ant-input-group-addon, .ant-divider,
   .ant-descriptions-view, .ant-descriptions-row > th, .ant-descriptions-row > td,
@@ -185,11 +368,11 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
   .ant-picker-panel, .ant-picker-header, .ant-picker-footer,
   .ant-picker-time-panel-column:not(:first-child), .ant-menu-inline
 ),
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-tabs-nav::before {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-tabs-nav::before {
   border-color: var(--moeflow-borderColorBase) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-modal-title, .ant-modal-confirm-title, .ant-drawer-title,
   .ant-form-item-label > label, .ant-checkbox-wrapper, .ant-radio-wrapper,
   .ant-select-selection-item, .ant-picker-input > input,
@@ -200,23 +383,23 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
   color: var(--moeflow-textColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-select-selection-placeholder, .ant-select-arrow, .ant-select-clear,
   .ant-input-suffix, .ant-input-password-icon, .ant-picker-suffix,
   .ant-picker-clear, .ant-modal-close, .ant-drawer-close,
   .ant-empty-description, .ant-tabs-nav-more
 ),
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(input, textarea)::placeholder {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(input, textarea)::placeholder {
   color: var(--moeflow-textColorSecondary) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-select-clear, .ant-picker-clear
 ) {
   background-color: var(--moeflow-surface) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-select-selection-search, .ant-select-selection-search-input,
   .ant-select-selection-search-input input, .ant-input-affix-wrapper > input.ant-input
 ) {
@@ -224,195 +407,201 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
 }
 
 /* 排除错误/警告、禁用输入，保留 antd 的校验语义色与禁用状态。 */
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-picker,
   .ant-mentions, .ant-pagination-options-quick-jumper input
 ):where(:not([class*='-status-error'], [class*='-status-warning'], [class*='-status-error'] *, [class*='-status-warning'] *, .ant-form-item-has-error *, .ant-form-item-has-warning *)),
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-select:not(.ant-select-customize-input) .ant-select-selector:where(:not([class*='-status-error'] *, [class*='-status-warning'] *, .ant-form-item-has-error *, .ant-form-item-has-warning *)) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-select:not(.ant-select-customize-input) .ant-select-selector:where(:not([class*='-status-error'] *, [class*='-status-warning'] *, .ant-form-item-has-error *, .ant-form-item-has-warning *)) {
   border-color: var(--moeflow-borderColorBase) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-picker, .ant-mentions,
   .ant-pagination-options-quick-jumper input
 ):where(:not([disabled], .ant-input-affix-wrapper-disabled, .ant-input-number-disabled, .ant-picker-disabled, [class*='-status-error'], [class*='-status-warning'], [class*='-status-error'] *, [class*='-status-warning'] *, .ant-form-item-has-error *, .ant-form-item-has-warning *)):is(:hover, :focus, :focus-within),
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-select:not(.ant-select-disabled):where(:not([class*='-status-error'], [class*='-status-warning'], .ant-form-item-has-error *, .ant-form-item-has-warning *)):is(:hover, .ant-select-focused, .ant-select-open) .ant-select-selector {
-  border-color: var(--moeflow-primaryColor) !important;
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-select:not(.ant-select-disabled):where(:not([class*='-status-error'], [class*='-status-warning'], .ant-form-item-has-error *, .ant-form-item-has-warning *)):is(:hover, .ant-select-focused, .ant-select-open) .ant-select-selector {
+  border-color: var(--moeflow-primaryFocusColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-picker, .ant-mentions,
   .ant-pagination-options-quick-jumper input
 ):where(:not([disabled], .ant-input-affix-wrapper-disabled, .ant-input-number-disabled, .ant-picker-disabled, [class*='-status-error'], [class*='-status-warning'], [class*='-status-error'] *, [class*='-status-warning'] *, .ant-form-item-has-error *, .ant-form-item-has-warning *)):is(:focus, :focus-within),
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-select-focused:not(.ant-select-disabled):where(:not([class*='-status-error'], [class*='-status-warning'], .ant-form-item-has-error *, .ant-form-item-has-warning *)) .ant-select-selector {
-  box-shadow: 0 0 0 2px rgba(var(--moeflow-primaryRgb), 0.2) !important;
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-select-focused:not(.ant-select-disabled):where(:not([class*='-status-error'], [class*='-status-warning'], .ant-form-item-has-error *, .ant-form-item-has-warning *)) .ant-select-selector {
+  box-shadow: 0 0 0 2px rgba(var(--moeflow-primaryFocusRgb), 0.2) !important;
+}
+
+/* 数字徽标也使用实色操作色与专用文字色，避免亮底仍遗留白字。 */
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-badge-count {
+  background-color: var(--moeflow-primaryActionColor);
+  color: var(--moeflow-primaryActionContrast);
 }
 
 /* 按钮：只覆盖品牌按钮，danger 按钮继续使用错误色。 */
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-btn:where(:not(.ant-btn-primary, .ant-btn-link, .ant-btn-text, .ant-btn-dangerous, [disabled])) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-btn:where(:not(.ant-btn-primary, .ant-btn-link, .ant-btn-text, .ant-btn-dangerous, [disabled])) {
   background-color: var(--moeflow-surface) !important;
   border-color: var(--moeflow-borderColorBase) !important;
   color: var(--moeflow-textColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :where(a:not(.ant-btn):not(.ant-typography-success):not(.ant-typography-warning):not(.ant-typography-danger)),
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-btn-link:not(.ant-btn-dangerous):not([disabled]) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :where(a:not(.ant-btn):not(.ant-typography-success):not(.ant-typography-warning):not(.ant-typography-danger)),
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-btn-link:not(.ant-btn-dangerous):not([disabled]) {
   color: var(--moeflow-primaryColor);
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):not([disabled]):is(:hover, :focus) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):not([disabled]):is(:hover, :focus) {
   border-color: var(--moeflow-primaryColor) !important;
   color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-btn-primary:not(.ant-btn-dangerous):not(.ant-btn-background-ghost):not([disabled]) {
-  background-color: var(--moeflow-primaryColor) !important;
-  border-color: var(--moeflow-primaryColor) !important;
-  color: var(--moeflow-primaryContrast) !important;
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-btn-primary:not(.ant-btn-dangerous):not(.ant-btn-background-ghost):not([disabled]) {
+  background-color: var(--moeflow-primaryActionColor) !important;
+  border-color: var(--moeflow-primaryActionColor) !important;
+  color: var(--moeflow-primaryActionContrast) !important;
   text-shadow: none;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-btn-primary:not(.ant-btn-dangerous):not(.ant-btn-background-ghost):not([disabled]):is(:hover, :focus, :active) {
-  background-color: var(--moeflow-primaryColorDarker) !important;
-  border-color: var(--moeflow-primaryColorDarker) !important;
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-btn-primary:not(.ant-btn-dangerous):not(.ant-btn-background-ghost):not([disabled]):is(:hover, :focus, :active) {
+  background-color: var(--moeflow-primaryActionHover) !important;
+  border-color: var(--moeflow-primaryActionHover) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-btn-primary.ant-btn-background-ghost:not(.ant-btn-dangerous):not([disabled]) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-btn-primary.ant-btn-background-ghost:not(.ant-btn-dangerous):not([disabled]) {
   background-color: transparent !important;
   border-color: var(--moeflow-primaryColor) !important;
   color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-btn[disabled], .ant-btn[disabled]:hover) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-btn[disabled], .ant-btn[disabled]:hover) {
   background-color: var(--moeflow-surface2) !important;
   border-color: var(--moeflow-borderColorLight) !important;
   color: var(--moeflow-textColorSecondaryLight) !important;
 }
 
 /* Radio / Checkbox / Switch 与分段按钮（含默认 outline 和 solid）。 */
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-checkbox-inner, .ant-radio-inner, .ant-radio-button-wrapper) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-checkbox-inner, .ant-radio-inner, .ant-radio-button-wrapper) {
   background-color: var(--moeflow-control) !important;
   border-color: var(--moeflow-borderColorBase) !important;
   color: var(--moeflow-textColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-checkbox, .ant-radio):not(.ant-checkbox-disabled):not(.ant-radio-disabled):is(:hover, .ant-checkbox-checked, .ant-radio-checked) :is(.ant-checkbox-inner, .ant-radio-inner),
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-checkbox-checked, .ant-radio-checked)::after {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-checkbox, .ant-radio):not(.ant-checkbox-disabled):not(.ant-radio-disabled):is(:hover, .ant-checkbox-checked, .ant-radio-checked) :is(.ant-checkbox-inner, .ant-radio-inner),
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-checkbox-checked, .ant-radio-checked)::after {
   border-color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-checkbox-checked:not(.ant-checkbox-disabled) .ant-checkbox-inner,
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-checkbox-indeterminate:not(.ant-checkbox-disabled) .ant-checkbox-inner::after,
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-radio:not(.ant-radio-disabled) .ant-radio-inner::after {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-checkbox-checked:not(.ant-checkbox-disabled) .ant-checkbox-inner,
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-checkbox-indeterminate:not(.ant-checkbox-disabled) .ant-checkbox-inner::after,
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-radio:not(.ant-radio-disabled) .ant-radio-inner::after {
   background-color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-checkbox-checked:not(.ant-checkbox-disabled) .ant-checkbox-inner::after {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-checkbox-checked:not(.ant-checkbox-disabled) .ant-checkbox-inner::after {
   border-color: var(--moeflow-primaryContrast) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-radio-button-wrapper::before {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-radio-button-wrapper::before {
   background-color: var(--moeflow-borderColorBase) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-radio-button-wrapper:not(.ant-radio-button-wrapper-disabled):hover {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-radio-button-wrapper:not(.ant-radio-button-wrapper-disabled):hover {
   color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
   background-color: var(--moeflow-primaryColorBg) !important;
   border-color: var(--moeflow-primaryColor) !important;
   color: var(--moeflow-primaryColor) !important;
   box-shadow: none;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled)::before {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled)::before {
   background-color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-radio-group-solid .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-radio-group-solid .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
   background-color: var(--moeflow-primaryColor) !important;
   color: var(--moeflow-primaryContrast) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-checkbox-input, .ant-radio-input):focus-visible + :is(.ant-checkbox-inner, .ant-radio-inner),
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-radio-button-wrapper, .ant-switch):is(:focus-visible, :focus-within) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-checkbox-input, .ant-radio-input):focus-visible + :is(.ant-checkbox-inner, .ant-radio-inner),
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-radio-button-wrapper, .ant-switch):is(:focus-visible, :focus-within) {
   box-shadow: 0 0 0 3px rgba(var(--moeflow-primaryRgb), 0.2) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-switch {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-switch {
   background-color: var(--moeflow-componentSwitch);
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-switch-checked {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-switch-checked {
   background-color: var(--moeflow-primaryColor);
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-switch-checked .ant-switch-inner {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-switch-checked .ant-switch-inner {
   color: var(--moeflow-primaryContrast);
 }
 
 /* 分页、Tabs、Select 和菜单：选中/hover 在明暗与 portal 中同步。 */
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-pagination-item, .ant-pagination-item-link) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-pagination-item, .ant-pagination-item-link) {
   background-color: var(--moeflow-surface) !important;
   border-color: var(--moeflow-borderColorBase) !important;
   color: var(--moeflow-textColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-pagination-item a {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-pagination-item a {
   color: var(--moeflow-textColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-pagination-item:is(:hover, .ant-pagination-item-active) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-pagination-item:is(:hover, .ant-pagination-item-active) {
   border-color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-pagination-item-active {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-pagination-item-active {
   background-color: var(--moeflow-primaryColorBg) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-pagination-item:is(:hover, .ant-pagination-item-active) a,
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-pagination-prev, .ant-pagination-next):not(.ant-pagination-disabled):hover .ant-pagination-item-link,
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-pagination-jump-prev, .ant-pagination-jump-next) .ant-pagination-item-link-icon {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-pagination-item:is(:hover, .ant-pagination-item-active) a,
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-pagination-prev, .ant-pagination-next):not(.ant-pagination-disabled):hover .ant-pagination-item-link,
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-pagination-jump-prev, .ant-pagination-jump-next) .ant-pagination-item-link-icon {
   color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-pagination-disabled .ant-pagination-item-link {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-pagination-disabled .ant-pagination-item-link {
   color: var(--moeflow-textColorSecondaryLight) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-tabs-tab, .ant-tabs-tab-btn) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-tabs-tab, .ant-tabs-tab-btn) {
   color: var(--moeflow-textColorLight) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-tabs-tab:not(.ant-tabs-tab-disabled):is(:hover, .ant-tabs-tab-active),
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-tabs-tab:not(.ant-tabs-tab-disabled):is(:hover, .ant-tabs-tab-active) .ant-tabs-tab-btn {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-tabs-tab:not(.ant-tabs-tab-disabled):is(:hover, .ant-tabs-tab-active),
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-tabs-tab:not(.ant-tabs-tab-disabled):is(:hover, .ant-tabs-tab-active) .ant-tabs-tab-btn {
   color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-tabs-ink-bar {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-tabs-ink-bar {
   background-color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab {
   background-color: var(--moeflow-surface2) !important;
   border-color: var(--moeflow-borderColorBase) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab-active {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab-active {
   background-color: var(--moeflow-surface) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-select-item, .ant-dropdown-menu-item, .ant-dropdown-menu-submenu-title, .ant-menu-item, .ant-menu-submenu-title, .ant-cascader-menu-item) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-select-item, .ant-dropdown-menu-item, .ant-dropdown-menu-submenu-title, .ant-menu-item, .ant-menu-submenu-title, .ant-cascader-menu-item) {
   background-color: transparent !important;
   color: var(--moeflow-textColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-menu-item, .ant-menu-submenu-title, .ant-dropdown-menu-item) a {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-menu-item, .ant-menu-submenu-title, .ant-dropdown-menu-item) a {
   color: inherit !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-select-item-option-active:not(.ant-select-item-option-disabled),
   .ant-dropdown-menu-item:not(.ant-dropdown-menu-item-disabled):hover,
   .ant-dropdown-menu-item-active:not(.ant-dropdown-menu-item-disabled),
@@ -424,7 +613,7 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
   background-color: var(--moeflow-hoverColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-select-item-option-selected:not(.ant-select-item-option-disabled),
   .ant-select-multiple .ant-select-selection-item,
   .ant-dropdown-menu-item-selected, .ant-menu-item-selected,
@@ -434,16 +623,16 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
   color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-select-item-option-state, .ant-menu-submenu-selected, .ant-menu-item-active, .ant-dropdown-menu-item-active) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-select-item-option-state, .ant-menu-submenu-selected, .ant-menu-item-active, .ant-dropdown-menu-item-active) {
   color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-menu-item-selected, .ant-menu-horizontal > .ant-menu-item:hover, .ant-menu-horizontal > .ant-menu-submenu:hover)::after {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-menu-item-selected, .ant-menu-horizontal > .ant-menu-item:hover, .ant-menu-horizontal > .ant-menu-submenu:hover)::after {
   border-color: var(--moeflow-primaryColor) !important;
 }
 
 /* 保留禁用项的中性弱化，不让通用前景色覆盖 disabled 状态。 */
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-select-item-option-disabled, .ant-dropdown-menu-item-disabled,
   .ant-menu-item-disabled, .ant-menu-submenu-disabled, .ant-cascader-menu-item-disabled,
   .ant-tabs-tab-disabled, .ant-tabs-tab-disabled .ant-tabs-tab-btn,
@@ -453,7 +642,7 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
   color: var(--moeflow-textColorSecondaryLight) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-checkbox-disabled .ant-checkbox-inner, .ant-radio-disabled .ant-radio-inner,
   .ant-radio-button-wrapper-disabled, .ant-input[disabled],
   .ant-input-affix-wrapper-disabled, .ant-input-number-disabled,
@@ -464,16 +653,16 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
 }
 
 /* 日期/时间弹层与滑块也不能残留构建时的粉色。 */
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-picker-cell-in-view, .ant-picker-time-panel-cell-inner, .ant-picker-header button) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-picker-cell-in-view, .ant-picker-time-panel-cell-inner, .ant-picker-header button) {
   color: var(--moeflow-textColor);
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-picker-cell-in-view.ant-picker-cell-today .ant-picker-cell-inner::before,
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-slider-handle {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-picker-cell-in-view.ant-picker-cell-today .ant-picker-cell-inner::before,
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-slider-handle {
   border-color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner,
   .ant-picker-cell-in-view.ant-picker-cell-range-start .ant-picker-cell-inner,
   .ant-picker-cell-in-view.ant-picker-cell-range-end .ant-picker-cell-inner,
@@ -483,20 +672,20 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
   color: var(--moeflow-primaryContrast) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-picker-cell-in-view.ant-picker-cell-in-range::before {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .ant-picker-cell-in-view.ant-picker-cell-in-range::before {
   background-color: var(--moeflow-primaryColorBg) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-picker-active-bar, .ant-slider-track, .ant-spin-dot-item) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-picker-active-bar, .ant-slider-track, .ant-spin-dot-item) {
   background-color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-spin, .ant-spin-text) {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.ant-spin, .ant-spin-text) {
   color: var(--moeflow-primaryColor) !important;
 }
 
 /* antd-mobile 2：NavBar / TabBar 及常用移动控件，不动排版与语义类。 */
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .am-navbar, .am-tab-bar, .am-tab-bar-item, .am-tab-bar-content, .am-tab-bar-tab,
   .am-tab-bar-bar, .am-list-body, .am-list-item, .am-modal-content,
   .am-modal-body, .am-action-sheet, .am-picker-popup, .am-picker-popup-header,
@@ -506,7 +695,7 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
   color: var(--moeflow-textColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .am-navbar-title,
   .am-list-item .am-list-line .am-list-content, .am-list-item .am-input-label,
   .am-list-item .am-input-control input, .am-modal-title
@@ -514,20 +703,20 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
   color: var(--moeflow-textColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
   .am-navbar-left, .am-navbar-right, .am-tabs-default-bar-tab-active,
   .am-picker-popup-item, .am-button-ghost, .am-segment-item
 ) {
   color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.am-tabs-default-bar-underline, .am-segment-item, .am-button-ghost),
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .am-button-ghost::before {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(.am-tabs-default-bar-underline, .am-segment-item, .am-button-ghost),
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .am-button-ghost::before {
   border-color: var(--moeflow-primaryColor) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
-  .am-button-primary, .am-segment-item-selected, .am-switch input[type='checkbox']:checked + .checkbox,
+html[data-theme][data-palette]:where(:not([data-palette='default'])) :is(
+  .am-segment-item-selected, .am-switch input[type='checkbox']:checked + .checkbox,
   .am-checkbox-checked .am-checkbox-inner, .am-slider-track
 ) {
   background-color: var(--moeflow-primaryColor) !important;
@@ -535,11 +724,22 @@ html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
   color: var(--moeflow-primaryContrast) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .am-checkbox-checked .am-checkbox-inner::after {
+/* 移动主操作与桌面保持同一 CTA；Radio/Checkbox/Switch 保留强调色。 */
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .am-button-primary:not(.am-button-disabled) {
+  background-color: var(--moeflow-primaryActionColor) !important;
+  border-color: var(--moeflow-primaryActionColor) !important;
+  color: var(--moeflow-primaryActionContrast) !important;
+}
+
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .am-button-primary:not(.am-button-disabled):active {
+  background-color: var(--moeflow-primaryActionHover) !important;
+}
+
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .am-checkbox-checked .am-checkbox-inner::after {
   border-color: var(--moeflow-primaryContrast) !important;
 }
 
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .am-radio-checked .am-radio-inner::after,
-html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .am-slider-handle {
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .am-radio-checked .am-radio-inner::after,
+html[data-theme][data-palette]:where(:not([data-palette='default'])) .am-slider-handle {
   border-color: var(--moeflow-primaryColor) !important;
 }

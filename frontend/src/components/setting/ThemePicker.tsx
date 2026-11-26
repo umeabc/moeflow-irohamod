@@ -4,6 +4,8 @@ import { useIntl } from 'react-intl';
 import { useTheme } from '@/hooks/useTheme';
 import { normalizePalette, themePalettes } from '@/utils/theme';
 
+export const compactThemePickerWidth = 244;
+
 export function PalettePicker({ compact = false }: { compact?: boolean }) {
   const { formatMessage } = useIntl();
   const { palette, changePalette } = useTheme();
@@ -17,10 +19,15 @@ export function PalettePicker({ compact = false }: { compact?: boolean }) {
         justify-content: space-between;
         gap: 12px;
         min-height: 40px;
-        width: ${compact ? '188px' : '100%'};
+        width: ${compact ? `${compactThemePickerWidth}px` : '100%'};
         margin: 0 auto;
+        > span {
+          flex-shrink: 0;
+        }
         select {
-          min-width: 116px;
+          flex: 0 1 168px;
+          width: 168px;
+          min-width: 0;
           min-height: 32px;
           padding: 4px 8px;
           border: 1px solid var(--moeflow-borderColorBase);
@@ -31,7 +38,8 @@ export function PalettePicker({ compact = false }: { compact?: boolean }) {
           cursor: pointer;
         }
         select:focus-visible {
-          outline: 2px solid var(--moeflow-primaryColor);
+          outline: 2px solid
+            var(--moeflow-primaryFocusColor, var(--moeflow-primaryColor));
           outline-offset: 2px;
         }
       `}

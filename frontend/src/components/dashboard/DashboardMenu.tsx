@@ -11,7 +11,10 @@ import { FC } from '@/interfaces';
 import { AppState } from '@/store';
 import { resetProjectsState } from '@/store/project/slice';
 import { useTheme } from '@/hooks/useTheme';
-import { PalettePicker } from '@/components/setting/ThemePicker';
+import {
+  compactThemePickerWidth,
+  PalettePicker,
+} from '@/components/setting/ThemePicker';
 import { setUserToken, UserState } from '@/store/user/slice';
 import style from '../../style';
 import { clickEffect } from '@/utils/style';
@@ -376,7 +379,7 @@ function useMenuProps(
   const { darkMode, changeDarkMode } = useTheme();
   const buttonStyle = css`
     margin: 0 auto;
-    width: 188px;
+    width: ${compactThemePickerWidth}px;
     height: 30px;
     display: flex;
     justify-content: center;

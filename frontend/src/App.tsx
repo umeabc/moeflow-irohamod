@@ -448,8 +448,8 @@ const App: React.FC = () => {
           }
           /* 新配色保留 TabBar 内联的 tintColor / unselectedTintColor CSS 变量，
              不能用统一文字色覆盖，否则选中项会失去主色。 */
-          html[data-theme='dark']:not([data-palette='azure']):not([data-palette='miku']) .am-tab-bar-item .am-tab-bar-tab-icon,
-          html[data-theme='dark']:not([data-palette='azure']):not([data-palette='miku']) .am-tab-bar-tab-title {
+          html[data-theme='dark']:is([data-palette='default'], :not([data-palette])) .am-tab-bar-item .am-tab-bar-tab-icon,
+          html[data-theme='dark']:is([data-palette='default'], :not([data-palette])) .am-tab-bar-tab-title {
             color: var(--moeflow-textColor);
           }
           /* antd-mobile TabBar 的 barTintColor 以内联样式落下，需 !important 才能盖住 */

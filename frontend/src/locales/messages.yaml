@@ -180,6 +180,15 @@ site.palette.azure:
 site.palette.miku:
   zhCn: 初音未来
   en: Hatsune Miku
+site.palette.resort-anthem:
+  zhCn: Resort Anthem
+  en: Resort Anthem
+site.palette.sparkle-shower:
+  zhCn: Sparkle Shower
+  en: Sparkle Shower
+site.palette.zinrai:
+  zhCn: ZINRAI
+  en: ZINRAI
 site.language:
   zhCn: 语言
   en: Language
