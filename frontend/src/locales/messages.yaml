@@ -162,6 +162,27 @@ router.goDashboard:
 site.dashboard:
   zhCn: 仪表盘
   en: Dashboard
+site.appearance:
+  zhCn: 外观
+  en: Appearance
+site.theme:
+  zhCn: 主题
+  en: Theme
+site.palette:
+  zhCn: 主题配色
+  en: Palette
+site.palette.default:
+  zhCn: 默认粉色
+  en: Classic Pink
+site.palette.azure:
+  zhCn: 蔚蓝档案
+  en: Blue Archive
+site.palette.miku:
+  zhCn: 初音未来
+  en: Hatsune Miku
+site.language:
+  zhCn: 语言
+  en: Language
 site.darkMode:
   zhCn: 暗色模式
   en: Dark Mode

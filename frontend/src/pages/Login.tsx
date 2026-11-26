@@ -1,5 +1,6 @@
 import { RegistrationFields } from '@/components/shared-form/RegistrationFields';
 import { useRegistration } from '@/hooks/useRegistration';
+import { LoginQuickSettings } from '@/components/setting/LoginQuickSettings';
 import { css } from '@emotion/core';
 import {
   Button,
@@ -36,7 +37,7 @@ interface LoginProps {
 // paper/cloud/ink 系列走 CSS 变量，暗色主题下自动切换（见 index.css --moeflow-login*）
 const BRAND = {
   primary: style.primaryColor, // #FF657C
-  primaryDeep: '#e0506a',
+  primaryDeep: 'var(--moeflow-loginPrimaryDeep, #e0506a)',
   gold: '#f2b64b',
   paper: 'var(--moeflow-loginPaper)', // 浅粉底
   cloud: 'var(--moeflow-loginCloud)',
@@ -169,6 +170,7 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
     <div
       css={css`
         min-height: 100vh;
+        position: relative;
         display: flex;
         align-items: stretch;
         /* 整页品牌渐变走变量，暗色主题下换成深色底（见 index.css --moeflow-loginPageBg） */
@@ -202,8 +204,8 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
               position: absolute;
               inset: 0;
               border-radius: 50%;
-              border: 2px solid rgba(255, 101, 124, 0.35);
-              box-shadow: 0 0 0 22px rgba(255, 101, 124, 0.08),
+              border: 2px solid rgba(var(--moeflow-primaryRgb), 0.35);
+              box-shadow: 0 0 0 22px rgba(var(--moeflow-primaryRgb), 0.08),
                 0 0 0 44px rgba(242, 182, 75, 0.06);
               animation: loginHaloBreathe 4.5s ease-in-out infinite;
             }
@@ -220,7 +222,7 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
             width: auto;
             height: min(46vh, 380px);
             object-fit: contain;
-            filter: drop-shadow(0 16px 34px rgba(255, 101, 124, 0.24));
+            filter: drop-shadow(0 16px 34px rgba(var(--moeflow-primaryRgb), 0.24));
             animation: loginMascotFloat 5.5s ease-in-out infinite;
           }
 
@@ -246,10 +248,14 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
         /* ===== 右：认证卡片 ===== */
         .Login__Panel {
           flex: 1;
+          min-width: 0;
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 40px 24px;
+          @media (max-width: 900px) {
+            padding-top: 80px; /* 为右上角主题/语言快捷入口留白 */
+          }
         }
 
         .Login__Card {
@@ -257,12 +263,15 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
           width: 100%;
           max-width: 440px;
           background: ${BRAND.cloud};
-          border: 1px solid rgba(255, 101, 124, 0.14);
+          border: 1px solid rgba(var(--moeflow-primaryRgb), 0.14);
           border-radius: 20px;
-          box-shadow: 0 24px 64px rgba(255, 101, 124, 0.14),
+          box-shadow: 0 24px 64px rgba(var(--moeflow-primaryRgb), 0.14),
             0 2px 8px rgba(0, 0, 0, 0.04);
           overflow: hidden;
           padding: 36px 36px 30px;
+          @media (max-width: 600px) {
+            padding: 28px 20px 24px;
+          }
 
           /* 顶部斜条纹（参照 image-translator momentum-stripes） */
           &::before {
@@ -272,8 +281,8 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
             height: 5px;
             background: repeating-linear-gradient(
               -55deg,
-              rgba(255, 101, 124, 0.55) 0 7px,
-              rgba(255, 101, 124, 0) 7px 14px,
+              rgba(var(--moeflow-primaryRgb), 0.55) 0 7px,
+              rgba(var(--moeflow-primaryRgb), 0) 7px 14px,
               rgba(242, 182, 75, 0.6) 14px 19px,
               rgba(242, 182, 75, 0) 19px 26px
             );
@@ -288,7 +297,7 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
             margin-bottom: 26px;
             border-radius: 12px;
             background: ${BRAND.paper};
-            border: 1px solid rgba(255, 101, 124, 0.14);
+            border: 1px solid rgba(var(--moeflow-primaryRgb), 0.14);
           }
           .Login__SegBtn {
             border: none;
@@ -301,9 +310,9 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
             cursor: pointer;
             transition: all 0.25s ease;
             &.on {
-              background: ${BRAND.cloud};
-              color: ${BRAND.primaryDeep};
-              box-shadow: 0 2px 8px rgba(255, 101, 124, 0.18);
+              background: var(--moeflow-loginSegmentBg, ${BRAND.cloud});
+              color: var(--moeflow-loginSegmentText, ${BRAND.primaryDeep});
+              box-shadow: 0 2px 8px rgba(var(--moeflow-primaryRgb), 0.18);
             }
             &:hover:not(.on) {
               color: ${BRAND.inkLight};
@@ -376,13 +385,14 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
               font-size: 15px;
               margin-bottom: 14px;
               &.Login__LoginedPrimary {
+                color: var(--moeflow-primaryContrast);
                 background: linear-gradient(
                   135deg,
                   ${BRAND.primary},
                   ${BRAND.primaryDeep}
                 );
                 border: none;
-                box-shadow: 0 8px 20px rgba(255, 101, 124, 0.3);
+                box-shadow: 0 8px 20px rgba(var(--moeflow-primaryRgb), 0.3);
                 transition: all 0.25s ease;
                 &:hover {
                   background: linear-gradient(
@@ -437,6 +447,7 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
         }
       `}
     >
+      <LoginQuickSettings />
       {/* 左：品牌区 */}
       <div className="Login__Brand">
         <div className="Login__Halo">
@@ -591,13 +602,14 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
                   height: 44px;
                   border-radius: 10px;
                   font-size: 16px;
+                  color: var(--moeflow-primaryContrast);
                   background: linear-gradient(
                     135deg,
                     ${BRAND.primary},
                     ${BRAND.primaryDeep}
                   );
                   border: none;
-                  box-shadow: 0 8px 20px rgba(255, 101, 124, 0.3);
+                  box-shadow: 0 8px 20px rgba(var(--moeflow-primaryRgb), 0.3);
                   transition: all 0.25s ease;
                   &:hover {
                     background: linear-gradient(
@@ -606,7 +618,7 @@ const Login: FC<LoginProps> = ({ beforeRedirect = false } = {}) => {
                       ${BRAND.primaryDeep}
                     );
                     transform: translateY(-1px);
-                    box-shadow: 0 10px 24px rgba(255, 101, 124, 0.36);
+                    box-shadow: 0 10px 24px rgba(var(--moeflow-primaryRgb), 0.36);
                   }
                 `}
               >

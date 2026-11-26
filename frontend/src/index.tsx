@@ -13,6 +13,7 @@ import './index.css';
 import store from './store';
 import {
   setDarkMode,
+  setPalette,
   setOSName,
   setPlatform,
   setRuntimeConfig,
@@ -28,7 +29,8 @@ import {
   HotKeyState,
   setHotKey,
 } from './store/hotKey/slice';
-import { loadHotKey, themeStorage } from './utils/storage';
+import { loadHotKey, paletteStorage, themeStorage } from './utils/storage';
+import { applyTheme } from './utils/theme';
 import { createDebugLogger } from './utils/debug-logger';
 const debugLogger = createDebugLogger('app');
 
@@ -55,16 +57,15 @@ for (const hotKeyName in hotKeyInitialState) {
   }
 }
 
-// 读取暗色模式偏好并应用到 <html>，避免首屏闪烁
+// 在渲染前恢复明暗与配色偏好（与 HTML 首屏脚本保持一致）。
 const initialDarkMode = themeStorage.load();
-document.documentElement.setAttribute(
-  'data-theme',
-  initialDarkMode ? 'dark' : 'light',
-);
+const initialPalette = paletteStorage.load();
+applyTheme(initialDarkMode, initialPalette);
 
 async function mountApp() {
   store.dispatch(setRuntimeConfig(await runtimeConfig));
   store.dispatch(setDarkMode(initialDarkMode));
+  store.dispatch(setPalette(initialPalette));
   const { intlMessages, locale, antdLocale, antdValidateMessages } =
     await initI18n;
   debugLogger('initial state', store.getState());

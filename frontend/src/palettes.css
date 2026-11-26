@@ -1,0 +1,545 @@
+/* Atelier studio.css 的 azure / miku 色值；default 继续使用 index.css 原明暗主题。
+ * 配色只覆盖品牌色与中性色，不改成功/警告/错误等语义色、字体、尺寸或漫画画布。
+ */
+html[data-theme='light'][data-palette='azure'] {
+  --moeflow-paletteCanvas: #f4f7fb;
+  --moeflow-paletteSurface: #fdfeff;
+  --moeflow-paletteElevated: #ebf2fa;
+  --moeflow-paletteHover: #e0ebf7;
+  --moeflow-paletteGlass: #fdfefff5;
+  --moeflow-paletteText: #182436;
+  --moeflow-paletteTextRgb: 24, 36, 54;
+  --moeflow-paletteSecondary: #4a5a73;
+  --moeflow-paletteMuted: #61728c;
+  --moeflow-paletteBorderSubtle: #e1eaf4;
+  --moeflow-paletteBorderInk: #cddbeb;
+  --moeflow-paletteBorderStrong: #9ab5d2;
+  --moeflow-paletteAccent: #2570e6;
+  --moeflow-paletteAccentDeep: #1b59bd;
+  --moeflow-paletteAccentSoft: #e6f1ff;
+  --moeflow-paletteAccentBorder: #93c5fd;
+  --moeflow-primaryRgb: 37, 112, 230;
+  --moeflow-primaryContrast: #ffffff;
+}
+
+html[data-theme='dark'][data-palette='azure'] {
+  --moeflow-paletteCanvas: #101621;
+  --moeflow-paletteSurface: #161e2d;
+  --moeflow-paletteElevated: #1d283b;
+  --moeflow-paletteHover: #25334a;
+  --moeflow-paletteGlass: #161e2df5;
+  --moeflow-paletteText: #edf3fc;
+  --moeflow-paletteTextRgb: 237, 243, 252;
+  --moeflow-paletteSecondary: #b3c3da;
+  --moeflow-paletteMuted: #8da0bc;
+  --moeflow-paletteBorderSubtle: #253247;
+  --moeflow-paletteBorderInk: #31425d;
+  --moeflow-paletteBorderStrong: #4b6388;
+  --moeflow-paletteAccent: #5eb5ff;
+  --moeflow-paletteAccentDeep: #82c7ff;
+  --moeflow-paletteAccentSoft: #193554;
+  --moeflow-paletteAccentBorder: #5894cf;
+  --moeflow-primaryRgb: 94, 181, 255;
+  --moeflow-primaryContrast: #091a30;
+}
+
+html[data-theme='light'][data-palette='miku'] {
+  --moeflow-paletteCanvas: #f1faf9;
+  --moeflow-paletteSurface: #fcfffe;
+  --moeflow-paletteElevated: #e5f5f3;
+  --moeflow-paletteHover: #d8efec;
+  --moeflow-paletteGlass: #fcfffef5;
+  --moeflow-paletteText: #162928;
+  --moeflow-paletteTextRgb: 22, 41, 40;
+  --moeflow-paletteSecondary: #45605e;
+  --moeflow-paletteMuted: #5c7a77;
+  --moeflow-paletteBorderSubtle: #d9eeec;
+  --moeflow-paletteBorderInk: #bfe2de;
+  --moeflow-paletteBorderStrong: #87c2bb;
+  --moeflow-paletteAccent: #118c84;
+  --moeflow-paletteAccentDeep: #0b736c;
+  --moeflow-paletteAccentSoft: #e0f7f5;
+  --moeflow-paletteAccentBorder: #39c5bb;
+  --moeflow-primaryRgb: 17, 140, 132;
+  --moeflow-primaryContrast: #ffffff;
+}
+
+html[data-theme='dark'][data-palette='miku'] {
+  --moeflow-paletteCanvas: #0f1819;
+  --moeflow-paletteSurface: #152224;
+  --moeflow-paletteElevated: #1c2e30;
+  --moeflow-paletteHover: #243b3e;
+  --moeflow-paletteGlass: #152224f5;
+  --moeflow-paletteText: #eaf7f6;
+  --moeflow-paletteTextRgb: 234, 247, 246;
+  --moeflow-paletteSecondary: #a8cac7;
+  --moeflow-paletteMuted: #82a8a4;
+  --moeflow-paletteBorderSubtle: #22383a;
+  --moeflow-paletteBorderInk: #2d4a4d;
+  --moeflow-paletteBorderStrong: #467175;
+  --moeflow-paletteAccent: #39c5bb;
+  --moeflow-paletteAccentDeep: #57d6cd;
+  --moeflow-paletteAccentSoft: #163d3b;
+  --moeflow-paletteAccentBorder: #2fb8ae;
+  --moeflow-primaryRgb: 57, 197, 187;
+  --moeflow-primaryContrast: #072322;
+}
+
+/* 比 index.css 的 html[data-theme] 多一个属性权重，导入在前仍能覆盖。
+ * 组件 token 仅在新配色中定义；App.tsx 的 fallback 保留 default 暗色原值。
+ */
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) {
+  --moeflow-primaryColor: var(--moeflow-paletteAccent);
+  --moeflow-primaryColorDarker: var(--moeflow-paletteAccentDeep);
+  --moeflow-primaryColorLighter: var(--moeflow-paletteAccentDeep);
+  --moeflow-primaryColorLightest: var(--moeflow-paletteAccentBorder);
+  --moeflow-primaryColorBg: var(--moeflow-paletteAccentSoft);
+  --moeflow-normalColor: var(--moeflow-paletteBorderStrong);
+  --moeflow-textColor: var(--moeflow-paletteText);
+  --moeflow-textColorSecondary: var(--moeflow-paletteMuted);
+  --moeflow-textColorLight: var(--moeflow-paletteSecondary);
+  --moeflow-textColorLighter: var(--moeflow-paletteSecondary);
+  --moeflow-textColorLightest: var(--moeflow-paletteMuted);
+  --moeflow-textColorSecondaryLight: rgba(var(--moeflow-paletteTextRgb), 0.45);
+  --moeflow-textColorSecondaryLighter: rgba(var(--moeflow-paletteTextRgb), 0.3);
+  --moeflow-textColorSecondaryLightest: rgba(var(--moeflow-paletteTextRgb), 0.18);
+  --moeflow-borderColorBase: var(--moeflow-paletteBorderInk);
+  --moeflow-borderColorLight: var(--moeflow-paletteBorderSubtle);
+  --moeflow-borderColorLighter: var(--moeflow-paletteElevated);
+  --moeflow-avatarBorderColor: var(--moeflow-paletteBorderSubtle);
+  --moeflow-pageBackground: var(--moeflow-paletteCanvas);
+  --moeflow-surface: var(--moeflow-paletteSurface);
+  --moeflow-surface2: var(--moeflow-paletteElevated);
+  --moeflow-control: var(--moeflow-paletteSurface);
+  --moeflow-controlIcon: var(--moeflow-paletteSecondary);
+  --moeflow-backgroundColorLight: var(--moeflow-paletteElevated);
+  --moeflow-backgroundFocus: var(--moeflow-paletteAccentSoft);
+  --moeflow-hoverColor: var(--moeflow-paletteHover);
+  --moeflow-activeColor: var(--moeflow-paletteHover);
+  --moeflow-selectedColor: var(--moeflow-paletteAccentSoft);
+  --moeflow-adminBackground: var(--moeflow-paletteCanvas);
+  --moeflow-adminNavActive: var(--moeflow-paletteAccent);
+  --moeflow-adminNavActiveBg: var(--moeflow-paletteAccentSoft);
+  --moeflow-progressStatus: var(--moeflow-paletteAccentBorder);
+  --moeflow-progressTrack: var(--moeflow-paletteBorderSubtle);
+  --moeflow-sliderRail: var(--moeflow-paletteBorderInk);
+  --moeflow-sliderThumb: var(--moeflow-paletteAccent);
+  --moeflow-menuBg: var(--moeflow-paletteGlass);
+  --moeflow-loginPageBg: linear-gradient(135deg, var(--moeflow-paletteCanvas) 0%, var(--moeflow-paletteSurface) 55%, var(--moeflow-paletteElevated) 100%);
+  --moeflow-loginPaper: var(--moeflow-paletteElevated);
+  --moeflow-loginCloud: var(--moeflow-paletteSurface);
+  --moeflow-loginInk: var(--moeflow-paletteText);
+  --moeflow-loginInkLight: var(--moeflow-paletteSecondary);
+  --moeflow-loginInkLighter: var(--moeflow-paletteMuted);
+  --moeflow-loginPrimaryDeep: var(--moeflow-paletteAccentDeep);
+  --moeflow-loginSegmentBg: var(--moeflow-primaryColor);
+  --moeflow-loginSegmentText: var(--moeflow-primaryContrast);
+  --moeflow-componentSurface: var(--moeflow-paletteSurface);
+  --moeflow-componentElevated: var(--moeflow-paletteElevated);
+  --moeflow-componentBorder: var(--moeflow-paletteBorderInk);
+  --moeflow-componentBorderStrong: var(--moeflow-paletteBorderStrong);
+  --moeflow-componentHover: var(--moeflow-paletteHover);
+  --moeflow-componentMuted: var(--moeflow-paletteElevated);
+  --moeflow-componentSelected: var(--moeflow-paletteAccentSoft);
+  --moeflow-componentSwitch: var(--moeflow-paletteBorderStrong);
+  --moeflow-componentPrimaryDisabledBg: var(--moeflow-paletteAccentSoft);
+  --moeflow-componentPrimaryDisabledBorder: var(--moeflow-paletteBorderSubtle);
+  --moeflow-componentInputPrefix: var(--moeflow-paletteMuted);
+}
+
+/* antd 4 的 Less 主色在构建时固定；以下仅在新配色下运行时补色。
+ * html 两个属性 + :is 组件选择器的权重高于 App.tsx 暗色 Global，
+ * 必要的 !important 同时覆盖其 !important 和移动底栏内联背景。
+ * 不以 #root 限定，Select/Dropdown/Modal 等 body portal 同样继承主题。
+ */
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-modal-content, .ant-modal-body, .ant-modal-header, .ant-modal-footer,
+  .ant-modal-confirm, .ant-modal-confirm-body, .ant-modal-confirm-content,
+  .ant-drawer-content, .ant-drawer-header, .ant-card, .ant-card-head,
+  .ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-input-number-input,
+  .ant-mentions, .ant-picker, .ant-select-selector, .ant-select-selection,
+  .ant-pagination-options-quick-jumper input, .ant-input-number-handler-wrap,
+  .ant-upload.ant-upload-drag, .ant-table, .ant-table-tbody > tr > td,
+  .ant-descriptions-item-content
+) {
+  background-color: var(--moeflow-surface) !important;
+  color: var(--moeflow-textColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-select-dropdown, .ant-dropdown-menu, .ant-menu, .ant-menu-sub,
+  .ant-menu-submenu-popup, .ant-message-notice-content, .ant-notification-notice,
+  .ant-tooltip-inner, .ant-popover-inner, .ant-popover-inner-content,
+  .ant-cascader-menus, .ant-picker-panel-container, .ant-picker-panel,
+  .ant-input-group-addon, .ant-descriptions-item-label, .ant-table-thead > tr > th
+) {
+  background-color: var(--moeflow-surface2) !important;
+  color: var(--moeflow-textColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-card, .ant-card-head, .ant-modal-header, .ant-modal-footer,
+  .ant-drawer-header, .ant-input-group-addon, .ant-divider,
+  .ant-descriptions-view, .ant-descriptions-row > th, .ant-descriptions-row > td,
+  .ant-table-thead > tr > th, .ant-table-tbody > tr > td,
+  .ant-picker-panel, .ant-picker-header, .ant-picker-footer,
+  .ant-picker-time-panel-column:not(:first-child), .ant-menu-inline
+),
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-tabs-nav::before {
+  border-color: var(--moeflow-borderColorBase) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-modal-title, .ant-modal-confirm-title, .ant-drawer-title,
+  .ant-form-item-label > label, .ant-checkbox-wrapper, .ant-radio-wrapper,
+  .ant-select-selection-item, .ant-picker-input > input,
+  .ant-breadcrumb, .ant-breadcrumb a, .ant-tabs, .ant-menu-item a,
+  .ant-menu-submenu-title a,
+  .ant-typography:where(:not(.ant-typography-success, .ant-typography-warning, .ant-typography-danger, .ant-typography-secondary))
+) {
+  color: var(--moeflow-textColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-select-selection-placeholder, .ant-select-arrow, .ant-select-clear,
+  .ant-input-suffix, .ant-input-password-icon, .ant-picker-suffix,
+  .ant-picker-clear, .ant-modal-close, .ant-drawer-close,
+  .ant-empty-description, .ant-tabs-nav-more
+),
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(input, textarea)::placeholder {
+  color: var(--moeflow-textColorSecondary) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-select-clear, .ant-picker-clear
+) {
+  background-color: var(--moeflow-surface) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-select-selection-search, .ant-select-selection-search-input,
+  .ant-select-selection-search-input input, .ant-input-affix-wrapper > input.ant-input
+) {
+  background-color: transparent !important;
+}
+
+/* 排除错误/警告、禁用输入，保留 antd 的校验语义色与禁用状态。 */
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-picker,
+  .ant-mentions, .ant-pagination-options-quick-jumper input
+):where(:not([class*='-status-error'], [class*='-status-warning'], [class*='-status-error'] *, [class*='-status-warning'] *, .ant-form-item-has-error *, .ant-form-item-has-warning *)),
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-select:not(.ant-select-customize-input) .ant-select-selector:where(:not([class*='-status-error'] *, [class*='-status-warning'] *, .ant-form-item-has-error *, .ant-form-item-has-warning *)) {
+  border-color: var(--moeflow-borderColorBase) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-picker, .ant-mentions,
+  .ant-pagination-options-quick-jumper input
+):where(:not([disabled], .ant-input-affix-wrapper-disabled, .ant-input-number-disabled, .ant-picker-disabled, [class*='-status-error'], [class*='-status-warning'], [class*='-status-error'] *, [class*='-status-warning'] *, .ant-form-item-has-error *, .ant-form-item-has-warning *)):is(:hover, :focus, :focus-within),
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-select:not(.ant-select-disabled):where(:not([class*='-status-error'], [class*='-status-warning'], .ant-form-item-has-error *, .ant-form-item-has-warning *)):is(:hover, .ant-select-focused, .ant-select-open) .ant-select-selector {
+  border-color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-picker, .ant-mentions,
+  .ant-pagination-options-quick-jumper input
+):where(:not([disabled], .ant-input-affix-wrapper-disabled, .ant-input-number-disabled, .ant-picker-disabled, [class*='-status-error'], [class*='-status-warning'], [class*='-status-error'] *, [class*='-status-warning'] *, .ant-form-item-has-error *, .ant-form-item-has-warning *)):is(:focus, :focus-within),
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-select-focused:not(.ant-select-disabled):where(:not([class*='-status-error'], [class*='-status-warning'], .ant-form-item-has-error *, .ant-form-item-has-warning *)) .ant-select-selector {
+  box-shadow: 0 0 0 2px rgba(var(--moeflow-primaryRgb), 0.2) !important;
+}
+
+/* 按钮：只覆盖品牌按钮，danger 按钮继续使用错误色。 */
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-btn:where(:not(.ant-btn-primary, .ant-btn-link, .ant-btn-text, .ant-btn-dangerous, [disabled])) {
+  background-color: var(--moeflow-surface) !important;
+  border-color: var(--moeflow-borderColorBase) !important;
+  color: var(--moeflow-textColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :where(a:not(.ant-btn):not(.ant-typography-success):not(.ant-typography-warning):not(.ant-typography-danger)),
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-btn-link:not(.ant-btn-dangerous):not([disabled]) {
+  color: var(--moeflow-primaryColor);
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):not([disabled]):is(:hover, :focus) {
+  border-color: var(--moeflow-primaryColor) !important;
+  color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-btn-primary:not(.ant-btn-dangerous):not(.ant-btn-background-ghost):not([disabled]) {
+  background-color: var(--moeflow-primaryColor) !important;
+  border-color: var(--moeflow-primaryColor) !important;
+  color: var(--moeflow-primaryContrast) !important;
+  text-shadow: none;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-btn-primary:not(.ant-btn-dangerous):not(.ant-btn-background-ghost):not([disabled]):is(:hover, :focus, :active) {
+  background-color: var(--moeflow-primaryColorDarker) !important;
+  border-color: var(--moeflow-primaryColorDarker) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-btn-primary.ant-btn-background-ghost:not(.ant-btn-dangerous):not([disabled]) {
+  background-color: transparent !important;
+  border-color: var(--moeflow-primaryColor) !important;
+  color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-btn[disabled], .ant-btn[disabled]:hover) {
+  background-color: var(--moeflow-surface2) !important;
+  border-color: var(--moeflow-borderColorLight) !important;
+  color: var(--moeflow-textColorSecondaryLight) !important;
+}
+
+/* Radio / Checkbox / Switch 与分段按钮（含默认 outline 和 solid）。 */
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-checkbox-inner, .ant-radio-inner, .ant-radio-button-wrapper) {
+  background-color: var(--moeflow-control) !important;
+  border-color: var(--moeflow-borderColorBase) !important;
+  color: var(--moeflow-textColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-checkbox, .ant-radio):not(.ant-checkbox-disabled):not(.ant-radio-disabled):is(:hover, .ant-checkbox-checked, .ant-radio-checked) :is(.ant-checkbox-inner, .ant-radio-inner),
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-checkbox-checked, .ant-radio-checked)::after {
+  border-color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-checkbox-checked:not(.ant-checkbox-disabled) .ant-checkbox-inner,
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-checkbox-indeterminate:not(.ant-checkbox-disabled) .ant-checkbox-inner::after,
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-radio:not(.ant-radio-disabled) .ant-radio-inner::after {
+  background-color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-checkbox-checked:not(.ant-checkbox-disabled) .ant-checkbox-inner::after {
+  border-color: var(--moeflow-primaryContrast) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-radio-button-wrapper::before {
+  background-color: var(--moeflow-borderColorBase) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-radio-button-wrapper:not(.ant-radio-button-wrapper-disabled):hover {
+  color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+  background-color: var(--moeflow-primaryColorBg) !important;
+  border-color: var(--moeflow-primaryColor) !important;
+  color: var(--moeflow-primaryColor) !important;
+  box-shadow: none;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled)::before {
+  background-color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-radio-group-solid .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+  background-color: var(--moeflow-primaryColor) !important;
+  color: var(--moeflow-primaryContrast) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-checkbox-input, .ant-radio-input):focus-visible + :is(.ant-checkbox-inner, .ant-radio-inner),
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-radio-button-wrapper, .ant-switch):is(:focus-visible, :focus-within) {
+  box-shadow: 0 0 0 3px rgba(var(--moeflow-primaryRgb), 0.2) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-switch {
+  background-color: var(--moeflow-componentSwitch);
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-switch-checked {
+  background-color: var(--moeflow-primaryColor);
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-switch-checked .ant-switch-inner {
+  color: var(--moeflow-primaryContrast);
+}
+
+/* 分页、Tabs、Select 和菜单：选中/hover 在明暗与 portal 中同步。 */
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-pagination-item, .ant-pagination-item-link) {
+  background-color: var(--moeflow-surface) !important;
+  border-color: var(--moeflow-borderColorBase) !important;
+  color: var(--moeflow-textColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-pagination-item a {
+  color: var(--moeflow-textColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-pagination-item:is(:hover, .ant-pagination-item-active) {
+  border-color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-pagination-item-active {
+  background-color: var(--moeflow-primaryColorBg) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-pagination-item:is(:hover, .ant-pagination-item-active) a,
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-pagination-prev, .ant-pagination-next):not(.ant-pagination-disabled):hover .ant-pagination-item-link,
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-pagination-jump-prev, .ant-pagination-jump-next) .ant-pagination-item-link-icon {
+  color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-pagination-disabled .ant-pagination-item-link {
+  color: var(--moeflow-textColorSecondaryLight) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-tabs-tab, .ant-tabs-tab-btn) {
+  color: var(--moeflow-textColorLight) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-tabs-tab:not(.ant-tabs-tab-disabled):is(:hover, .ant-tabs-tab-active),
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-tabs-tab:not(.ant-tabs-tab-disabled):is(:hover, .ant-tabs-tab-active) .ant-tabs-tab-btn {
+  color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-tabs-ink-bar {
+  background-color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab {
+  background-color: var(--moeflow-surface2) !important;
+  border-color: var(--moeflow-borderColorBase) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab-active {
+  background-color: var(--moeflow-surface) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-select-item, .ant-dropdown-menu-item, .ant-dropdown-menu-submenu-title, .ant-menu-item, .ant-menu-submenu-title, .ant-cascader-menu-item) {
+  background-color: transparent !important;
+  color: var(--moeflow-textColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-menu-item, .ant-menu-submenu-title, .ant-dropdown-menu-item) a {
+  color: inherit !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-select-item-option-active:not(.ant-select-item-option-disabled),
+  .ant-dropdown-menu-item:not(.ant-dropdown-menu-item-disabled):hover,
+  .ant-dropdown-menu-item-active:not(.ant-dropdown-menu-item-disabled),
+  .ant-dropdown-menu-submenu-title:hover, .ant-menu-item:not(.ant-menu-item-disabled):hover,
+  .ant-menu-item-active:not(.ant-menu-item-disabled), .ant-menu-submenu-title:hover,
+  .ant-cascader-menu-item:not(.ant-cascader-menu-item-disabled):hover,
+  .ant-table-tbody > tr:hover > td
+) {
+  background-color: var(--moeflow-hoverColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-select-item-option-selected:not(.ant-select-item-option-disabled),
+  .ant-select-multiple .ant-select-selection-item,
+  .ant-dropdown-menu-item-selected, .ant-menu-item-selected,
+  .ant-cascader-menu-item-active:not(.ant-cascader-menu-item-disabled)
+) {
+  background-color: var(--moeflow-primaryColorBg) !important;
+  color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-select-item-option-state, .ant-menu-submenu-selected, .ant-menu-item-active, .ant-dropdown-menu-item-active) {
+  color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-menu-item-selected, .ant-menu-horizontal > .ant-menu-item:hover, .ant-menu-horizontal > .ant-menu-submenu:hover)::after {
+  border-color: var(--moeflow-primaryColor) !important;
+}
+
+/* 保留禁用项的中性弱化，不让通用前景色覆盖 disabled 状态。 */
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-select-item-option-disabled, .ant-dropdown-menu-item-disabled,
+  .ant-menu-item-disabled, .ant-menu-submenu-disabled, .ant-cascader-menu-item-disabled,
+  .ant-tabs-tab-disabled, .ant-tabs-tab-disabled .ant-tabs-tab-btn,
+  .ant-radio-button-wrapper-disabled, .ant-radio-wrapper-disabled,
+  .ant-checkbox-wrapper-disabled
+) {
+  color: var(--moeflow-textColorSecondaryLight) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-checkbox-disabled .ant-checkbox-inner, .ant-radio-disabled .ant-radio-inner,
+  .ant-radio-button-wrapper-disabled, .ant-input[disabled],
+  .ant-input-affix-wrapper-disabled, .ant-input-number-disabled,
+  .ant-picker-disabled, .ant-select-disabled .ant-select-selector
+) {
+  background-color: var(--moeflow-surface2) !important;
+  border-color: var(--moeflow-borderColorLight) !important;
+}
+
+/* 日期/时间弹层与滑块也不能残留构建时的粉色。 */
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-picker-cell-in-view, .ant-picker-time-panel-cell-inner, .ant-picker-header button) {
+  color: var(--moeflow-textColor);
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-picker-cell-in-view.ant-picker-cell-today .ant-picker-cell-inner::before,
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-slider-handle {
+  border-color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner,
+  .ant-picker-cell-in-view.ant-picker-cell-range-start .ant-picker-cell-inner,
+  .ant-picker-cell-in-view.ant-picker-cell-range-end .ant-picker-cell-inner,
+  .ant-picker-time-panel-cell-selected .ant-picker-time-panel-cell-inner
+) {
+  background-color: var(--moeflow-primaryColor) !important;
+  color: var(--moeflow-primaryContrast) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .ant-picker-cell-in-view.ant-picker-cell-in-range::before {
+  background-color: var(--moeflow-primaryColorBg) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-picker-active-bar, .ant-slider-track, .ant-spin-dot-item) {
+  background-color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.ant-spin, .ant-spin-text) {
+  color: var(--moeflow-primaryColor) !important;
+}
+
+/* antd-mobile 2：NavBar / TabBar 及常用移动控件，不动排版与语义类。 */
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .am-navbar, .am-tab-bar, .am-tab-bar-item, .am-tab-bar-content, .am-tab-bar-tab,
+  .am-tab-bar-bar, .am-list-body, .am-list-item, .am-modal-content,
+  .am-modal-body, .am-action-sheet, .am-picker-popup, .am-picker-popup-header,
+  .am-tabs-default-bar, .am-segment
+) {
+  background-color: var(--moeflow-surface) !important;
+  color: var(--moeflow-textColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .am-navbar-title,
+  .am-list-item .am-list-line .am-list-content, .am-list-item .am-input-label,
+  .am-list-item .am-input-control input, .am-modal-title
+) {
+  color: var(--moeflow-textColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .am-navbar-left, .am-navbar-right, .am-tabs-default-bar-tab-active,
+  .am-picker-popup-item, .am-button-ghost, .am-segment-item
+) {
+  color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(.am-tabs-default-bar-underline, .am-segment-item, .am-button-ghost),
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .am-button-ghost::before {
+  border-color: var(--moeflow-primaryColor) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) :is(
+  .am-button-primary, .am-segment-item-selected, .am-switch input[type='checkbox']:checked + .checkbox,
+  .am-checkbox-checked .am-checkbox-inner, .am-slider-track
+) {
+  background-color: var(--moeflow-primaryColor) !important;
+  border-color: var(--moeflow-primaryColor) !important;
+  color: var(--moeflow-primaryContrast) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .am-checkbox-checked .am-checkbox-inner::after {
+  border-color: var(--moeflow-primaryContrast) !important;
+}
+
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .am-radio-checked .am-radio-inner::after,
+html[data-theme]:is([data-palette='azure'], [data-palette='miku']) .am-slider-handle {
+  border-color: var(--moeflow-primaryColor) !important;
+}

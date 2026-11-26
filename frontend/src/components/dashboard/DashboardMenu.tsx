@@ -10,9 +10,9 @@ import { NoticeHistoryModal } from '../notice/NoticeHistoryModal';
 import { FC } from '@/interfaces';
 import { AppState } from '@/store';
 import { resetProjectsState } from '@/store/project/slice';
-import { setDarkMode } from '@/store/site/slice';
+import { useTheme } from '@/hooks/useTheme';
+import { PalettePicker } from '@/components/setting/ThemePicker';
 import { setUserToken, UserState } from '@/store/user/slice';
-import { themeStorage } from '@/utils/storage';
 import style from '../../style';
 import { clickEffect } from '@/utils/style';
 import { routes } from '@/pages/routes';
@@ -373,10 +373,10 @@ function useMenuProps(
   const { formatMessage } = useIntl();
   const dispatch = useDispatch();
   const history = useHistory();
-  const darkMode = useSelector((state: AppState) => state.site.darkMode);
+  const { darkMode, changeDarkMode } = useTheme();
   const buttonStyle = css`
     margin: 0 auto;
-    width: 150px;
+    width: 188px;
     height: 30px;
     display: flex;
     justify-content: center;
@@ -389,15 +389,6 @@ function useMenuProps(
     dispatch(setUserToken({ token: '' }));
     history.push(routes.login);
   };
-  /** 切换暗色模式 */
-  const toggleDarkMode = (checked: boolean) => {
-    dispatch(setDarkMode(checked));
-    themeStorage.save(checked);
-    document.documentElement.setAttribute(
-      'data-theme',
-      checked ? 'dark' : 'light',
-    );
-  };
   return {
     // @ts-expect-error until filter(Boolean) lands
     items: [
@@ -407,6 +398,14 @@ function useMenuProps(
         ),
         key: 'auth.logout',
         onClick: logout,
+      },
+      {
+        key: 'palette',
+        label: (
+          <div onClick={(event) => event.stopPropagation()}>
+            <PalettePicker compact />
+          </div>
+        ),
       },
       {
         key: 'darkMode',
@@ -420,7 +419,8 @@ function useMenuProps(
             <Switch
               size="small"
               checked={darkMode}
-              onChange={toggleDarkMode}
+              aria-label={formatMessage({ id: 'site.darkMode' })}
+              onChange={changeDarkMode}
             />
           </div>
         ),

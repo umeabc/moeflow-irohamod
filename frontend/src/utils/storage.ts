@@ -1,4 +1,5 @@
 import store from 'store';
+import { normalizePalette, ThemePalette } from './theme';
 import { HotKeyOption } from '../components/HotKey/interfaces';
 import { HotKeyState } from '../store/hotKey/slice';
 import type { LLMConf } from '@/services/ai/llm_preprocess';
@@ -92,9 +93,18 @@ export const llmConfStorage = {
 
 export const themeStorage = {
   load(): boolean {
-    return store.get('darkMode', false);
+    return store.get('darkMode', false) === true;
   },
   save(dark: boolean) {
     store.set('darkMode', dark);
+  },
+} as const;
+
+export const paletteStorage = {
+  load(): ThemePalette {
+    return normalizePalette(store.get('palette'));
+  },
+  save(palette: ThemePalette) {
+    store.set('palette', palette);
   },
 } as const;

@@ -1,9 +1,12 @@
 @import 'tailwindcss';
+@import './palettes.css';
 
 /* ===== 明暗主题 CSS 变量（供 style.ts 引用） ===== */
 :root {
   color-scheme: light;
   --moeflow-primaryColor: #FF657C;
+  --moeflow-primaryRgb: 255, 101, 124;
+  --moeflow-primaryContrast: #fff;
   --moeflow-infoColor: #62a4ca;
   --moeflow-successColor: #52c41a;
   --moeflow-processingColor: #1890ff;

@@ -6,6 +6,7 @@ import style from '../../style';
 import { AvatarUpload } from '../shared/AvatarUpload';
 import { UserEditForm } from './UserEditForm';
 import { LocalePicker } from './LocalePicker';
+import { ThemeSettings } from './ThemePicker';
 
 /** 用户基础设置的属性接口 */
 interface UserBasicSettingsProps {
@@ -30,6 +31,10 @@ export const UserBasicSettings: FC<UserBasicSettingsProps> = ({
     >
       <Content>
         <LocalePicker />
+        <ContentTitle>{formatMessage({ id: 'site.appearance' })}</ContentTitle>
+        <ContentItem>
+          <ThemeSettings />
+        </ContentItem>
         <ContentTitle>{formatMessage({ id: 'user.info' })}</ContentTitle>
         <div style={{ marginBottom: '24px' }}>
           <AvatarUpload type="user" />

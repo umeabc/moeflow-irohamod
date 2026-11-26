@@ -49,7 +49,7 @@ const App: React.FC = () => {
           .ant-input-prefix {
             margin-left: 4px;
             margin-right: 12px;
-            color: #858585;
+            color: var(--moeflow-componentInputPrefix, #858585);
             font-size: 15px;
             line-height: 25px;
           }
@@ -152,7 +152,8 @@ const App: React.FC = () => {
       {/* 暗色模式：覆盖 antd / antd-mobile 组件的浅色默认值 */}
       <Global
         styles={css`
-          /* 暗色模式：覆盖 antd / antd-mobile 组件（全部使用扁平选择器 + !important 确保生效） */
+          /* 暗色覆盖使用 palette 组件 token；fallback 保留 default 原配色。
+             palettes.css 以更高属性权重补充实时主色与选中态。 */
           html[data-theme='dark'] .ant-modal,
           html[data-theme='dark'] .ant-modal-content,
           html[data-theme='dark'] .ant-modal-body,
@@ -161,18 +162,18 @@ const App: React.FC = () => {
           html[data-theme='dark'] .ant-modal-confirm,
           html[data-theme='dark'] .ant-modal-confirm-body,
           html[data-theme='dark'] .ant-modal-confirm-content {
-            background-color: #1f1f1f !important;
-            color: rgba(255, 255, 255, 0.85) !important;
+            background-color: var(--moeflow-componentSurface, #1f1f1f) !important;
+            color: var(--moeflow-textColor) !important;
           }
           html[data-theme='dark'] .ant-modal-title,
           html[data-theme='dark'] .ant-modal-confirm-title {
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--moeflow-textColor);
           }
           html[data-theme='dark'] .ant-modal-confirm-btns .ant-btn,
           html[data-theme='dark'] .ant-btn:not(.ant-btn-primary):not(.ant-btn-link):not(.ant-btn-text) {
-            background-color: #1f1f1f !important;
-            border-color: #333 !important;
-            color: rgba(255, 255, 255, 0.85) !important;
+            background-color: var(--moeflow-componentSurface, #1f1f1f) !important;
+            border-color: var(--moeflow-componentBorder, #333) !important;
+            color: var(--moeflow-textColor) !important;
           }
           html[data-theme='dark'] .ant-input,
           html[data-theme='dark'] .ant-input-affix-wrapper,
@@ -187,14 +188,14 @@ const App: React.FC = () => {
           html[data-theme='dark'] .ant-card,
           html[data-theme='dark'] .ant-card-head,
           html[data-theme='dark'] .ant-table {
-            background-color: #1f1f1f !important;
-            border-color: #333 !important;
-            color: rgba(255, 255, 255, 0.85) !important;
+            background-color: var(--moeflow-componentSurface, #1f1f1f) !important;
+            border-color: var(--moeflow-componentBorder, #333) !important;
+            color: var(--moeflow-textColor) !important;
           }
           html[data-theme='dark'] .ant-input::placeholder,
           html[data-theme='dark'] input::placeholder,
           html[data-theme='dark'] textarea::placeholder {
-            color: rgba(255, 255, 255, 0.35);
+            color: var(--moeflow-textColorSecondaryLight);
           }
           html[data-theme='dark'] .ant-select-dropdown,
           html[data-theme='dark'] .ant-dropdown-menu,
@@ -216,17 +217,17 @@ const App: React.FC = () => {
           html[data-theme='dark'] .ant-breadcrumb,
           html[data-theme='dark'] .ant-tabs.ant-tabs-card .ant-tabs-card-bar .ant-tabs-tab,
           html[data-theme='dark'] .ant-empty-image {
-            background-color: #262626 !important;
-            color: rgba(255, 255, 255, 0.85) !important;
+            background-color: var(--moeflow-componentElevated, #262626) !important;
+            color: var(--moeflow-textColor) !important;
           }
           html[data-theme='dark'] .ant-select-item-option-active,
           html[data-theme='dark'] .ant-dropdown-menu-item:hover,
           html[data-theme='dark'] .ant-dropdown-menu-submenu-title:hover,
           html[data-theme='dark'] .ant-tabs-tab:hover {
-            background-color: #333;
+            background-color: var(--moeflow-componentHover, #333);
           }
           html[data-theme='dark'] .ant-select-item-option-selected {
-            background-color: rgba(255, 101, 124, 0.2);
+            background-color: var(--moeflow-componentSelected, rgba(var(--moeflow-primaryRgb), 0.2));
           }
           /* 让 AutoComplete/Select 内层输入框透明，露出暗色底 */
           html[data-theme='dark'] .ant-select-selection-search,
@@ -234,18 +235,18 @@ const App: React.FC = () => {
           html[data-theme='dark'] .ant-select-selection-search-input input,
           html[data-theme='dark'] .ant-auto-complete .ant-select-selection-search-input {
             background-color: transparent !important;
-            color: rgba(255, 255, 255, 0.85) !important;
+            color: var(--moeflow-textColor) !important;
           }
           html[data-theme='dark'] .ant-table,
           html[data-theme='dark'] .ant-table-thead > tr > th,
           html[data-theme='dark'] .ant-table-tbody > tr > td,
           html[data-theme='dark'] .ant-table-tbody > tr > td.ant-table-cell-fix-left,
           html[data-theme='dark'] .ant-table-tbody > tr > td.ant-table-cell-fix-right {
-            border-color: #333;
+            border-color: var(--moeflow-componentBorder, #333);
           }
           html[data-theme='dark'] .ant-table-tbody > tr:hover > td,
           html[data-theme='dark'] .ant-table-thead > tr > th {
-            background-color: #2a2a2a;
+            background-color: var(--moeflow-componentMuted, #2a2a2a);
           }
           html[data-theme='dark'] .ant-pagination-item-active,
           html[data-theme='dark'] .ant-tabs-ink-bar {
@@ -254,22 +255,22 @@ const App: React.FC = () => {
           html[data-theme='dark'] .ant-form-item,
           html[data-theme='dark'] .ant-upload-list-item-name,
           html[data-theme='dark'] .ant-upload-list-item {
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--moeflow-textColor);
           }
           html[data-theme='dark'] .ant-form-item-label > label {
-            color: rgba(255, 255, 255, 0.85) !important;
+            color: var(--moeflow-textColor) !important;
           }
           html[data-theme='dark'] .ant-divider,
           html[data-theme='dark'] .ant-divider-horizontal {
-            border-color: #333;
+            border-color: var(--moeflow-componentBorder, #333);
           }
           html[data-theme='dark'] .ant-badge-count {
             box-shadow: none;
           }
           html[data-theme='dark'] .ant-checkbox-inner,
           html[data-theme='dark'] .ant-radio-inner {
-            border-color: #555;
-            background-color: #1f1f1f;
+            border-color: var(--moeflow-componentBorderStrong, #555);
+            background-color: var(--moeflow-componentSurface, #1f1f1f);
           }
           html[data-theme='dark'] .ant-checkbox-checked .ant-checkbox-inner,
           html[data-theme='dark'] .ant-radio-checked .ant-radio-inner {
@@ -277,118 +278,118 @@ const App: React.FC = () => {
             background-color: var(--moeflow-primaryColor);
           }
           html[data-theme='dark'] .ant-switch {
-            background-color: #444;
+            background-color: var(--moeflow-componentSwitch, #444);
           }
           html[data-theme='dark'] .ant-switch-checked {
             background-color: var(--moeflow-primaryColor);
           }
           html[data-theme='dark'] .ant-spin-text,
           html[data-theme='dark'] .ant-spin-blur {
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--moeflow-textColor);
           }
           html[data-theme='dark'] .ant-empty-description,
           html[data-theme='dark'] .ant-empty-image-inner {
-            color: rgba(255, 255, 255, 0.45);
+            color: var(--moeflow-textColorSecondary);
           }
           html[data-theme='dark'] .ant-tag {
-            background-color: #2a2a2a;
-            border-color: #333;
-            color: rgba(255, 255, 255, 0.85);
+            background-color: var(--moeflow-componentMuted, #2a2a2a);
+            border-color: var(--moeflow-componentBorder, #333);
+            color: var(--moeflow-textColor);
           }
           /* Tabs（默认线型标签页） */
           html[data-theme='dark'] .ant-tabs {
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--moeflow-textColor);
           }
           html[data-theme='dark'] .ant-tabs-tab,
           html[data-theme='dark'] .ant-tabs-tab-btn {
-            color: rgba(255, 255, 255, 0.65);
+            color: var(--moeflow-textColorLighter);
           }
           html[data-theme='dark'] .ant-tabs-tab:hover,
           html[data-theme='dark'] .ant-tabs-tab:hover .ant-tabs-tab-btn {
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--moeflow-textColor);
           }
           html[data-theme='dark'] .ant-tabs-tab.ant-tabs-tab-active,
           html[data-theme='dark'] .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
             color: var(--moeflow-primaryColor);
           }
           html[data-theme='dark'] .ant-tabs-nav::before {
-            border-bottom-color: #333;
+            border-bottom-color: var(--moeflow-componentBorder, #333);
           }
           html[data-theme='dark'] .ant-tabs-nav-more {
-            color: rgba(255, 255, 255, 0.65);
+            color: var(--moeflow-textColorLighter);
           }
           /* Descriptions（详情弹窗） */
           html[data-theme='dark'] .ant-descriptions-view,
           html[data-theme='dark'] .ant-descriptions-row > th,
           html[data-theme='dark'] .ant-descriptions-row > td {
-            border-color: #333 !important;
+            border-color: var(--moeflow-componentBorder, #333) !important;
           }
           html[data-theme='dark'] .ant-descriptions-item-label {
-            background-color: #262626 !important;
-            color: rgba(255, 255, 255, 0.65) !important;
+            background-color: var(--moeflow-componentElevated, #262626) !important;
+            color: var(--moeflow-textColorLighter) !important;
           }
           html[data-theme='dark'] .ant-descriptions-item-content {
-            background-color: #1f1f1f !important;
-            color: rgba(255, 255, 255, 0.85) !important;
+            background-color: var(--moeflow-componentSurface, #1f1f1f) !important;
+            color: var(--moeflow-textColor) !important;
           }
           /* 日期选择器（筛选时间范围） */
           html[data-theme='dark'] .ant-picker-input > input {
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--moeflow-textColor);
           }
           html[data-theme='dark'] .ant-picker-panel-container {
-            background-color: #262626;
-            color: rgba(255, 255, 255, 0.85);
+            background-color: var(--moeflow-componentElevated, #262626);
+            color: var(--moeflow-textColor);
           }
           html[data-theme='dark'] .ant-picker-header,
           html[data-theme='dark'] .ant-picker-footer,
           html[data-theme='dark'] .ant-picker-content th,
           html[data-theme='dark'] .ant-picker-cell {
-            color: rgba(255, 255, 255, 0.45);
+            color: var(--moeflow-textColorSecondary);
           }
           html[data-theme='dark'] .ant-picker-cell-in-view {
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--moeflow-textColor);
           }
           html[data-theme='dark'] .ant-picker-cell:hover:not(.ant-picker-cell-selected):not(.ant-picker-cell-range-start):not(.ant-picker-cell-range-end) .ant-picker-cell-inner,
           html[data-theme='dark'] .ant-picker-time-panel-column > li.ant-picker-time-panel-cell .ant-picker-time-panel-cell-inner:hover {
-            background-color: #333;
+            background-color: var(--moeflow-componentHover, #333);
           }
           /* 时间列（小时/分钟）文字与选中态 */
           html[data-theme='dark'] .ant-picker-time-panel-column::before {
-            background-color: #262626;
-            color: rgba(255, 255, 255, 0.45);
+            background-color: var(--moeflow-componentElevated, #262626);
+            color: var(--moeflow-textColorSecondary);
           }
           html[data-theme='dark'] .ant-picker-time-panel-column:not(:first-child) {
-            border-left-color: #333;
+            border-left-color: var(--moeflow-componentBorder, #333);
           }
           html[data-theme='dark'] .ant-picker-time-panel-column > li.ant-picker-time-panel-cell .ant-picker-time-panel-cell-inner {
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--moeflow-textColor);
           }
           html[data-theme='dark'] .ant-picker-time-panel-column > li.ant-picker-time-panel-cell-selected .ant-picker-time-panel-cell-inner {
             background-color: var(--moeflow-primaryColor);
-            color: #fff;
+            color: var(--moeflow-primaryContrast);
           }
           html[data-theme='dark'] .ant-tooltip,
           html[data-theme='dark'] .ant-tooltip-inner {
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--moeflow-textColor);
           }
           /* Typography（重置密码页等处的 Paragraph 默认深色文字，暗色下不可见） */
           html[data-theme='dark'] .ant-typography {
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--moeflow-textColor);
           }
           /* Radio.Button 分段按钮（创建团队/项目设置等表单） */
           html[data-theme='dark'] .ant-radio-button-wrapper {
-            background-color: #1f1f1f !important;
-            border-color: #555 !important;
-            color: rgba(255, 255, 255, 0.85) !important;
+            background-color: var(--moeflow-componentSurface, #1f1f1f) !important;
+            border-color: var(--moeflow-componentBorderStrong, #555) !important;
+            color: var(--moeflow-textColor) !important;
           }
           html[data-theme='dark'] .ant-radio-button-wrapper::before {
-            background-color: #555 !important;
+            background-color: var(--moeflow-componentBorderStrong, #555) !important;
           }
           html[data-theme='dark']
             .ant-radio-button-wrapper-checked:not(
               .ant-radio-button-wrapper-disabled
             ) {
-            background-color: #2a2a2a !important;
+            background-color: var(--moeflow-componentMuted, #2a2a2a) !important;
             border-color: var(--moeflow-primaryColor) !important;
             color: var(--moeflow-primaryColorLighter) !important;
           }
@@ -400,30 +401,30 @@ const App: React.FC = () => {
           }
           /* 进度条轨道（管理员工作台硬盘占用等） */
           html[data-theme='dark'] .ant-progress-line .ant-progress-inner {
-            background-color: #2a2a2a !important;
+            background-color: var(--moeflow-componentMuted, #2a2a2a) !important;
           }
           /* 输入框前缀附加块（登录页验证码图后面） */
           html[data-theme='dark'] .ant-input-group-addon {
-            background-color: #262626 !important;
-            border-color: #333 !important;
-            color: rgba(255, 255, 255, 0.85) !important;
+            background-color: var(--moeflow-componentElevated, #262626) !important;
+            border-color: var(--moeflow-componentBorder, #333) !important;
+            color: var(--moeflow-textColor) !important;
           }
           /* 禁用按钮（antd 默认浅灰底在暗色下刺眼） */
           html[data-theme='dark'] .ant-btn[disabled],
           html[data-theme='dark'] .ant-btn[disabled]:hover {
-            background-color: #2a2a2a !important;
-            border-color: #333 !important;
-            color: rgba(255, 255, 255, 0.35) !important;
+            background-color: var(--moeflow-componentMuted, #2a2a2a) !important;
+            border-color: var(--moeflow-componentBorder, #333) !important;
+            color: var(--moeflow-textColorSecondaryLight) !important;
           }
           html[data-theme='dark'] .ant-btn-primary[disabled],
           html[data-theme='dark'] .ant-btn-primary[disabled]:hover {
-            background-color: #33272a !important;
-            border-color: #403338 !important;
-            color: rgba(255, 255, 255, 0.35) !important;
+            background-color: var(--moeflow-componentPrimaryDisabledBg, #33272a) !important;
+            border-color: var(--moeflow-componentPrimaryDisabledBorder, #403338) !important;
+            color: var(--moeflow-textColorSecondaryLight) !important;
           }
           /* 滑动条（图片翻译器缩放面板：轨道与手柄） */
           html[data-theme='dark'] .ant-slider-rail {
-            background-color: #3a3a3a !important;
+            background-color: var(--moeflow-sliderRail) !important;
           }
           html[data-theme='dark'] .ant-slider-handle {
             background-color: var(--moeflow-sliderThumb) !important;
@@ -431,27 +432,29 @@ const App: React.FC = () => {
           }
           /* antd-mobile */
           html[data-theme='dark'] .am-navbar {
-            background-color: #1f1f1f;
+            background-color: var(--moeflow-componentSurface, #1f1f1f);
           }
           html[data-theme='dark'] .am-navbar-title,
           html[data-theme='dark'] .am-navbar-left,
           html[data-theme='dark'] .am-navbar-right {
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--moeflow-textColor);
           }
           html[data-theme='dark'] .am-tab-bar,
           html[data-theme='dark'] .am-tab-bar-item,
           html[data-theme='dark'] .am-tab-bar-content,
           html[data-theme='dark'] .am-tab-bar-tab {
-            background-color: #1f1f1f;
-            color: rgba(255, 255, 255, 0.85);
+            background-color: var(--moeflow-componentSurface, #1f1f1f);
+            color: var(--moeflow-textColor);
           }
-          html[data-theme='dark'] .am-tab-bar-item .am-tab-bar-tab-icon,
-          html[data-theme='dark'] .am-tab-bar-tab-title {
-            color: rgba(255, 255, 255, 0.85);
+          /* 新配色保留 TabBar 内联的 tintColor / unselectedTintColor CSS 变量，
+             不能用统一文字色覆盖，否则选中项会失去主色。 */
+          html[data-theme='dark']:not([data-palette='azure']):not([data-palette='miku']) .am-tab-bar-item .am-tab-bar-tab-icon,
+          html[data-theme='dark']:not([data-palette='azure']):not([data-palette='miku']) .am-tab-bar-tab-title {
+            color: var(--moeflow-textColor);
           }
           /* antd-mobile TabBar 的 barTintColor 以内联样式落下，需 !important 才能盖住 */
           html[data-theme='dark'] .am-tab-bar-bar {
-            background-color: #1f1f1f !important;
+            background-color: var(--moeflow-componentSurface, #1f1f1f) !important;
           }
         `}
       />
